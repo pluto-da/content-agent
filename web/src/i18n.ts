@@ -18,6 +18,16 @@ const en: Record<string, string> = {
   本地应用: 'Local apps', 网页端: 'Web', 打开应用: 'Open app', 分享草稿到应用: 'Share draft to app', 导入已安装应用: 'Import installed apps', 选择应用: 'Choose app',
   '退出登录/清除登录': 'Log out / clear login', 已保存会话: 'Session saved', 未登录: 'Not logged in', 会话已被平台过期: 'Session expired by platform', 登录状态: 'Login status', 知乎: 'Zhihu',
   导入CSV: 'Import CSV', 生成复盘: 'Generate review', 状态: 'Status', 理由: 'Reason', 内容: 'Content', 测试: 'Test', 提供方: 'Provider',
+  内容生产: 'Create', 发布与复盘: 'Publish & review', 系统: 'System', 快速跳转: 'Quick jump', '搜索页面…': 'Search pages…', 页面: 'Pages', 搜索或跳转: 'Search or jump to', 内容运营助手: 'Content Agent',
+  全部功能: 'All features', 更多: 'More', 切换到浅色: 'Switch to light', 切换到深色: 'Switch to dark',
+  今日运营概况与待办: 'Today at a glance', '公开热榜采集、跨榜合并与聚类': 'Public trend boards, merged and clustered', 信息源与已采集内容: 'Sources and collected items', 候选选题与多平台改写: 'Topic candidates and rewrites',
+  人工审核草稿与发布交接: 'Review drafts and hand off', 官方创作后台与本地应用: 'Official creator hubs and local apps', '导入数据、生成复盘与回复草稿': 'Import data, reviews and reply drafts',
+  'soul、规则、skills 与记忆': 'Soul, rules, skills and memory', 'Skills 状态、A/B 评测与改进日志': 'Skills, A/B evals and improvement log', 按终端启用平台模块与本地应用: 'Per-device modules and local apps', 任务队列与结构化日志: 'Task queue and structured logs', '主题、连接、密钥、模型与备份': 'Theme, connection, secrets, models, backup',
+  较上周: 'vs last week', 夜深了: 'Good night', 早上好: 'Good morning', 下午好: 'Good afternoon', 晚上好: 'Good evening', 这是今天的内容运营概况: "here's today's content overview",
+  热榜条目: 'Trend items', '近 30 天成本': 'Cost (30d)', 任务成功率: 'Task success', 失败任务: 'Failed tasks', '近 14 天草稿数': 'Drafts, last 14 days', 各榜单条目数: 'Items per board', '近 14 天成本': 'Cost, last 14 days', '近 14 天任务数': 'Tasks, last 14 days',
+  流水线状态: 'Pipeline', 从选题到交接的内容流转: 'From topic to hand-off', 候选选题: 'Candidates', 待审核: 'Pending', 已通过: 'Approved', 已交接: 'Handed off', 已驳回: 'Rejected',
+  审核队列: 'Review queue', 没有待审草稿: 'Nothing to review', 热点榜: 'Trending', '跨榜单合并 · 最新': 'Merged across boards · latest', 全部: 'All', 关注词命中: 'Keyword matches', 榜: 'boards', 先采集热榜: 'fetch boards first',
+  各能力成本: 'Cost by capability', '近 30 天': 'Last 30 days', 次: ' calls', 暂无调用记录: 'No usage yet', 最近任务: 'Recent tasks', '写在代码中，不可放宽': 'Enforced in code',
 };
 
 export function translate(lang: Lang, key: string): string {

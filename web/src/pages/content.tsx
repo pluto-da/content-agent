@@ -1,49 +1,263 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { get, post, del } from '../api';
 import { useT } from '../i18n';
+import { Icon } from '../icons';
 import { notify, type Device } from '../runtime';
-import { Badge, Card, ErrorBox, Field, Loading, StatusBadge, useLoad, useToast } from '../ui';
+import { Badge, Card, CountUp, Empty, ErrorBox, Field, Loading, MiniBars, Skeleton, SkeletonLines, Sparkline, StatusBadge, useLoad, useToast } from '../ui';
+
+/* ---------- 总览 Dashboard ---------- */
+
+/** 最近 n 天（UTC 日期，与 SQLite datetime('now') 对齐）。 */
+function lastDays(n: number): string[] {
+  const out: string[] = [];
+  const now = Date.now();
+  for (let i = n - 1; i >= 0; i--) out.push(new Date(now - i * 86400000).toISOString().slice(0, 10));
+  return out;
+}
+function perDay(rows: any[], days: string[], field = 'created_at', value?: (r: any) => number): number[] {
+  const m = new Map(days.map((d) => [d, 0]));
+  for (const r of rows ?? []) {
+    const d = String(r?.[field] ?? '').slice(0, 10);
+    if (m.has(d)) m.set(d, m.get(d)! + (value ? value(r) : 1));
+  }
+  return days.map((d) => m.get(d)!);
+}
+function weekDelta(series: number[]): number | null {
+  const a = series.slice(-7).reduce((s, x) => s + x, 0);
+  const b = series.slice(-14, -7).reduce((s, x) => s + x, 0);
+  if (!a && !b) return null;
+  if (!b) return 100;
+  return Math.round(((a - b) / b) * 100);
+}
+function ago(ts: string | undefined, lang: string): string {
+  if (!ts) return '';
+  const t = Date.parse(ts.includes('T') ? ts : ts.replace(' ', 'T') + 'Z');
+  if (!Number.isFinite(t)) return ts;
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  const zh = lang === 'zh';
+  if (s < 60) return zh ? '刚刚' : 'just now';
+  if (s < 3600) return zh ? `${Math.floor(s / 60)} 分钟前` : `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return zh ? `${Math.floor(s / 3600)} 小时前` : `${Math.floor(s / 3600)}h ago`;
+  return zh ? `${Math.floor(s / 86400)} 天前` : `${Math.floor(s / 86400)}d ago`;
+}
+
+function Kpi({ label, value, decimals, prefix, suffix, delta, deltaGoodWhenUp = true, chart, icon, loading, onClick, hint }: {
+  label: string; value: number; decimals?: number; prefix?: string; suffix?: string; delta?: number | null; deltaGoodWhenUp?: boolean;
+  chart: ReactNode; icon: string; loading: boolean; onClick?: () => void; hint?: string;
+}) {
+  const { t } = useT();
+  const good = delta == null ? null : (delta >= 0) === deltaGoodWhenUp;
+  return (
+    <button className="kpi" onClick={onClick} aria-label={`${label}：${loading ? t('加载中') : value.toFixed(decimals ?? 0)}${suffix ?? ''}`}>
+      <span className="kpi-top">
+        <span className="kpi-label"><Icon name={icon} size={15} />{label}</span>
+        <Icon name="arrowRight" size={14} className="kpi-go" />
+      </span>
+      {loading ? <Skeleton w="45%" h={30} r={8} style={{ margin: '6px 0 4px' }} /> : <span className="kpi-value"><CountUp value={value} decimals={decimals} prefix={prefix} suffix={suffix} /></span>}
+      <span className="kpi-foot">
+        {delta != null && !loading
+          ? <span className={`delta ${good ? 'up' : 'down'}`}><Icon name={delta >= 0 ? 'arrowUp' : 'arrowDown'} size={12} strokeWidth={2.2} />{Math.abs(delta)}%<span className="muted"> {t('较上周')}</span></span>
+          : <span className="muted small">{hint ?? ''}</span>}
+        <span className="kpi-chart">{chart}</span>
+      </span>
+    </button>
+  );
+}
 
 export function Overview({ go }: { go: (p: string) => void }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const n = useLoad(() => get('/api/notifications'));
-  const tasks = useLoad(() => get('/api/tasks?limit=5'));
+  const tasks = useLoad(() => get('/api/tasks?limit=200'));
   const models = useLoad(() => get('/api/models'));
   const b = useLoad(() => get('/api/boundaries'));
+  const costs = useLoad(() => get('/api/models/costs?days=30'));
+  const hot = useLoad(() => get('/api/hot'));
+  const drafts = useLoad(() => get('/api/drafts'));
+  const topics = useLoad(() => get('/api/topics'));
   const [toast, say] = useToast();
+
+  const days = lastDays(14);
+  const draftRows: any[] = Array.isArray(drafts.data?.drafts) ? drafts.data.drafts : [];
+  const taskRows: any[] = Array.isArray(tasks.data?.tasks) ? tasks.data.tasks : [];
+  const topicRows: any[] = Array.isArray(topics.data?.topics) ? topics.data.topics : [];
+  const merged: any[] = Array.isArray(hot.data?.merged) ? hot.data.merged : [];
+  const runs: any[] = Array.isArray(hot.data?.runs) ? hot.data.runs : [];
+  const hotMatches: string[] = Array.isArray(n.data?.hotMatches) ? n.data.hotMatches : [];
+  const stats: Record<string, number> = tasks.data?.stats ?? {};
+
+  const draftSeries = perDay(draftRows, days);
+  const taskSeries = perDay(taskRows, days);
+  const costSeries = perDay(costs.data?.byDay ?? [], days, 'day', (r) => Number(r.cost) || 0);
+  const okN = stats.succeeded ?? 0;
+  const failN = stats.failed ?? 0;
+  const successRate = okN + failN ? (okN / (okN + failN)) * 100 : 0;
+  const boardCounts = runs.map((r) => Number(r.count ?? r.items?.length ?? 0));
+
+  const byStatus = (s: string) => draftRows.filter((d) => d.status === s).length;
+  const candidates = topicRows.filter((x) => x.status === 'candidate').length;
+  const stages: { key: string; label: string; n: number; page: string; tone: string }[] = [
+    { key: 'topic', label: '候选选题', n: candidates, page: 'topics', tone: 's1' },
+    { key: 'pending', label: '待审核', n: byStatus('pending'), page: 'review', tone: 's2' },
+    { key: 'approved', label: '已通过', n: byStatus('approved'), page: 'review', tone: 's3' },
+    { key: 'handed_off', label: '已交接', n: byStatus('handed_off'), page: 'review', tone: 's4' },
+    { key: 'rejected', label: '已驳回', n: byStatus('rejected'), page: 'review', tone: 's5' },
+  ];
+  const stageTotal = stages.reduce((s, x) => s + x.n, 0);
+  const pendingList = draftRows.filter((d) => d.status === 'pending').slice(0, 5);
+  const capCosts: any[] = Array.isArray(costs.data?.byCapability) ? costs.data.byCapability : [];
+  const capMax = Math.max(...capCosts.map((c) => Number(c.cost) || 0), 0);
+  const callMax = Math.max(...capCosts.map((c) => Number(c.calls) || 0), 1);
+  const hour = new Date().getHours();
+  const greet = hour < 6 ? '夜深了' : hour < 12 ? '早上好' : hour < 18 ? '下午好' : '晚上好';
+  const dateStr = new Date().toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'long', day: 'numeric', weekday: 'long' });
+
   return (
-    <div className="grid">
+    <div className="dash">
       {toast}
-      <Card title={t('通知')} actions={<button onClick={async () => {
-        const d = n.data;
-        const ok = await notify('内容运营助手', `待审草稿 ${d?.pendingDrafts ?? 0} 篇；热点命中 ${d?.hotMatches?.length ?? 0} 条`);
-        say(ok ? '已发送本地通知' : '通知权限未开启');
-      }}>{t('开启通知')}</button>}>
-        <ErrorBox error={n.error} />
-        <div className="stats">
-          <button className="stat" onClick={() => go('review')}><b>{n.data?.pendingDrafts ?? '–'}</b><span>{t('待审草稿')}</span></button>
-          <button className="stat" onClick={() => go('hot')}><b>{n.data?.hotMatches?.length ?? '–'}</b><span>{t('热点命中')}</span></button>
-          <button className="stat" onClick={() => go('tasks')}><b>{tasks.data?.stats?.failed ?? 0}</b><span>失败任务</span></button>
+      <section className="dash-hero">
+        <div>
+          <p className="eyebrow">{dateStr}</p>
+          <h2 className="hero-title">{t(greet)}<span className="muted">，{t('这是今天的内容运营概况')}</span></h2>
         </div>
-        {n.data?.hotMatches?.length > 0 && <ul className="list">{n.data.hotMatches.map((h: string) => <li key={h}>{h}</li>)}</ul>}
-      </Card>
-      <Card title={t('模型能力')} actions={<button onClick={() => go('settings')}>{t('设置')}</button>}>
-        <ErrorBox error={models.error} />
-        <ul className="caps">
-          {models.data?.status?.map((s: any) => (
-            <li key={s.capability}>
-              <span>{s.label}</span>
-              {s.configured ? <Badge tone={s.provider === 'mock' ? 'info' : 'ok'}>{s.provider === 'mock' ? t('模拟输出') : `${s.provider}/${s.model}`}</Badge> : <Badge tone="warn">{t('未配置')}</Badge>}
-            </li>
-          ))}
-        </ul>
-      </Card>
-      <Card title={t('硬边界')}>
-        <ol className="small">{b.data?.boundaries?.map((x: string) => <li key={x}>{x}</li>)}</ol>
-      </Card>
+        <div className="row wrap">
+          <button onClick={async () => {
+            const d = n.data;
+            const ok = await notify('内容运营助手', `待审草稿 ${d?.pendingDrafts ?? 0} 篇；热点命中 ${d?.hotMatches?.length ?? 0} 条`);
+            say(ok ? '已发送本地通知' : '通知权限未开启');
+          }}><Icon name="bell" size={16} />{t('开启通知')}</button>
+          <button className="primary" onClick={() => go('hot')}><Icon name="hot" size={16} />{t('采集热榜')}</button>
+        </div>
+      </section>
+      <ErrorBox error={n.error} />
+
+      <div className="dash-grid">
+        <div className="kpis span-12">
+          <Kpi icon="inbox" label={t('待审草稿')} value={Number(n.data?.pendingDrafts ?? 0)} loading={n.loading} onClick={() => go('review')}
+            delta={weekDelta(draftSeries)} chart={<Sparkline values={draftSeries} label={t('近 14 天草稿数')} />} />
+          <Kpi icon="hot" label={t('热榜条目')} value={merged.length} loading={hot.loading} onClick={() => go('hot')}
+            hint={`${t('热点命中')} ${hotMatches.length}`} chart={<MiniBars values={boardCounts.length ? boardCounts : [0, 0, 0, 0, 0]} label={t('各榜单条目数')} />} />
+          <Kpi icon="coin" label={t('近 30 天成本')} value={Number(costs.data?.total ?? 0)} decimals={2} prefix="¥" loading={costs.loading} onClick={() => go('settings')}
+            delta={weekDelta(costSeries)} deltaGoodWhenUp={false} chart={<Sparkline values={costSeries} label={t('近 14 天成本')} />} />
+          <Kpi icon="activity" label={t('任务成功率')} value={successRate} decimals={0} suffix="%" loading={tasks.loading} onClick={() => go('tasks')}
+            hint={`${t('失败任务')} ${failN}`} chart={<Sparkline values={taskSeries} label={t('近 14 天任务数')} />} />
+        </div>
+
+        <Card className="span-8" icon="activity" title={t('流水线状态')} subtitle={t('从选题到交接的内容流转')} actions={<button className="ghost" onClick={() => go('review')}>{t('审核')}<Icon name="chevronRight" size={14} /></button>}>
+          {drafts.loading || topics.loading ? <SkeletonLines lines={3} /> : (
+            <>
+              <div className="stack-bar" role="img" aria-label={stages.map((s) => `${t(s.label)} ${s.n}`).join('，')}>
+                {stageTotal > 0
+                  ? stages.filter((s) => s.n > 0).map((s) => <span key={s.key} className={`seg ${s.tone}`} style={{ flexGrow: s.n }} />)
+                  : <span className="seg empty" style={{ flexGrow: 1 }} />}
+              </div>
+              <ol className="stages">
+                {stages.map((s, i) => (
+                  <li key={s.key}>
+                    <button className="stage" onClick={() => go(s.page)}>
+                      <span className={`dot ${s.tone}`} aria-hidden="true" />
+                      <span className="stage-n"><CountUp value={s.n} /></span>
+                      <span className="stage-l">{t(s.label)}</span>
+                    </button>
+                    {i < stages.length - 2 && <Icon name="chevronRight" size={14} className="stage-arrow" />}
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+        </Card>
+
+        <Card className="span-4" icon="inbox" title={t('审核队列')} actions={<Badge tone={pendingList.length ? 'warn' : 'ok'}>{byStatus('pending')}</Badge>}>
+          {drafts.loading ? <SkeletonLines lines={4} /> : pendingList.length ? (
+            <ul className="list rows">
+              {pendingList.map((d) => (
+                <li key={d.id}>
+                  <button className="row-btn" onClick={() => go('review')}>
+                    <span className="plat">{PLATFORM_SHORT[d.platform] ?? d.platform}</span>
+                    <span className="grow ellipsis">{d.title || String(d.body ?? '').slice(0, 30)}</span>
+                    <span className="muted small nowrap">{ago(d.created_at, lang)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : <Empty icon="check">{t('没有待审草稿')}</Empty>}
+        </Card>
+
+        <Card className="span-5" icon="hot" title={t('热点榜')} subtitle={t('跨榜单合并 · 最新')} actions={<button className="ghost" onClick={() => go('hot')}>{t('全部')}<Icon name="chevronRight" size={14} /></button>}>
+          {hotMatches.length > 0 && (
+            <div className="matches" aria-label={t('关注词命中')}>
+              <span className="muted small">{t('关注词命中')}</span>
+              <ul className="list match-list">{hotMatches.map((h) => <li key={h}><Badge tone="warn">{h}</Badge></li>)}</ul>
+            </div>
+          )}
+          {hot.loading ? <SkeletonLines lines={5} /> : merged.length ? (
+            <ol className="list hot-list">
+              {merged.slice(0, 8).map((m, i) => (
+                <li key={m.id ?? m.title}>
+                  <span className={`rank r${i + 1}`}>{i + 1}</span>
+                  <span className="grow ellipsis">{m.title}</span>
+                  <span className="muted small nowrap">{(m.boards ?? []).length} {t('榜')}</span>
+                </li>
+              ))}
+            </ol>
+          ) : <Empty icon="hot">{t('暂无数据')}：{t('先采集热榜')}</Empty>}
+        </Card>
+
+        <Card className="span-4" icon="coin" title={t('各能力成本')} subtitle={t('近 30 天')}>
+          {costs.loading ? <SkeletonLines lines={4} /> : capCosts.length ? (
+            <ul className="bars">
+              {capCosts.map((c) => {
+                const v = Number(c.cost) || 0;
+                const pct = capMax > 0 ? (v / capMax) * 100 : ((Number(c.calls) || 0) / callMax) * 100;
+                return (
+                  <li key={c.capability || 'other'}>
+                    <div className="row between small"><span>{c.capability || '—'}</span><span className="num muted">¥{v.toFixed(4)} · {c.calls}{t('次')}{c.failed ? ` · ${c.failed}✗` : ''}</span></div>
+                    <div className="bar"><span style={{ width: `${Math.max(2, pct)}%` }} /></div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : <Empty icon="coin">{t('暂无调用记录')}</Empty>}
+        </Card>
+
+        <Card className="span-3" icon="cpu" title={t('模型能力')} actions={<button className="ghost icon-btn" aria-label={t('设置')} onClick={() => go('settings')}><Icon name="settings" size={16} /></button>}>
+          <ErrorBox error={models.error} />
+          {models.loading ? <SkeletonLines lines={4} /> : (
+            <ul className="caps">
+              {(models.data?.status ?? []).map((s: any) => (
+                <li key={s.capability}>
+                  <span className="cap-name"><span className={`led ${s.configured ? (s.provider === 'mock' ? 'info' : 'ok') : 'warn'}`} aria-hidden="true" />{s.label}</span>
+                  {s.configured ? <Badge tone={s.provider === 'mock' ? 'info' : 'ok'}>{s.provider === 'mock' ? t('模拟输出') : `${s.provider}/${s.model}`}</Badge> : <Badge tone="warn">{t('未配置')}</Badge>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="span-8" icon="tasks" title={t('最近任务')} actions={<button className="ghost" onClick={() => go('tasks')}>{t('任务与日志')}<Icon name="chevronRight" size={14} /></button>}>
+          {tasks.loading ? <SkeletonLines lines={5} /> : taskRows.length ? (
+            <ul className="list rows">
+              {taskRows.slice(0, 6).map((x) => (
+                <li key={x.id} className="task-row">
+                  <span className={`led ${x.status === 'succeeded' ? 'ok' : x.status === 'failed' ? 'bad' : x.status === 'running' ? 'info pulse' : 'neutral'}`} aria-hidden="true" />
+                  <span className="grow ellipsis">{x.label}{x.error && <span className="muted small"> · {x.error}</span>}</span>
+                  <StatusBadge status={x.status} />
+                  <span className="muted small nowrap num">{x.ms != null ? `${x.ms}ms` : '–'}</span>
+                  <span className="muted small nowrap hide-sm">{ago(x.created_at, lang)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : <Empty icon="tasks">{t('暂无数据')}</Empty>}
+        </Card>
+
+        <Card className="span-4" icon="shield" title={t('硬边界')} subtitle={t('写在代码中，不可放宽')}>
+          {b.loading ? <SkeletonLines lines={4} /> : <ol className="boundaries">{(b.data?.boundaries ?? []).map((x: string) => <li key={x}>{x}</li>)}</ol>}
+        </Card>
+      </div>
     </div>
   );
 }
+
+const PLATFORM_SHORT: Record<string, string> = { xiaohongshu: '小红书', douyin_script: '抖音', channels: '视频号', wechat_article: '公众号', xianyu: '闲鱼', x_post: 'X', zhihu_answer: '知乎', zhihu_article: '知乎' };
 
 export function Hot({ device, go }: { device: Device; go: (p: string) => void }) {
   const { t } = useT();
@@ -60,7 +274,7 @@ export function Hot({ device, go }: { device: Device; go: (p: string) => void })
   return (
     <div className="grid">
       {toast}
-      <Card title={t('热点')} actions={<>
+      <Card icon="hot" title={t('热点')} actions={<>
         <button disabled={!!busy} onClick={() => run('f', async () => { setResults((await post('/api/hot/fetch', { device })).results); hot.reload(); })}>{t('采集热榜')}</button>
         <button disabled={!!busy} onClick={() => run('f2', async () => { setResults((await post('/api/hot/fetch', { device, force: true })).results); hot.reload(); })}>{t('强制刷新')}</button>
         <button className="primary" disabled={!!busy} onClick={() => run('c', async () => setClusters((await post('/api/hot/cluster')).clusters))}>{t('聚类')}</button>
@@ -68,17 +282,17 @@ export function Hot({ device, go }: { device: Device; go: (p: string) => void })
         <p className="muted small">只读取公开热榜标题与官方接口；访问前检查 robots.txt，被禁止的如实标注，不绕过。结果缓存 30 分钟。</p>
         <ErrorBox error={err ?? hot.error} />
         {busy && <p className="muted" aria-live="polite">处理中…</p>}
-        <table className="table">
+        <div className="table-wrap"><table className="table">
           <thead><tr><th>热榜</th><th>{t('状态')}</th><th>说明</th></tr></thead>
           <tbody>
             {(results ?? hot.data?.runs ?? []).map((r: any) => (
               <tr key={r.board}><td>{r.label ?? r.board}</td><td><StatusBadge status={r.status} />{r.fromCache && <Badge>缓存</Badge>}</td><td className="small">{r.message ?? `${r.count ?? r.items?.length ?? 0} 条`}</td></tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </Card>
       {clusters && (
-        <Card title="话题簇">
+        <Card icon="topics" title="话题簇">
           <ul className="list">
             {clusters.map((c) => (
               <li key={c.name} className="row between">
@@ -89,14 +303,14 @@ export function Hot({ device, go }: { device: Device; go: (p: string) => void })
           </ul>
         </Card>
       )}
-      <Card title="跨榜单合并（最新）">
+      <Card icon="activity" title="跨榜单合并（最新）">
         <Loading show={hot.loading} />
-        <ol className="list compact">
+        <ol className="list compact hot-merged">
           {hot.data?.merged?.slice(0, 40).map((m: any) => (
             <li key={m.id}><span>{m.title}</span> {m.boards.map((b: any) => <Badge key={b.board}>{b.board}#{b.rank}</Badge>)}</li>
           ))}
         </ol>
-        {!hot.loading && !hot.data?.merged?.length && <p className="muted">{t('暂无数据')}</p>}
+        {!hot.loading && !hot.data?.merged?.length && <Empty icon="hot">{t('暂无数据')}</Empty>}
       </Card>
     </div>
   );
@@ -118,9 +332,9 @@ export function Library({ go }: { go: (p: string) => void }) {
   return (
     <div className="grid">
       {toast}
-      <Card title={t('信息源')}>
+      <Card icon="library" title={t('信息源')}>
         <ErrorBox error={err ?? src.error} />
-        <table className="table">
+        <div className="table-wrap"><table className="table">
           <thead><tr><th>名称</th><th>类型</th><th>{t('状态')}</th><th /></tr></thead>
           <tbody>
             {src.data?.sources?.map((s: any) => (
@@ -134,7 +348,7 @@ export function Library({ go }: { go: (p: string) => void }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
         <form className="form-row" onSubmit={(e) => { e.preventDefault(); act(async () => {
           const config = form.kind === 'rss' || form.kind === 'web' ? { url: form.url, selector: form.selector || undefined } : form.kind === 'x_api' ? { query: form.query } : {};
           await post('/api/sources', { kind: form.kind, name: form.name || form.kind, config });
@@ -152,7 +366,7 @@ export function Library({ go }: { go: (p: string) => void }) {
           <button className="primary" type="submit">{t('添加')}</button>
         </form>
       </Card>
-      <Card title={t('内容库')} actions={<button className="primary" disabled={!sel.length} onClick={() => act(async () => { const r = await post('/api/topics/generate', { itemIds: sel }); say(`生成选题 ${r.topicIds.length} 个`); setSel([]); go('topics'); })}>{t('生成选题')}（{sel.length}）</button>}>
+      <Card icon="inbox" title={t('内容库')} actions={<button className="primary" disabled={!sel.length} onClick={() => act(async () => { const r = await post('/api/topics/generate', { itemIds: sel }); say(`生成选题 ${r.topicIds.length} 个`); setSel([]); go('topics'); })}>{t('生成选题')}（{sel.length}）</button>}>
         <div className="form-row">
           <Field label={t('搜索')}><input type="search" value={q} onChange={(e) => { setSem(null); setQ(e.target.value); }} /></Field>
           <Field label="标签"><select value={tag} onChange={(e) => setTag(e.target.value)}><option value="">全部</option>{['AI', '科技', '财经', '教育', '生活', '电商'].map((x) => <option key={x}>{x}</option>)}</select></Field>
@@ -172,7 +386,7 @@ export function Library({ go }: { go: (p: string) => void }) {
             </li>
           ))}
         </ul>
-        {!items.loading && !list.length && <p className="muted">{t('暂无数据')}</p>}
+        {!items.loading && !list.length && <Empty>{t('暂无数据')}</Empty>}
       </Card>
     </div>
   );
@@ -230,7 +444,7 @@ export function Topics({ device, go }: { device: Device; go: (p: string) => void
           </Card>
         );
       })}
-      {!topics.loading && !topics.data?.topics?.length && <p className="muted">{t('暂无数据')}：先在内容库或热点页生成选题。</p>}
+      {!topics.loading && !topics.data?.topics?.length && <Empty icon="topics">{t('暂无数据')}：先在内容库或热点页生成选题。</Empty>}
     </div>
   );
 }

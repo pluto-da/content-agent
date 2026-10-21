@@ -18,7 +18,7 @@ export function AgentFiles() {
   const readOnly = path.startsWith('memory/');
   return (
     <div className="split">
-      <Card title={t('系统文件')}>
+      <Card icon="agent" title={t('系统文件')}>
         <p className="muted small">soul、工作方式、用户画像、确认规则与 skills 均可编辑；每次保存生成新版本，可回滚。硬边界写在代码中，修改这些文件不能放宽。</p>
         <ul className="list compact">
           {files.data?.files?.map((f: string) => <li key={f}><button className={`linklike ${path === f ? 'active' : ''}`} onClick={() => setPath(f)}>{f}</button></li>)}
@@ -71,18 +71,18 @@ export function Improve() {
   const skillVersions = (versions.data?.versions ?? []).filter((v: any) => v.target.startsWith('skills/'));
   return (
     <div className="grid">
-      <Card title="Skills">
+      <Card icon="topics" title="Skills">
         <ErrorBox error={skills.error} />
-        <table className="table">
+        <div className="table-wrap"><table className="table">
           <thead><tr><th>名称</th><th>需要的模型能力</th><th>{t('状态')}</th></tr></thead>
           <tbody>{skills.data?.skills?.map((s: any) => (
             <tr key={s.name}><td><b>{s.name}</b><div className="muted small">{s.description}</div></td><td>{s.models.map((m: string) => <Badge key={m}>{m}</Badge>)}</td>
               <td>{s.missing.length ? <Badge tone="warn">缺 {s.missing.join('/')}</Badge> : <Badge tone="ok">可用</Badge>}</td></tr>
           ))}</tbody>
-        </table>
+        </table></div>
         {skills.data?.errors?.map((e: any) => <div key={e.file} className="alert error">{e.file}：{e.error}</div>)}
       </Card>
-      <Card title={t('A/B 评测')}>
+      <Card icon="analytics" title={t('A/B 评测')}>
         <p className="muted small">对同一个 skill 的两个版本运行基准集（{bench.data?.cases?.length ?? 0} 个用例），比较通过率。评测只证明格式与规则层面的改进，真实效果以平台数据为准。</p>
         <div className="form-row">
           <Field label="版本 A"><select value={a} onChange={(e) => setA(e.target.value)}><option value="">选择</option>{skillVersions.map((v: any) => <option key={v.id} value={v.id}>#{v.id} {v.target}</option>)}</select></Field>
@@ -92,7 +92,7 @@ export function Improve() {
         <ErrorBox error={err} />
         {res && <p>A #{res.A.version}：{(res.A.passRate * 100).toFixed(0)}%  B #{res.B.version}：{(res.B.passRate * 100).toFixed(0)}%  （{res.cases} 个用例）{res.note && <Badge tone="warn">{res.note}</Badge>}</p>}
       </Card>
-      <Card title={t('改进日志')} actions={<button onClick={log.reload}>{t('刷新')}</button>}>
+      <Card icon="improve" title={t('改进日志')} actions={<button onClick={log.reload}>{t('刷新')}</button>}>
         <pre className="pre">{log.data?.content}</pre>
       </Card>
     </div>
@@ -108,7 +108,7 @@ export function Plugins({ device }: { device: Device }) {
   const label: Record<string, string> = { phone: '手机', tablet: '平板', desktop: '电脑（App）', web: '网页' };
   return (
     <div className="grid">
-    <Card title={`${t('插件管理')} · ${t('本终端')}：${label[device]}`} actions={<button className="primary" onClick={async () => { await put('/api/plugins', { device, enabled: sel }); say('已保存，本终端导航与改写目标已更新'); p.reload(); }}>{t('保存')}</button>}>
+    <Card icon="plugins" title={`${t('插件管理')} · ${t('本终端')}：${label[device]}`} actions={<button className="primary" onClick={async () => { await put('/api/plugins', { device, enabled: sel }); say('已保存，本终端导航与改写目标已更新'); p.reload(); }}>{t('保存')}</button>}>
       {toast}
       <p className="muted small">每个终端单独勾选要启用的平台模块；未启用的插件不出现在导航、改写目标与热榜采集中。插件只能声明白名单内的能力。</p>
       <ErrorBox error={p.error} />
@@ -140,17 +140,17 @@ export function Tasks() {
   }, [reloadTasks]);
   return (
     <div className="grid">
-      <Card title={t('任务')} actions={<button onClick={tasks.reload}>{t('刷新')}</button>}>
+      <Card icon="tasks" title={t('任务')} actions={<button onClick={tasks.reload}>{t('刷新')}</button>}>
         <div className="stats">{Object.entries(tasks.data?.stats ?? {}).map(([k, v]) => <div key={k} className="stat"><b>{String(v)}</b><span><StatusBadge status={k} /></span></div>)}</div>
         <ErrorBox error={tasks.error} />
-        <table className="table">
+        <div className="table-wrap"><table className="table">
           <thead><tr><th>#</th><th>任务</th><th>{t('状态')}</th><th>次数</th><th>耗时</th><th>错误</th></tr></thead>
           <tbody>{tasks.data?.tasks?.map((x: any) => (
             <tr key={x.id}><td>{x.id}</td><td>{x.label}</td><td><StatusBadge status={x.status} /></td><td>{x.attempts}</td><td>{x.ms ?? '–'}ms</td><td className="small">{x.error}</td></tr>
           ))}</tbody>
-        </table>
+        </table></div>
       </Card>
-      <Card title="结构化日志" actions={<select aria-label="日志级别" value={level} onChange={(e) => setLevel(e.target.value)}><option value="">全部</option><option value="info">info</option><option value="warn">warn</option><option value="error">error</option></select>}>
+      <Card icon="activity" title="结构化日志" actions={<select aria-label="日志级别" value={level} onChange={(e) => setLevel(e.target.value)}><option value="">全部</option><option value="info">info</option><option value="warn">warn</option><option value="error">error</option></select>}>
         <pre className="pre small">{logs.data?.logs?.map((l: any) => JSON.stringify(l)).join('\n')}</pre>
       </Card>
     </div>

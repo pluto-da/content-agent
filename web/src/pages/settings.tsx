@@ -29,25 +29,25 @@ export function Settings({ theme, setTheme, lang, setLang }: { theme: Theme; set
   return (
     <div className="grid">
       {toast}
-      <Card title={`${t('主题')} / ${t('语言')}`}>
+      <Card icon="sun" title={`${t('主题')} / ${t('语言')}`}>
         <div className="form-row">
           <Field label={t('主题')}><select value={theme} onChange={(e) => setTheme(e.target.value as Theme)}><option value="system">{t('跟随系统')}</option><option value="light">{t('浅色')}</option><option value="dark">{t('深色')}</option></select></Field>
           <Field label={t('语言')}><select value={lang} onChange={(e) => setLang(e.target.value as Lang)}><option value="zh">简体中文</option><option value="en">English</option></select></Field>
         </div>
       </Card>
-      <Card title="连接">
+      <Card icon="activity" title="连接">
         {runtime() !== 'web' && <Field label={t('服务地址')} hint="运行后端的电脑或你自己的服务器，例如 http://192.168.1.10:8787"><input value={server} onChange={(e) => setServer(e.target.value)} /></Field>}
         <Field label={t('访问口令')} hint="与后端环境变量 CA_ACCESS_TOKEN 一致；仅保存在本机"><input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} /></Field>
         <button onClick={() => { localStorage.setItem('ca.server', server); localStorage.setItem('ca.token', token); say('已保存到本机'); s.reload(); }}>{t('保存')}</button>
         <p className="muted small">当前服务：{serverBase() || '同源'}</p>
       </Card>
-      <Card title={`${t('代理')} / 采集`}>
+      <Card icon="hot" title={`${t('代理')} / 采集`}>
         <ErrorBox error={err ?? s.error} />
         <Field label={t('代理')} hint="境外模型、X API、Google Trends 走此代理（如本机 VPN 客户端的 HTTP 代理端口）；国内模型与平台默认直连"><input value={proxy} placeholder="http://127.0.0.1:7890" onChange={(e) => setProxy(e.target.value)} /></Field>
         <Field label="热点关注关键词（逗号分隔，用于本地通知）"><input value={kw} onChange={(e) => setKw(e.target.value)} /></Field>
         <button onClick={() => act(async () => { await put('/api/settings', { proxy, hotKeywords: kw.split(/[,，]/).map((x) => x.trim()).filter(Boolean) }); say('已保存'); })}>{t('保存')}</button>
       </Card>
-      <Card title={t('密钥')}>
+      <Card icon="shield" title={t('密钥')}>
         <p className="muted small">密钥只保存在后端本机的加密密钥库（AES-256-GCM），界面只显示末四位；不会进入前端包、日志或备份。</p>
         <ul className="secrets">
           {Object.entries(s.data?.secrets ?? {}).map(([name, v]: [string, any]) => (
@@ -84,7 +84,7 @@ function Models() {
     setRoutes({ ...routes, [cap]: r });
   };
   return (
-    <Card title={`${t('模型')}（按能力分模块）`}>
+    <Card icon="cpu" title={`${t('模型')}（按能力分模块）`}>
       {toast}
       <ErrorBox error={err ?? m.error} />
       <div className="table-wrap">
@@ -118,10 +118,10 @@ function Models() {
         <button onClick={async () => { setErr(null); try { await put('/api/models/prices', { prices: JSON.parse(prices) }); say('已保存'); } catch (e) { setErr(e); } }}>{t('保存')}</button>
       </details>
       <h3>{t('成本')}（近 30 天）：¥{Number(costs.data?.total ?? 0).toFixed(4)}</h3>
-      <table className="table small">
+      <div className="table-wrap"><table className="table small">
         <thead><tr><th>能力</th><th>调用</th><th>失败</th><th>费用</th></tr></thead>
         <tbody>{costs.data?.byCapability?.map((c: any) => <tr key={c.capability}><td>{c.capability}</td><td>{c.calls}</td><td>{c.failed}</td><td>{c.cost}</td></tr>)}</tbody>
-      </table>
+      </table></div>
     </Card>
   );
 }
@@ -131,7 +131,7 @@ function Backup() {
   const [err, setErr] = useState<any>(null);
   const [toast, say] = useToast();
   return (
-    <Card title={t('备份')}>
+    <Card icon="inbox" title={t('备份')}>
       {toast}
       <p className="muted small">导出全部业务数据与系统文件为 JSON（不含任何密钥）。导入会覆盖当前数据，导入前自动备份。</p>
       <div className="row wrap">

@@ -3,7 +3,7 @@ import { get, post, put, mediaUrl } from '../api';
 import { useT } from '../i18n';
 import { shareToLocalApp } from '../native';
 import { appOs, copyText, electronBridge, openExternal, runtime, type LoginState } from '../runtime';
-import { Badge, Card, ErrorBox, Field, Loading, StatusBadge, useLoad, useToast } from '../ui';
+import { Badge, Card, Empty, ErrorBox, Field, Loading, StatusBadge, useLoad, useToast } from '../ui';
 import { LocalAppPanel, useLocalApps } from './localapps';
 
 export const PLATFORM_LABEL: Record<string, string> = { xiaohongshu: '小红书', douyin_script: '抖音', channels: '视频号', wechat_article: '公众号', xianyu: '闲鱼', x_post: 'X', zhihu_answer: '知乎回答', zhihu_article: '知乎文章' };
@@ -15,8 +15,8 @@ export function Review({ openCenter }: { openCenter: (id: string) => void }) {
   const [id, setId] = useState<number | null>(null);
   return (
     <div className="split">
-      <Card title={t('审核')}>
-        <div role="tablist" className="tabs">
+      <Card icon="review" title={t('审核')}>
+        <div role="tablist" className="tabs segmented">
           {[['pending', '待审核'], ['approved', '已通过'], ['handed_off', '已交接'], ['rejected', '已驳回'], ['', '全部']].map(([k, l]) => (
             <button key={k} role="tab" aria-selected={status === k} className={status === k ? 'active' : ''} onClick={() => { setStatus(k!); setId(null); }}>{l}</button>
           ))}
@@ -32,7 +32,7 @@ export function Review({ openCenter }: { openCenter: (id: string) => void }) {
             </li>
           ))}
         </ul>
-        {!drafts.loading && !drafts.data?.drafts?.length && <p className="muted">{t('暂无数据')}</p>}
+        {!drafts.loading && !drafts.data?.drafts?.length && <Empty icon="review">{t('暂无数据')}</Empty>}
       </Card>
       {id !== null && <DraftEditor key={id} id={id} onChange={drafts.reload} openCenter={openCenter} />}
     </div>
@@ -170,10 +170,10 @@ export function CreatorCenters({ active, setActive }: { active: string; setActiv
   return (
     <div className="creator">
       {toast}
-      <div role="tablist" className="tabs" aria-label="平台">
+      <div role="tablist" className="tabs seg-tabs" aria-label="平台">
         {centers.map((x) => (
           <button key={x.id} role="tab" aria-selected={cur?.id === x.id} className={cur?.id === x.id ? 'active' : ''} onClick={() => setActive(x.id)}>
-            {x.label}{status[x.id] === 'saved' ? ' ●' : status[x.id] === 'expired' ? ' ⚠' : ''}
+            {x.label}{status[x.id] === 'saved' ? <span className="tab-dot ok" role="img" aria-label={t('已保存会话')} /> : status[x.id] === 'expired' ? <span className="tab-dot warn" role="img" aria-label={t('会话已被平台过期')} /> : null}
           </button>
         ))}
       </div>
@@ -181,7 +181,7 @@ export function CreatorCenters({ active, setActive }: { active: string; setActiv
       {cur && (
         <>
           <div className="row wrap between">
-            <div role="tablist" className="tabs" aria-label="方式">
+            <div role="tablist" className="tabs segmented" aria-label="方式">
               <button role="tab" aria-selected={mode === 'web'} className={mode === 'web' ? 'active' : ''} onClick={() => setMode('web')}>{t('网页端')}（{t('创作中心')}）</button>
               <button role="tab" aria-selected={mode === 'app'} className={mode === 'app' ? 'active' : ''} onClick={() => setMode('app')}>{t('本地应用')}</button>
             </div>
@@ -205,7 +205,7 @@ export function CreatorCenters({ active, setActive }: { active: string; setActiv
               {rt === 'electron'
                 ? <CreatorWebview key={`${cur.id}-${reloadKey}`} center={cur} onNavigate={refresh} />
                 : (
-                  <Card title={cur.label}>
+                  <Card icon="creator" title={cur.label}>
                     <p>{rt === 'web'
                       ? '网页版中，官方创作后台禁止被嵌入，因此在新标签页打开；登录态由你的浏览器保存。'
                       : '在系统浏览器组件中打开官方创作后台（Android 为 Custom Tabs，与系统浏览器共享登录；iOS 为 SFSafariViewController，登录态由系统在本机保存）。'}</p>
@@ -230,7 +230,7 @@ export function ReplyDraft() {
   const [err, setErr] = useState<any>(null);
   const [toast, say] = useToast();
   return (
-    <Card title="评论/私信回复草稿">
+    <Card icon="inbox" title="评论/私信回复草稿">
       {toast}
       <p className="muted small">把评论或私信粘贴进来，系统只生成回复草稿；由你确认后在 App 内自行发送。</p>
       <Field label="评论内容"><textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} /></Field>
@@ -251,7 +251,7 @@ export function Analytics() {
   return (
     <div className="grid">
       {toast}
-      <Card title={t('导入CSV')}>
+      <Card icon="library" title={t('导入CSV')}>
         <p className="muted small">从各平台后台导出数据 CSV 后上传。自动识别“标题、播放/阅读、点赞、评论、收藏、分享、发布时间”等列。</p>
         <div className="form-row">
           <Field label="平台"><select value={platform} onChange={(e) => setPlatform(e.target.value)}>{Object.entries(PLATFORM_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
@@ -264,7 +264,7 @@ export function Analytics() {
         </div>
         <ErrorBox error={err} />
       </Card>
-      <Card title={t('复盘')} actions={<button disabled={!sum.data?.count} onClick={async () => { setErr(null); try { setReview(await post('/api/analytics/review')); } catch (x) { setErr(x); } }}>{t('生成复盘')}</button>}>
+      <Card icon="analytics" title={t('复盘')} actions={<button disabled={!sum.data?.count} onClick={async () => { setErr(null); try { setReview(await post('/api/analytics/review')); } catch (x) { setErr(x); } }}>{t('生成复盘')}</button>}>
         {sum.data && (
           <>
             <p>样本 {sum.data.count} 条 {sum.data.note && <Badge tone="warn">{sum.data.note}</Badge>}</p>

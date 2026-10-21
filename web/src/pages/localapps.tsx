@@ -3,7 +3,7 @@ import { del, get, post, put } from '../api';
 import { useT } from '../i18n';
 import { canListInstalled, launchLocalApp, listInstalledApps, pickDesktopApp, type KnownApp, type LocalAppEntry } from '../native';
 import { appOs, runtime, type AppOs } from '../runtime';
-import { Badge, Card, ErrorBox, Field, Loading, useLoad, useToast } from '../ui';
+import { Badge, Card, Empty, ErrorBox, Field, Loading, useLoad, useToast } from '../ui';
 
 export const OS_LABEL: Record<AppOs, string> = { android: 'Android', ios: 'iOS', windows: 'Windows', mac: 'macOS' };
 
@@ -94,7 +94,7 @@ export function LocalAppsManager() {
   const known = d.data?.known ?? [];
   const os = appOs() ?? 'android';
   return (
-    <Card title={t('本地应用')} actions={<>
+    <Card icon="creator" title={t('本地应用')} actions={<>
       <button onClick={() => setEditing(presetFor(known, known[0]?.platform ?? 'douyin', os))} disabled={!known.length}>{t('添加')}</button>
       <button onClick={async () => { setErr(null); try { downloadJson('content-agent-local-apps.json', await get('/api/local-apps/export')); } catch (x) { setErr(x); } }}>{t('导出')}</button>
       <label className="button-like">{t('导入')}<input type="file" accept=".json,application/json" hidden onChange={async (e) => {
@@ -110,7 +110,7 @@ export function LocalAppsManager() {
       <ErrorBox error={err ?? d.error} />
       <Loading show={d.loading} />
       {editing && <LocalAppForm key={`${editing.platform}-${editing.os}-${editing.id ?? 'new'}`} value={editing} known={known} onCancel={() => setEditing(null)} onSaved={() => { setEditing(null); say('已保存'); d.reload(); }} />}
-      <table className="table">
+      <div className="table-wrap"><table className="table">
         <thead><tr><th>平台</th><th>系统</th><th>启动信息</th><th></th></tr></thead>
         <tbody>
           {d.data?.apps?.map((a) => (
@@ -126,8 +126,8 @@ export function LocalAppsManager() {
             </tr>
           ))}
         </tbody>
-      </table>
-      {!d.loading && !d.data?.apps?.length && <p className="muted">{t('暂无数据')}</p>}
+      </table></div>
+      {!d.loading && !d.data?.apps?.length && <Empty icon="creator">{t('暂无数据')}</Empty>}
     </Card>
   );
 }
@@ -142,7 +142,7 @@ export function LocalAppPanel({ platform, data, reload }: { platform: string; da
   const entry = os ? data?.apps?.find((a) => a.platform === platform && a.os === os) : undefined;
   const others = data?.apps?.filter((a) => a.platform === platform && a.os !== os) ?? [];
   return (
-    <Card title={t('本地应用')}>
+    <Card icon="creator" title={t('本地应用')}>
       {toast}
       {!os && <p className="muted">无法识别本机系统，请在其他终端使用本地应用。</p>}
       {os && entry && !editing && (
