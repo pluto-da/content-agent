@@ -9,5 +9,6 @@ cd mobile
 npm install
 [ -d android ] || npx cap add android
 npx cap sync android
+node scripts/apply-native.mjs android   # 本地应用插件、<queries>、FileProvider
 (cd android && ./gradlew assembleDebug)
 echo "APK：mobile/android/app/build/outputs/apk/debug/app-debug.apk"

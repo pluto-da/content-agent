@@ -4,4 +4,4 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 npm ci
 (cd web && VITE_TARGET=app npx vite build)
-cd mobile && npm install && { [ -d ios ] || npx cap add ios; } && npx cap sync ios && npx cap open ios
+cd mobile && npm install && { [ -d ios ] || npx cap add ios; } && npx cap sync ios && node scripts/apply-native.mjs ios && npx cap open ios
