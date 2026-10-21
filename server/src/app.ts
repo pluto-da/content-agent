@@ -291,7 +291,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
     });
     if (!images.length || !b.instruction?.trim()) throw new AppError('bad_request', '需要至少一张图片与编辑指令');
     const st = hub.imageEditStatus();
-    if (!st.configured) throw new AppError('not_configured', `未配置：图像编辑（${st.reason ?? ''}）`, 400, '到 设置 → 模型 为“图像生成与编辑”选择提供方');
+    if (!st.configured) throw new AppError('not_configured', st.reason ?? '未配置：图像编辑', 400, '到 设置 → 模型 为“图像生成与编辑”选择提供方');
     const r = await hub.imageEdit('edit', images, b.instruction, { n: b.n, size: b.size });
     const out = r.images.map((im, i) => {
       if (im.b64 && b.draftId && getDraft(db, num(b.draftId))) {
