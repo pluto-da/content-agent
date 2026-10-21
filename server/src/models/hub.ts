@@ -6,15 +6,17 @@ import { defaultHttp } from '../http.js';
 import { BUILTIN_PROVIDERS } from './providers.js';
 import { createAdapter } from './adapters.js';
 import { mockAdapter } from './mock.js';
+import type { WsFactory } from './cosyvoice.js';
 import type {
-  AsrResult, AudioResult, BaseResult, Capability, ChatMessage, ChatResult, EmbedResult, ImageInput, ImageResult, ProviderAdapter, ProviderDef, RerankResult, Usage, VideoResult,
+  AsrResult, AudioResult, BaseResult, Capability, ChatMessage, ChatResult, EmbedResult, ImageEditOptions, ImageInput, ImageResult, ProviderAdapter, ProviderDef, RerankResult, Usage, VideoResult,
 } from './types.js';
 import { CAPABILITIES, CAPABILITY_LABELS, NotConfiguredError, NotSupportedError } from './types.js';
 
-export interface RouteTarget { provider: string; model?: string }
+/** model：模型名；editModel：图像编辑模型名（image 能力）；voice：语音合成音色（tts 能力） */
+export interface RouteTarget { provider: string; model?: string; editModel?: string; voice?: string }
 export interface CapabilityRoute { default?: RouteTarget; fallback?: RouteTarget; tasks?: Record<string, RouteTarget> }
 export type Routes = Partial<Record<Capability, CapabilityRoute>>;
-export interface ProviderOverride { baseURL?: string; nativeBaseURL?: string; useProxy?: boolean; models?: Partial<Record<Capability, string>> }
+export interface ProviderOverride { baseURL?: string; nativeBaseURL?: string; useProxy?: boolean; models?: Partial<Record<Capability, string>>; imageEditModel?: string; ttsVoice?: string }
 /** 单价：token 为每百万；image 为每张；char 为每万字符；second 为每分钟；call 为每次。 */
 export interface Price { input?: number; output?: number }
 
@@ -41,7 +43,7 @@ export class ModelHub {
     private readonly db: DB,
     private readonly vault: SecretVault,
     private readonly http: HttpClient = defaultHttp,
-    private readonly opts: { pollMs?: number; pollMax?: number } = {},
+    private readonly opts: { pollMs?: number; pollMax?: number; wsFactory?: WsFactory } = {},
   ) {}
 
   /** 测试用：替换某个提供方的适配器。 */
@@ -53,7 +55,10 @@ export class ModelHub {
     const ov = getSetting<Record<string, ProviderOverride>>(this.db, 'models.providers', {});
     return BUILTIN_PROVIDERS.map((p) => {
       const o = ov[p.id] ?? {};
-      return { ...p, baseURL: o.baseURL ?? p.baseURL, nativeBaseURL: o.nativeBaseURL ?? p.nativeBaseURL, useProxy: o.useProxy ?? p.useProxy, models: { ...p.models, ...(o.models ?? {}) } };
+      return {
+        ...p, baseURL: o.baseURL ?? p.baseURL, nativeBaseURL: o.nativeBaseURL ?? p.nativeBaseURL, useProxy: o.useProxy ?? p.useProxy, models: { ...p.models, ...(o.models ?? {}) },
+        imageEditModel: o.imageEditModel ?? p.imageEditModel, ttsVoice: o.ttsVoice ?? p.ttsVoice,
+      };
     });
   }
 
@@ -71,7 +76,7 @@ export class ModelHub {
     return { ok: true };
   }
 
-  private resolve(cap: Capability, task: string, which: 'primary' | 'fallback'): { def: ProviderDef; model: string } {
+  private resolve(cap: Capability, task: string, which: 'primary' | 'fallback', kind: 'default' | 'edit' = 'default'): { def: ProviderDef; model: string; target: RouteTarget } {
     const r = this.routes()[cap];
     const target = which === 'primary' ? (r?.tasks?.[task] ?? r?.default) : r?.fallback;
     if (!target) throw new NotConfiguredError(cap, which === 'primary' ? '尚未选择提供方' : '无备用提供方');
@@ -80,9 +85,14 @@ export class ModelHub {
     if (!def.capabilities.includes(cap)) throw new NotConfiguredError(cap, `${def.label} 不提供该能力`);
     const ready = this.providerReady(def);
     if (!ready.ok) throw new NotConfiguredError(cap, `${def.label}：${ready.reason}`);
+    if (kind === 'edit') {
+      const model = target.editModel || def.imageEditModel || '';
+      if (!model) throw new NotConfiguredError(cap, `${def.label} 未填写图像编辑模型名（或该提供方未接图像编辑）`);
+      return { def, model, target };
+    }
     const model = target.model || def.models[cap] || '';
     if (!model) throw new NotConfiguredError(cap, `${def.label} 未填写模型名`);
-    return { def, model };
+    return { def, model, target };
   }
 
   private adapter(def: ProviderDef): ProviderAdapter {
@@ -94,6 +104,7 @@ export class ModelHub {
       proxy: getSetting<string>(this.db, 'proxy.url', '') || undefined,
       pollMs: this.opts.pollMs, pollMax: this.opts.pollMax,
       comfyWorkflow: getSetting<string>(this.db, 'models.comfyui.workflow', '') || undefined,
+      wsFactory: this.opts.wsFactory,
     });
   }
 
@@ -107,20 +118,23 @@ export class ModelHub {
   }
 
   /** 统一执行：主提供方 → 失败时启用备用（并在结果中注明实际提供方）。 */
-  private async run<T extends BaseResult>(cap: Capability, task: string, call: (a: ProviderAdapter, model: string) => Promise<T> | undefined): Promise<T & { fallbackUsed?: boolean }> {
+  private async run<T extends BaseResult>(
+    cap: Capability, task: string, call: (a: ProviderAdapter, model: string, target: RouteTarget, def: ProviderDef) => Promise<T> | undefined,
+    kind: 'default' | 'edit' = 'default',
+  ): Promise<T & { fallbackUsed?: boolean }> {
     const attempt = async (which: 'primary' | 'fallback') => {
-      const { def, model } = this.resolve(cap, task, which);
+      const { def, model, target } = this.resolve(cap, task, which, kind);
       const a = this.adapter(def);
-      if (typeof a[CAP_METHOD[cap]] !== 'function') throw new NotSupportedError(def.label, cap);
+      if (typeof a[kind === 'edit' ? 'imageEdit' : CAP_METHOD[cap]] !== 'function') throw new NotSupportedError(def.label, cap);
       const started = Date.now();
       try {
-        const p = call(a, model);
+        const p = call(a, model, target, def);
         if (!p) throw new NotSupportedError(def.label, cap);
         const r = await p;
-        this.record(cap, task, r, def, model, true, Date.now() - started);
+        this.record(cap, kind === 'edit' ? `edit:${task}` : task, r, def, model, true, Date.now() - started);
         return r;
       } catch (e) {
-        this.record(cap, task, null, def, model, false, Date.now() - started);
+        this.record(cap, kind === 'edit' ? `edit:${task}` : task, null, def, model, false, Date.now() - started);
         throw e;
       }
     };
@@ -140,7 +154,16 @@ export class ModelHub {
     return this.run('ocr', task, (a, m) => a.vision?.(images, '请做 OCR：逐行输出图片中的全部文字，不要解释，不要补充图片中没有的文字。', m));
   }
   image(task: string, prompt: string, opts?: { n?: number; size?: string }): Promise<ImageResult> { return this.run('image', task, (a, m) => a.image?.(prompt, m, opts)); }
-  tts(task: string, text: string, opts?: { voice?: string }): Promise<AudioResult> { return this.run('tts', task, (a, m) => a.tts?.(text, m, opts)); }
+  /** 图像编辑：输入 1-3 张图（url / base64）+ 编辑指令。路由沿用 image 能力（tasks.edit 可单独指定），按输出张数计费。 */
+  imageEdit(task: string, images: ImageInput[], instruction: string, opts?: ImageEditOptions): Promise<ImageResult> {
+    if (!images.length) return Promise.reject(new Error('图像编辑需要至少一张输入图'));
+    if (!instruction.trim()) return Promise.reject(new Error('图像编辑需要编辑指令'));
+    return this.run('image', task.startsWith('edit') ? task : 'edit', (a, m) => a.imageEdit?.(images, instruction, m, opts), 'edit');
+  }
+  /** 音色优先级：调用参数 → 路由 voice → 提供方默认音色。 */
+  tts(task: string, text: string, opts?: { voice?: string }): Promise<AudioResult> {
+    return this.run('tts', task, (a, m, target, def) => a.tts?.(text, m, { voice: opts?.voice || target.voice || def.ttsVoice }));
+  }
   asr(task: string, audio: { url?: string; data?: Buffer; mime?: string }): Promise<AsrResult> { return this.run('asr', task, (a, m) => a.asr?.(audio, m)); }
   video(task: string, prompt: string, opts?: { imageUrl?: string }): Promise<VideoResult> { return this.run('video', task, (a, m) => a.video?.(prompt, m, opts)); }
   videoStatus(task: string, taskId: string): Promise<VideoResult> { return this.run('video', task, (a, m) => a.videoStatus?.(taskId, m)); }
@@ -157,6 +180,18 @@ export class ModelHub {
         return { capability: cap, label: CAPABILITY_LABELS[cap], configured: false, reason: e instanceof Error ? e.message : String(e) };
       }
     });
+  }
+
+  /** 图像编辑是否可用（与其他能力一致：未配置时给出原因）。 */
+  imageEditStatus(): { configured: boolean; provider?: string; model?: string; reason?: string } {
+    try {
+      const { def, model } = this.resolve('image', 'edit', 'primary', 'edit');
+      const a = this.adapter(def);
+      if (typeof a.imageEdit !== 'function') return { configured: false, reason: new NotSupportedError(def.label, 'image').message };
+      return { configured: true, provider: def.id, model };
+    } catch (e) {
+      return { configured: false, reason: e instanceof Error ? e.message : String(e) };
+    }
   }
 
   isConfigured(cap: Capability): boolean {

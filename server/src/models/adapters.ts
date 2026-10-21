@@ -1,8 +1,9 @@
 import type { HttpClient, HttpResponse } from '../http.js';
 import type {
-  AsrResult, AudioResult, ChatMessage, ChatResult, EmbedResult, ImageInput, ProviderAdapter, ProviderDef, RerankResult, Segment, VideoResult,
+  AsrResult, AudioResult, ChatMessage, ChatResult, EmbedResult, ImageInput, ImageResult, ProviderAdapter, ProviderDef, RerankResult, Segment, VideoResult,
 } from './types.js';
 import { estimateSegments, sleep } from './util.js';
+import { cosyvoiceTts, cosyvoiceWsUrl, type WsFactory } from './cosyvoice.js';
 
 export interface AdapterCtx {
   def: ProviderDef;
@@ -15,6 +16,8 @@ export interface AdapterCtx {
   pollMax?: number;
   /** ComfyUI 工作流 JSON（含 {{prompt}} 占位符） */
   comfyWorkflow?: string;
+  /** WebSocket 工厂（CosyVoice；测试中可替换） */
+  wsFactory?: WsFactory;
 }
 
 const trim = (u: string) => u.replace(/\/+$/, '');
@@ -46,6 +49,25 @@ function meta(ctx: AdapterCtx, model: string, started: number) {
   return { provider: ctx.def.id, model, ms: Date.now() - started, mock: false };
 }
 
+/** 把输入图转为字节（OpenAI 风格 multipart 需要上传文件）；只允许 data/base64 或公网地址。 */
+async function loadImageBytes(ctx: AdapterCtx, img: ImageInput): Promise<{ data: Buffer; mime: string }> {
+  if (img.b64) return { data: Buffer.from(img.b64, 'base64'), mime: img.mime ?? 'image/png' };
+  if (img.url?.startsWith('data:')) {
+    const m = /^data:([^;,]+)?;base64,(.*)$/s.exec(img.url);
+    if (!m) throw new Error('无法解析 data URL 图像');
+    return { data: Buffer.from(m[2]!, 'base64'), mime: m[1] ?? 'image/png' };
+  }
+  if (!img.url) throw new Error('输入图缺少 url 或 b64');
+  const r = await ctx.http(img.url, { timeoutMs: 60000, maxBytes: 20 * 1024 * 1024 });
+  check(r, '下载输入图');
+  return { data: r.body, mime: img.mime ?? r.headers['content-type']?.split(';')[0] ?? 'image/png' };
+}
+
+function dataUrl(img: ImageInput): string {
+  if (img.url) return img.url;
+  return `data:${img.mime ?? 'image/png'};base64,${img.b64 ?? ''}`;
+}
+
 function imgContent(images: ImageInput[]) {
   return images.map((i) => ({ type: 'image_url', image_url: { url: i.url ?? `data:${i.mime ?? 'image/png'};base64,${i.b64}` } }));
 }
@@ -72,6 +94,26 @@ export function openaiAdapter(ctx: AdapterCtx): ProviderAdapter {
       const j = JSON.parse(res.text) as { data?: { url?: string; b64_json?: string }[] };
       const images = (j.data ?? []).map((d) => ({ url: d.url, b64: d.b64_json }));
       return { ...meta(ctx, model, t), images, usage: { unit: 'image', input: 0, output: images.length } };
+    },
+    async imageEdit(images, instruction, model, opts): Promise<ImageResult> {
+      if (!images.length) throw new Error('图像编辑需要至少一张输入图');
+      const t = Date.now();
+      const fd = new FormData();
+      fd.append('model', model);
+      fd.append('prompt', instruction);
+      fd.append('n', String(opts?.n ?? 1));
+      if (opts?.size) fd.append('size', opts.size);
+      const field = images.length > 1 ? 'image[]' : 'image';
+      for (const [i, img] of images.entries()) {
+        const { data, mime } = await loadImageBytes(ctx, img);
+        fd.append(field, new Blob([new Uint8Array(data)], { type: mime }), `image-${i + 1}.${mime.split('/')[1] ?? 'png'}`);
+      }
+      const res = await ctx.http(`${root}/images/edits`, { method: 'POST', proxy, timeoutMs: 180000, headers: { authorization: `Bearer ${ctx.apiKey}` }, body: fd });
+      check(res, '图像编辑接口');
+      const j = JSON.parse(res.text) as { data?: { url?: string; b64_json?: string }[] };
+      const out = (j.data ?? []).map((d) => ({ url: d.url, b64: d.b64_json }));
+      if (!out.length) throw new Error('图像编辑接口未返回图像');
+      return { ...meta(ctx, model, t), images: out, usage: { unit: 'image', input: images.length, output: out.length } };
     },
     async tts(text, model, opts): Promise<AudioResult> {
       const t = Date.now();
@@ -120,8 +162,10 @@ export function zhipuAdapter(ctx: AdapterCtx): ProviderAdapter {
     const s = j.task_status === 'SUCCESS' ? 'succeeded' : j.task_status === 'FAIL' ? 'failed' : 'running';
     return { ...meta(ctx, model, t), taskId, status: s, url: j.video_result?.[0]?.url, usage: { unit: 'call', input: 0, output: 0 } };
   };
+  const { imageEdit: _noEdit, ...rest } = o; // 智谱未提供 OpenAI 风格 images/edits，不暴露
+  void _noEdit;
   return {
-    ...o,
+    ...rest,
     async video(prompt, model, opts) {
       const t = Date.now();
       const res = await json(`${root}/videos/generations`, { model, prompt, ...(opts?.imageUrl ? { image_url: opts.imageUrl } : {}) }, {}, '视频接口');
@@ -167,6 +211,28 @@ export function dashscopeAdapter(ctx: AdapterCtx): ProviderAdapter {
       const out = await poll(id);
       const images = (out.results ?? []).map((r) => ({ url: r.url }));
       return { ...meta(ctx, model, t), images, usage: { unit: 'image', input: 0, output: images.length } };
+    },
+    /** 千问图像编辑（qwen-image-2.0 系列等），同步接口 multimodal-generation/generation，1-3 张输入图。 */
+    async imageEdit(images, instruction, model, opts) {
+      if (!images.length) throw new Error('图像编辑需要至少一张输入图');
+      if (images.length > 3) throw new Error('百炼图像编辑最多支持 3 张输入图');
+      const t = Date.now();
+      const res = await json(`${native}/services/aigc/multimodal-generation/generation`, {
+        model,
+        input: { messages: [{ role: 'user', content: [...images.map((i) => ({ image: dataUrl(i) })), { text: instruction }] }] },
+        parameters: { n: opts?.n ?? 1, watermark: false, prompt_extend: true, ...(opts?.negativePrompt ? { negative_prompt: opts.negativePrompt } : {}), ...(opts?.size ? { size: opts.size.replace('x', '*') } : {}) },
+      }, {}, '百炼图像编辑接口');
+      const j = JSON.parse(res.text) as { code?: string; message?: string; output?: { choices?: { message?: { content?: { image?: string }[] } }[] }; usage?: { image_count?: number } };
+      if (j.code) throw new Error(`百炼图像编辑错误 ${j.code} ${j.message ?? ''}`);
+      const out = (j.output?.choices ?? []).flatMap((c) => c.message?.content ?? []).filter((c) => c.image).map((c) => ({ url: c.image }));
+      if (!out.length) throw new Error('百炼图像编辑未返回图像');
+      return { ...meta(ctx, model, t), images: out, usage: { unit: 'image', input: images.length, output: j.usage?.image_count ?? out.length } };
+    },
+    /** CosyVoice 语音合成（官方 WebSocket 协议） */
+    async tts(text, model, opts) {
+      const t = Date.now();
+      const r = await cosyvoiceTts({ url: cosyvoiceWsUrl(native), apiKey: ctx.apiKey, model, voice: opts?.voice || ctx.def.ttsVoice || 'longanyang', text, wsFactory: ctx.wsFactory });
+      return { ...meta(ctx, model, t), ...r };
     },
     async video(prompt, model, opts) {
       const t = Date.now();

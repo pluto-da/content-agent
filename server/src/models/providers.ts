@@ -9,13 +9,15 @@ export const BUILTIN_PROVIDERS: ProviderDef[] = [
     id: 'mock', label: 'Mock（模拟输出，仅测试）', protocol: 'mock', baseURL: 'mock://local', secretName: '', useProxy: false, region: 'test',
     capabilities: ['llm', 'vision', 'image', 'tts', 'asr', 'video', 'embedding', 'ocr'],
     models: { llm: 'mock-llm', vision: 'mock-vision', image: 'mock-image', tts: 'mock-tts', asr: 'mock-asr', video: 'mock-video', embedding: 'mock-embed', ocr: 'mock-vision' },
+    imageEditModel: 'mock-image-edit', ttsVoice: 'mock-voice',
   },
   {
     id: 'dashscope', label: '通义·阿里云百炼（千问/万相/CosyVoice/Paraformer）', protocol: 'dashscope',
     baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1', nativeBaseURL: 'https://dashscope.aliyuncs.com/api/v1',
     secretName: 'model.dashscope.key', useProxy: false, region: 'cn',
-    capabilities: ['llm', 'vision', 'ocr', 'embedding', 'image', 'video', 'asr'],
-    models: { llm: 'qwen-plus', vision: 'qwen-vl-plus', ocr: 'qwen-vl-ocr', embedding: 'text-embedding-v4', image: 'wan2.6-t2i', video: 'wan2.6-t2v', asr: 'paraformer-v2' },
+    capabilities: ['llm', 'vision', 'ocr', 'embedding', 'image', 'video', 'asr', 'tts'],
+    models: { llm: 'qwen-plus', vision: 'qwen-vl-plus', ocr: 'qwen-vl-ocr', embedding: 'text-embedding-v4', image: 'wan2.6-t2i', video: 'wan2.6-t2v', asr: 'paraformer-v2', tts: 'cosyvoice-v3-flash' },
+    imageEditModel: 'qwen-image-2.0-pro', ttsVoice: 'longanyang',
   },
   {
     id: 'deepseek', label: 'DeepSeek', protocol: 'openai', baseURL: 'https://api.deepseek.com', secretName: 'model.deepseek.key', useProxy: false, region: 'cn',
@@ -42,6 +44,7 @@ export const BUILTIN_PROVIDERS: ProviderDef[] = [
     id: 'openai', label: 'OpenAI（经代理）', protocol: 'openai', baseURL: 'https://api.openai.com/v1', secretName: 'model.openai.key', useProxy: true, region: 'global',
     capabilities: ['llm', 'vision', 'ocr', 'image', 'tts', 'asr', 'embedding'],
     models: { llm: 'gpt-4.1-mini', vision: 'gpt-4.1-mini', ocr: 'gpt-4.1-mini', image: 'gpt-image-1', tts: 'gpt-4o-mini-tts', asr: 'whisper-1', embedding: 'text-embedding-3-small' },
+    imageEditModel: 'gpt-image-1', ttsVoice: 'alloy',
   },
   {
     id: 'anthropic', label: 'Anthropic Claude（经代理）', protocol: 'anthropic', baseURL: 'https://api.anthropic.com/v1', secretName: 'model.anthropic.key', useProxy: true, region: 'global',

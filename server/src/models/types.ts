@@ -32,6 +32,10 @@ export interface ProviderDef {
   region: 'cn' | 'global' | 'local' | 'test';
   /** 每个能力的默认模型名 */
   models: Partial<Record<Capability, string>>;
+  /** 图像编辑默认模型名（属于 image 能力；为空表示该提供方未接图像编辑） */
+  imageEditModel?: string;
+  /** 语音合成默认音色 */
+  ttsVoice?: string;
 }
 
 export interface ChatMessage {
@@ -64,12 +68,15 @@ export interface EmbedResult extends BaseResult { vectors: number[][] }
 export interface RerankResult extends BaseResult { scores: { index: number; score: number }[] }
 
 export interface ImageInput { url?: string; b64?: string; mime?: string }
+export interface ImageEditOptions { n?: number; size?: string; negativePrompt?: string }
 
 /** 每个协议适配器实现其支持能力对应的方法，未实现的方法为 undefined。 */
 export interface ProviderAdapter {
   chat?(messages: ChatMessage[], model: string): Promise<ChatResult>;
   vision?(images: ImageInput[], prompt: string, model: string): Promise<ChatResult>;
   image?(prompt: string, model: string, opts?: { n?: number; size?: string }): Promise<ImageResult>;
+  /** 图像编辑：输入 1-3 张图 + 编辑指令，输出编辑后的图像 */
+  imageEdit?(images: ImageInput[], instruction: string, model: string, opts?: ImageEditOptions): Promise<ImageResult>;
   tts?(text: string, model: string, opts?: { voice?: string }): Promise<AudioResult>;
   asr?(audio: { url?: string; data?: Buffer; mime?: string }, model: string): Promise<AsrResult>;
   video?(prompt: string, model: string, opts?: { imageUrl?: string }): Promise<VideoResult>;

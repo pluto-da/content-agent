@@ -81,6 +81,11 @@ export function mockAdapter(): ProviderAdapter {
       const n = opts?.n ?? 1;
       return { ...M(model), images: Array.from({ length: n }, () => ({ b64: MOCK_PNG_B64 })), usage: { unit: 'image', input: 0, output: n } };
     },
+    async imageEdit(images, _instruction, model, opts) {
+      if (!images.length) throw new Error('图像编辑需要至少一张输入图');
+      const n = opts?.n ?? 1;
+      return { ...M(model), images: Array.from({ length: n }, () => ({ b64: MOCK_PNG_B64 })), usage: { unit: 'image', input: images.length, output: n } };
+    },
     async tts(text, model) {
       // 返回一个最小的“模拟音频”字节串（不是真实 mp3，界面会标注模拟）
       return { ...M(model), audio: Buffer.from(`MOCK-AUDIO:${text.slice(0, 50)}`), mime: 'audio/mpeg', usage: { unit: 'char', input: text.length, output: 0 } };
