@@ -1,6 +1,6 @@
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import fastifyStatic from '@fastify/static';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, normalize, relative } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { openDb, getSetting, setSetting, type DB } from './db.js';
@@ -16,7 +16,7 @@ import { AgentFiles } from './modules/agentfiles.js';
 import { ADAPTERS, addSource, listSources, recentRuns, runSource, sourceStatus, Scheduler } from './sources/index.js';
 import type { SourceContext } from './sources/types.js';
 import { listItems } from './modules/library.js';
-import { PLATFORMS, isPlatform, generateTopics, listTopics, rewrite, listDrafts, getDraft, editDraft, setDraftStatus, draftEdits, replyDraft, type Deps, type DraftStatus } from './modules/content.js';
+import { PLATFORMS, isPlatform, generateTopics, listTopics, rewrite, listDrafts, getDraft, editDraft, setDraftStatus, draftEdits, replyDraft, draftVideo, type Deps, type DraftStatus } from './modules/content.js';
 import { CREATOR_CENTERS, handoffCard, markCopied, pushWechatDraft } from './modules/handoff.js';
 import { importCsv, summarize } from './modules/analytics.js';
 import { BOARDS, fetchAllBoards, mergeLatest, matchKeywords, clusterHots, researchCluster, lastRuns } from './modules/hot.js';
@@ -149,6 +149,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
     routes: hub.routes(),
     prices: hub.prices(),
     status: hub.status(),
+    imageEdit: hub.imageEditStatus(),
   }));
   app.put('/api/models/routes', async (req) => {
     hub.setRoutes(((req.body ?? {}) as { routes?: Routes }).routes ?? {});
@@ -266,6 +267,43 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
       results.push({ platform: p, ok: r.ok, error: r.error, ...(r.result ?? {}) });
     }
     return { results };
+  });
+
+  /* ---------- 视频合成与图像编辑 ---------- */
+  app.post('/api/drafts/:id/video', async (req) => {
+    const id = num((req.params as { id: string }).id);
+    if (!getDraft(db, id)) throw new AppError('not_found', '草稿不存在', 404);
+    const r = await queue.run({ kind: 'video', label: `视频合成：草稿 #${id}`, retries: 0, timeoutMs: 900000 }, () => draftVideo(deps, id));
+    if (!r.ok) throw new AppError('video_failed', r.error ?? '视频合成失败', 500);
+    return r.result;
+  });
+  app.post('/api/images/edit', async (req) => {
+    const b = (req.body ?? {}) as { images?: { url?: string; b64?: string; mime?: string }[]; instruction?: string; n?: number; size?: string; draftId?: number };
+    const images = (b.images ?? []).slice(0, 3).map((i) => {
+      const local = i.url ? /^\/api\/media\/(\d+)\/([\w.-]+)$/.exec(i.url) : null;
+      if (local) {
+        const p = join(deps.mediaDir, local[1]!, local[2]!);
+        if (!existsSync(p)) throw new AppError('not_found', `图片不存在：${i.url}`, 404);
+        return { b64: readFileSync(p).toString('base64'), mime: 'image/png' };
+      }
+      if (i.url && !i.url.startsWith('data:') && !isPublicHttpUrl(i.url)) throw new AppError('bad_url', '图片地址必须是公网地址、data URL 或本机媒体地址');
+      return i;
+    });
+    if (!images.length || !b.instruction?.trim()) throw new AppError('bad_request', '需要至少一张图片与编辑指令');
+    const st = hub.imageEditStatus();
+    if (!st.configured) throw new AppError('not_configured', `未配置：图像编辑（${st.reason ?? ''}）`, 400, '到 设置 → 模型 为“图像生成与编辑”选择提供方');
+    const r = await hub.imageEdit('edit', images, b.instruction, { n: b.n, size: b.size });
+    const out = r.images.map((im, i) => {
+      if (im.b64 && b.draftId && getDraft(db, num(b.draftId))) {
+        const dir = join(deps.mediaDir, String(num(b.draftId)));
+        mkdirSync(dir, { recursive: true });
+        const name = `edit-${Date.now()}-${i + 1}.png`;
+        writeFileSync(join(dir, name), Buffer.from(im.b64, 'base64'));
+        return { url: `/api/media/${num(b.draftId)}/${name}` };
+      }
+      return im.url ? { url: im.url } : { b64: im.b64 };
+    });
+    return { provider: r.provider, model: r.model, mock: r.mock, images: out, usage: r.usage };
   });
 
   /* ---------- 审核 ---------- */
@@ -441,7 +479,8 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
     if (!/^\d+$/.test(draft) || !/^[\w.-]+$/.test(name)) throw new AppError('bad_path', '非法路径');
     const p = join(deps.mediaDir, draft, name);
     if (!existsSync(p)) throw new AppError('not_found', '文件不存在', 404);
-    const type = name.endsWith('.png') ? 'image/png' : name.endsWith('.mp3') ? 'audio/mpeg' : name.endsWith('.srt') ? 'text/plain; charset=utf-8' : 'application/octet-stream';
+    const MEDIA_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', mp3: 'audio/mpeg', wav: 'audio/wav', srt: 'text/plain; charset=utf-8', mp4: 'video/mp4' };
+    const type = MEDIA_TYPES[name.split('.').pop()!.toLowerCase()] ?? 'application/octet-stream';
     return reply.type(type).send(readFileSync(p));
   });
 

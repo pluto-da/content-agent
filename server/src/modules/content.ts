@@ -10,6 +10,7 @@ import { missingCapabilities } from '../skills/loader.js';
 import type { AgentFiles } from './agentfiles.js';
 import { checkCompliance } from './compliance.js';
 import { getItems } from './library.js';
+import { composeDraftVideo, VIDEO_PLATFORMS } from './video.js';
 
 export const PLATFORMS = {
   xiaohongshu: { label: '小红书图文', skill: 'xiaohongshu-note' },
@@ -167,10 +168,30 @@ export async function rewrite(deps: Deps, topicId: number, platform: Platform): 
     }
   }
 
+  // 视频合成：配音 + 字幕 + 配图 → 竖版 MP4（抖音、视频号）
+  if (platform in VIDEO_PLATFORMS && assets.some((a) => a.type === 'audio')) {
+    const v = await composeDraftVideo(deps, draftId, { platform, script: out.voiceover || out.body, assets, imagePrompts: out.image_prompts });
+    assets.push(...v.added);
+    if (v.asset) assets.push(v.asset);
+    steps.push(...v.steps);
+  }
+
   deps.db.prepare('UPDATE drafts SET assets = ?, pipeline = ? WHERE id = ?').run(JSON.stringify(assets), JSON.stringify(steps), draftId);
   deps.db.prepare("UPDATE topics SET status = 'adopted' WHERE id = ?").run(topicId);
   deps.agent.daily(`改写草稿 #${draftId}（${PLATFORMS[platform].label}），步骤：${steps.map((s) => `${s.step}${s.ok ? '✓' : '✗'}`).join('、')}`);
   return { draftId, steps };
+}
+
+/** 为已有草稿（重新）合成视频：小红书等图文草稿可用其配图 + 正文配音生成竖版视频。 */
+export async function draftVideo(deps: Deps, draftId: number): Promise<{ steps: PipelineStep[]; assets: unknown[] }> {
+  const d = deps.db.prepare('SELECT platform, body, assets, pipeline FROM drafts WHERE id = ?').get(draftId) as { platform: string; body: string; assets: string; pipeline: string } | undefined;
+  if (!d) throw new Error('草稿不存在');
+  const assets = parseJson<{ type: string; url: string; note?: string }[]>(d.assets, []).filter((a) => a.type !== 'video');
+  const v = await composeDraftVideo(deps, draftId, { platform: d.platform, script: d.body, assets, synthesizeVoice: true, generateImages: false });
+  const next = [...assets, ...v.added, ...(v.asset ? [v.asset] : [])];
+  const steps = [...parseJson<PipelineStep[]>(d.pipeline, []).filter((s) => !s.step.startsWith('视频')), ...v.steps];
+  deps.db.prepare("UPDATE drafts SET assets = ?, pipeline = ?, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(next), JSON.stringify(steps), draftId);
+  return { steps: v.steps, assets: next };
 }
 
 /* ---------------- 审核 ---------------- */
