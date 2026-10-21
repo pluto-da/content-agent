@@ -15,6 +15,8 @@ const en: Record<string, string> = {
   导出: 'Export', 导入: 'Import', 回滚: 'Roll back', 历史版本: 'History', 记忆: 'Memory', 改进日志: 'Improvement log', 'A/B 评测': 'A/B eval',
   启用: 'Enable', 本终端: 'This device', 通知: 'Notifications', 开启通知: 'Enable notifications', 回复草稿: 'Reply draft', 跳过: 'Skip',
   打开: 'Open', '用 App 打开': 'Open app', 外部浏览器打开: 'Open in browser', 合规提示: 'Compliance', 素材: 'Assets', 流水线: 'Pipeline',
+  本地应用: 'Local apps', 网页端: 'Web', 打开应用: 'Open app', 分享草稿到应用: 'Share draft to app', 导入已安装应用: 'Import installed apps', 选择应用: 'Choose app',
+  '退出登录/清除登录': 'Log out / clear login', 已保存会话: 'Session saved', 未登录: 'Not logged in', 会话已被平台过期: 'Session expired by platform', 登录状态: 'Login status', 知乎: 'Zhihu',
   导入CSV: 'Import CSV', 生成复盘: 'Generate review', 状态: 'Status', 理由: 'Reason', 内容: 'Content', 测试: 'Test', 提供方: 'Provider',
 };
 

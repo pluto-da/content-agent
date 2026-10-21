@@ -3,6 +3,7 @@ import { get, post, put } from '../api';
 import { useT } from '../i18n';
 import type { Device } from '../runtime';
 import { Badge, Card, ErrorBox, Field, Loading, StatusBadge, useLoad, useToast } from '../ui';
+import { LocalAppsManager } from './localapps';
 
 export function AgentFiles() {
   const { t } = useT();
@@ -106,6 +107,7 @@ export function Plugins({ device }: { device: Device }) {
   useEffect(() => { if (p.data) setSel(p.data.enabled); }, [p.data]);
   const label: Record<string, string> = { phone: '手机', tablet: '平板', desktop: '电脑（App）', web: '网页' };
   return (
+    <div className="grid">
     <Card title={`${t('插件管理')} · ${t('本终端')}：${label[device]}`} actions={<button className="primary" onClick={async () => { await put('/api/plugins', { device, enabled: sel }); say('已保存，本终端导航与改写目标已更新'); p.reload(); }}>{t('保存')}</button>}>
       {toast}
       <p className="muted small">每个终端单独勾选要启用的平台模块；未启用的插件不出现在导航、改写目标与热榜采集中。插件只能声明白名单内的能力。</p>
@@ -121,6 +123,8 @@ export function Plugins({ device }: { device: Device }) {
         ))}
       </ul>
     </Card>
+    <LocalAppsManager />
+    </div>
   );
 }
 

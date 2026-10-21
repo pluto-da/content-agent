@@ -3,7 +3,42 @@ export type Runtime = 'web' | 'capacitor' | 'electron';
 export type Device = 'phone' | 'tablet' | 'desktop' | 'web';
 
 interface CapGlobal { isNativePlatform?: () => boolean; getPlatform?: () => string }
-interface ElectronBridge { isElectron: true; openExternal: (url: string) => void }
+export type LoginState = 'saved' | 'none' | 'expired';
+export interface ElectronBridge {
+  isElectron: true;
+  platform?: string;
+  openExternal: (url: string) => void;
+  creator?: { lastUrl: (id: string) => Promise<string | null>; status: (ids?: string[]) => Promise<Record<string, LoginState>>; logout: (id: string) => Promise<{ ok: boolean }> };
+  localApp?: {
+    pick: () => Promise<string | null>;
+    launch: (o: { execPath?: string | null; protocol?: string | null }) => Promise<{ ok: boolean; error?: string }>;
+    share: (o: { text: string; draftId?: number; execPath?: string | null; protocol?: string | null }) => Promise<{ ok: boolean; error?: string; copied?: boolean; mediaDir?: string | null }>;
+  };
+}
+
+export function electronBridge(w: Window = window): ElectronBridge | undefined {
+  return (w as unknown as { contentAgent?: ElectronBridge }).contentAgent;
+}
+
+/** 本机系统（用于“本地应用”选择对应的条目）。网页版根据 UA 推断，桌面浏览器返回 windows/mac。 */
+export type AppOs = 'android' | 'ios' | 'windows' | 'mac';
+export function appOs(w: Window = window): AppOs | null {
+  const rt = runtime(w);
+  if (rt === 'capacitor') {
+    const p = (w as unknown as { Capacitor?: CapGlobal }).Capacitor?.getPlatform?.();
+    return p === 'android' || p === 'ios' ? p : null;
+  }
+  if (rt === 'electron') {
+    const p = electronBridge(w)?.platform;
+    return p === 'win32' ? 'windows' : p === 'darwin' ? 'mac' : null;
+  }
+  const ua = w.navigator?.userAgent ?? '';
+  if (/Android/i.test(ua)) return 'android';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+  if (/Windows/i.test(ua)) return 'windows';
+  if (/Macintosh|Mac OS X/i.test(ua)) return 'mac';
+  return null;
+}
 
 export function runtime(w: Window = window): Runtime {
   const cap = (w as unknown as { Capacitor?: CapGlobal }).Capacitor;

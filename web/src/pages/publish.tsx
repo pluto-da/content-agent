@@ -1,10 +1,12 @@
-import { createElement, useEffect, useState } from 'react';
+import { createElement, useCallback, useEffect, useState } from 'react';
 import { get, post, put, mediaUrl } from '../api';
 import { useT } from '../i18n';
-import { copyText, openExternal, runtime } from '../runtime';
+import { shareToLocalApp } from '../native';
+import { appOs, copyText, electronBridge, openExternal, runtime, type LoginState } from '../runtime';
 import { Badge, Card, ErrorBox, Field, Loading, StatusBadge, useLoad, useToast } from '../ui';
+import { LocalAppPanel, useLocalApps } from './localapps';
 
-const PLATFORM_LABEL: Record<string, string> = { xiaohongshu: '小红书', douyin_script: '抖音', channels: '视频号', wechat_article: '公众号', xianyu: '闲鱼', x_post: 'X' };
+export const PLATFORM_LABEL: Record<string, string> = { xiaohongshu: '小红书', douyin_script: '抖音', channels: '视频号', wechat_article: '公众号', xianyu: '闲鱼', x_post: 'X', zhihu_answer: '知乎回答', zhihu_article: '知乎文章' };
 
 export function Review({ openCenter }: { openCenter: (id: string) => void }) {
   const { t } = useT();
@@ -45,11 +47,19 @@ function DraftEditor({ id, onChange, openCenter }: { id: number; onChange: () =>
   const [card, setCard] = useState<any>(null);
   const [err, setErr] = useState<any>(null);
   const [toast, say] = useToast();
+  const [questionUrl, setQuestionUrl] = useState('');
+  const localApps = useLocalApps();
   useEffect(() => { if (d.data) { setBody(d.data.draft.body); setTitle(d.data.draft.title ?? ''); } }, [d.data]);
-  useEffect(() => { if (d.data?.draft.status === 'approved') get(`/api/drafts/${id}/handoff`).then(setCard).catch(setErr); else setCard(null); }, [d.data, id]);
+  useEffect(() => {
+    if (d.data?.draft.status !== 'approved') { setCard(null); return; }
+    const q = questionUrl.trim() ? `?questionUrl=${encodeURIComponent(questionUrl.trim())}` : '';
+    get(`/api/drafts/${id}/handoff${q}`).then(setCard).catch(setErr);
+  }, [d.data, id, questionUrl]);
   const act = async (fn: () => Promise<void>) => { setErr(null); try { await fn(); d.reload(); onChange(); } catch (e) { setErr(e); } };
   if (!d.data) return <Card><Loading show /><ErrorBox error={d.error} /></Card>;
   const dr = d.data.draft;
+  const os = appOs();
+  const localApp = card && os ? localApps.data?.apps?.find((a) => a.platform === card.center.id && a.os === os) : undefined;
   return (
     <Card title={`#${dr.id} · ${PLATFORM_LABEL[dr.platform]}`} actions={<StatusBadge status={dr.status} />}>
       {toast}
@@ -83,13 +93,24 @@ function DraftEditor({ id, onChange, openCenter }: { id: number; onChange: () =>
         <div className="handoff" aria-label="发布交接卡">
           <h3>发布交接</h3>
           <ul className="small">{card.checklist.map((c: string) => <li key={c}>☐ {c}</li>)}</ul>
+          {card.platform === 'zhihu_answer' && (
+            <Field label="知乎问题链接（可选）" hint={card.needsQuestionUrl ? '粘贴要回答的问题链接，复制后会直接打开该问题页；不填则打开知乎创作中心' : '复制后将打开该问题页'}>
+              <input value={questionUrl} onChange={(e) => setQuestionUrl(e.target.value)} placeholder="https://www.zhihu.com/question/…" />
+            </Field>
+          )}
           <div className="row wrap">
             <button className="primary" onClick={() => act(async () => {
               const ok = await copyText(card.copyText);
               await post(`/api/drafts/${id}/handoff/copy`);
               say(ok ? '已复制全文，请在官方 App 中粘贴并由你本人发布' : '复制失败，请手动复制');
-              openCenter(card.center.id);
-            })}>{t('复制')}并{t('去发布')}</button>
+              if (card.jumpUrl && card.jumpUrl !== card.center.url) await openExternal(card.jumpUrl);
+              else openCenter(card.center.id);
+            })}>{t('复制')}并{t('去发布')}（{t('网页端')}）</button>
+            <button onClick={() => act(async () => {
+              const r = await shareToLocalApp(localApp ?? null, { id, text: card.copyText, assets: dr.assets });
+              if (r.ok) await post(`/api/drafts/${id}/handoff/copy`);
+              say(r.message);
+            })} title={localApp ? `分享到 ${localApp.label}` : '未登记本机应用时，使用系统分享或仅复制'}>{t('分享草稿到应用')}{localApp ? `（${localApp.label}）` : ''}</button>
             {card.intentUrl && <button onClick={() => openExternal(card.intentUrl)}>打开 X 发帖页（预填）</button>}
             {card.platform === 'wechat_article' && <button disabled={!card.canPushWechatDraft} title={card.canPushWechatDraft ? '' : '需配置 AppID、AppSecret 与封面素材 media_id'} onClick={() => act(async () => { const r = await post(`/api/drafts/${id}/handoff/wechat-draft`); say(`已进入草稿箱 media_id=${r.media_id}`); })}>{t('推送公众号草稿箱')}</button>}
           </div>
@@ -101,33 +122,102 @@ function DraftEditor({ id, onChange, openCenter }: { id: number; onChange: () =>
   );
 }
 
-/** 创作中心：用户自己登录、自己操作。Agent 不注入脚本、不读取页面、不自动点击。 */
+const LOGIN_LABEL: Record<LoginState, [string, 'ok' | 'neutral' | 'warn']> = { saved: ['已保存会话', 'ok'], none: ['未登录', 'neutral'], expired: ['会话已被平台过期', 'warn'] };
+
+/** 桌面端各平台登录状态：只根据该平台分区内是否存在其域名的 Cookie（主进程只数数量，不读值）。 */
+function useLoginStatus(ids: string[]) {
+  const [status, setStatus] = useState<Record<string, LoginState>>({});
+  const key = ids.join(',');
+  const refresh = useCallback(async () => {
+    const b = electronBridge()?.creator;
+    if (!b || !key) return;
+    try { setStatus(await b.status(key.split(','))); } catch { /* 忽略 */ }
+  }, [key]);
+  useEffect(() => { void refresh(); }, [refresh]);
+  return { status, refresh };
+}
+
+/** 桌面端 webview：恢复上次地址；每个平台独立持久分区。 */
+function CreatorWebview({ center, onNavigate }: { center: any; onNavigate: () => void }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const b = electronBridge()?.creator;
+    (b ? b.lastUrl(center.id).catch(() => null) : Promise.resolve(null)).then((u) => { if (alive) setSrc(u || center.url); });
+    return () => { alive = false; };
+  }, [center.id, center.url]);
+  const ref = useCallback((el: HTMLElement | null) => {
+    if (!el) return;
+    el.addEventListener('did-navigate', onNavigate);
+  }, [onNavigate]);
+  if (!src) return <Loading show />;
+  return createElement('webview', { key: center.id, ref, src, partition: `persist:creator-${center.id}`, className: 'webview', allowpopups: 'false', title: center.label });
+}
+
+/** 创作中心：用户自己登录、自己操作。Agent 不注入脚本、不读取页面、不自动点击。每个平台提供网页端与本地应用两种方式。 */
 export function CreatorCenters({ active, setActive }: { active: string; setActive: (id: string) => void }) {
   const { t } = useT();
   const c = useLoad(() => get('/api/creator-centers'));
+  const apps = useLocalApps();
   const rt = runtime();
   const centers: any[] = c.data?.centers ?? [];
   const cur = centers.find((x) => x.id === active) ?? centers[0];
+  const [mode, setMode] = useState<'web' | 'app'>('web');
+  const { status, refresh } = useLoginStatus(rt === 'electron' ? centers.map((x) => x.id) : []);
+  const [toast, say] = useToast();
+  const [reloadKey, setReloadKey] = useState(0);
+  const st = cur ? status[cur.id] : undefined;
   return (
     <div className="creator">
-      <div role="tablist" className="tabs">
-        {centers.map((x) => <button key={x.id} role="tab" aria-selected={cur?.id === x.id} className={cur?.id === x.id ? 'active' : ''} onClick={() => setActive(x.id)}>{x.label}</button>)}
+      {toast}
+      <div role="tablist" className="tabs" aria-label="平台">
+        {centers.map((x) => (
+          <button key={x.id} role="tab" aria-selected={cur?.id === x.id} className={cur?.id === x.id ? 'active' : ''} onClick={() => setActive(x.id)}>
+            {x.label}{status[x.id] === 'saved' ? ' ●' : status[x.id] === 'expired' ? ' ⚠' : ''}
+          </button>
+        ))}
       </div>
       <ErrorBox error={c.error} />
       {cur && (
         <>
-          <p className="muted small">由你本人登录与操作；登录态只保存在本机。本应用不会在该页面中执行任何自动点击、脚本注入或数据读取。</p>
-          {rt === 'electron'
-            ? createElement('webview', { key: cur.id, src: cur.url, partition: `persist:creator-${cur.id}`, className: 'webview', allowpopups: 'false', title: cur.label })
-            : (
-              <Card title={cur.label}>
-                <p>{rt === 'web' ? '网页版中，官方创作后台禁止被嵌入，因此在新标签页打开。' : '在系统浏览器组件中打开官方创作后台（登录态由系统在本机保存）。'}</p>
-                <div className="row wrap">
-                  <button className="primary" onClick={() => openExternal(cur.url)}>{t('打开')} {cur.url}</button>
-                  {rt === 'capacitor' && <button onClick={() => { window.location.href = cur.app; }}>{t('用 App 打开')}</button>}
-                </div>
-              </Card>
+          <div className="row wrap between">
+            <div role="tablist" className="tabs" aria-label="方式">
+              <button role="tab" aria-selected={mode === 'web'} className={mode === 'web' ? 'active' : ''} onClick={() => setMode('web')}>{t('网页端')}（{t('创作中心')}）</button>
+              <button role="tab" aria-selected={mode === 'app'} className={mode === 'app' ? 'active' : ''} onClick={() => setMode('app')}>{t('本地应用')}</button>
+            </div>
+            {mode === 'web' && rt === 'electron' && (
+              <div className="row wrap">
+                {st && <Badge tone={LOGIN_LABEL[st][1]}>{t(LOGIN_LABEL[st][0])}</Badge>}
+                <button onClick={() => void refresh()}>{t('刷新')}</button>
+                <button className="danger" onClick={async () => {
+                  if (!window.confirm(`确定退出「${cur.label}」吗？将清除本机保存的该平台登录信息（Cookie、本地存储与缓存），下次需要重新登录。`)) return;
+                  await electronBridge()?.creator?.logout(cur.id);
+                  say('已清除该平台登录信息');
+                  await refresh();
+                  setReloadKey((k) => k + 1);
+                }}>{t('退出登录/清除登录')}</button>
+              </div>
             )}
+          </div>
+          {mode === 'app' ? <LocalAppPanel platform={cur.id} data={apps.data} reload={apps.reload} /> : (
+            <>
+              <p className="muted small">由你本人登录与操作；登录态只保存在本机，直到你点击“退出登录/清除登录”（平台也可能因改密、安全校验等原因让会话失效，届时重新登录即可）。本应用不会在该页面中执行任何自动点击、脚本注入或数据读取。</p>
+              {rt === 'electron'
+                ? <CreatorWebview key={`${cur.id}-${reloadKey}`} center={cur} onNavigate={refresh} />
+                : (
+                  <Card title={cur.label}>
+                    <p>{rt === 'web'
+                      ? '网页版中，官方创作后台禁止被嵌入，因此在新标签页打开；登录态由你的浏览器保存。'
+                      : '在系统浏览器组件中打开官方创作后台（Android 为 Custom Tabs，与系统浏览器共享登录；iOS 为 SFSafariViewController，登录态由系统在本机保存）。'}</p>
+                    <p className="muted small">{t('登录状态')}：由浏览器保存，本应用无法也不会检测。</p>
+                    <div className="row wrap">
+                      <button className="primary" onClick={() => openExternal(cur.url)}>{t('打开')} {cur.url}</button>
+                      <button onClick={() => setMode('app')}>{t('用 App 打开')}</button>
+                    </div>
+                  </Card>
+                )}
+            </>
+          )}
         </>
       )}
     </div>
