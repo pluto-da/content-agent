@@ -153,6 +153,20 @@ CREATE TABLE IF NOT EXISTS hot_runs (
   from_cache INTEGER NOT NULL DEFAULT 0,
   fetched_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS local_apps (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  platform TEXT NOT NULL,
+  os TEXT NOT NULL,
+  label TEXT NOT NULL DEFAULT '',
+  package_name TEXT,
+  deep_link TEXT,
+  url_scheme TEXT,
+  exec_path TEXT,
+  protocol TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(platform, os)
+);
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL

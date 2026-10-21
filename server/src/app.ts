@@ -22,6 +22,7 @@ import { importCsv, summarize } from './modules/analytics.js';
 import { BOARDS, fetchAllBoards, mergeLatest, matchKeywords, clusterHots, researchCluster, lastRuns } from './modules/hot.js';
 import { PLUGINS, enabledFor, type Device, type EnabledMap } from './modules/plugins.js';
 import { exportBackup, importBackup } from './modules/backup.js';
+import { registerLocalApps } from './modules/localapps.js';
 import { abTest, loadBenchmark } from './modules/evals.js';
 
 export interface AppOptions {
@@ -288,7 +289,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   });
 
   /* ---------- 交接 ---------- */
-  app.get('/api/drafts/:id/handoff', async (req) => handoffCard(db, vault, num((req.params as { id: string }).id)));
+  app.get('/api/drafts/:id/handoff', async (req) => handoffCard(db, vault, num((req.params as { id: string }).id), { questionUrl: (req.query as { questionUrl?: string }).questionUrl }));
   app.post('/api/drafts/:id/handoff/copy', async (req) => {
     try { markCopied(db, agent, num((req.params as { id: string }).id)); } catch (e) { throw new AppError('handoff_failed', (e as Error).message); }
     return { ok: true, lastStep: '请在官方 App 或创作中心粘贴并由你本人点击发布' };
@@ -300,6 +301,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
     return { ok: true, ...r.result, lastStep: '已进入公众号草稿箱，请在公众号后台预览并由你本人点击发布' };
   });
   app.get('/api/creator-centers', async () => ({ centers: CREATOR_CENTERS }));
+  registerLocalApps(app, db, (code, message, status) => new AppError(code, message, status ?? 400));
 
   /* ---------- 回复草稿 ---------- */
   app.post('/api/replies/draft', async (req) => {

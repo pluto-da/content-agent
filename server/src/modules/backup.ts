@@ -4,7 +4,7 @@ import type { DB } from '../db.js';
 import type { AgentFiles } from './agentfiles.js';
 
 /** 参与备份的业务表。settings 中的密钥类键不会出现（密钥在独立的加密密钥库中）。 */
-export const BACKUP_TABLES = ['sources', 'items', 'topics', 'drafts', 'draft_edits', 'handoffs', 'metrics', 'versions', 'hot_runs', 'hot_items', 'usage', 'settings'] as const;
+export const BACKUP_TABLES = ['sources', 'items', 'topics', 'drafts', 'draft_edits', 'handoffs', 'metrics', 'versions', 'hot_runs', 'hot_items', 'usage', 'local_apps', 'settings'] as const;
 
 export interface Backup { format: 'content-agent-backup'; version: 1; createdAt: string; tables: Record<string, Record<string, unknown>[]>; agentFiles: Record<string, string> }
 

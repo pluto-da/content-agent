@@ -18,6 +18,8 @@ export const PLATFORMS = {
   wechat_article: { label: '公众号长文', skill: 'wechat-article' },
   xianyu: { label: '闲鱼文案', skill: 'xianyu-listing' },
   x_post: { label: 'X 帖子', skill: 'x-post' },
+  zhihu_answer: { label: '知乎回答', skill: 'zhihu-answer' },
+  zhihu_article: { label: '知乎专栏文章', skill: 'zhihu-article' },
 } as const;
 export type Platform = keyof typeof PLATFORMS;
 export function isPlatform(p: string): p is Platform {

@@ -14,4 +14,4 @@ version: 1
 
 ## 输出格式
 {"topics":[{"title":"","angle":"","platforms":["xiaohongshu"],"score":0.8,"reason":"","risk":"","item_ids":[1]}]}
-platforms 只能取：xiaohongshu、douyin_script、channels、wechat_article、xianyu、x_post。
+platforms 只能取：xiaohongshu、douyin_script、channels、wechat_article、xianyu、x_post、zhihu_answer、zhihu_article。
