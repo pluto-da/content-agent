@@ -1,0 +1,9 @@
+[
+  { "id": "xhs-1", "platform": "xiaohongshu", "topic": "秋季换季护肤的三个误区", "checks": { "minLen": 50, "maxLen": 1200, "requireTitle": true, "noComplianceWarn": true, "forbid": ["加微信"] } },
+  { "id": "xhs-2", "platform": "xiaohongshu", "topic": "县城周末一日游路线", "checks": { "minLen": 50, "maxLen": 1200, "requireTitle": true } },
+  { "id": "dy-1", "platform": "douyin_script", "topic": "普通人如何用 AI 写周报", "checks": { "minLen": 50, "maxLen": 800, "requireTitle": true, "noComplianceWarn": true } },
+  { "id": "ch-1", "platform": "channels", "topic": "退休金调整怎么看", "checks": { "minLen": 50, "maxLen": 800, "requireTitle": true } },
+  { "id": "wx-1", "platform": "wechat_article", "topic": "考研最后两个月的时间安排", "checks": { "minLen": 50, "requireTitle": true } },
+  { "id": "xy-1", "platform": "xianyu", "topic": "九成新 iPad 第九代 64G", "checks": { "minLen": 30, "forbid": ["加微信", "vx"], "noComplianceWarn": true } },
+  { "id": "x-1", "platform": "x_post", "topic": "国产大模型价格战", "checks": { "minLen": 10, "maxLen": 280 } }
+]

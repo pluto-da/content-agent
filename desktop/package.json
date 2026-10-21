@@ -1,0 +1,31 @@
+{
+  "name": "content-agent-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "内容运营助手桌面端（Electron 外壳 + 本机后端）",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis",
+    "dist:mac": "electron-builder --mac dmg"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "local.contentagent.desktop",
+    "productName": "内容运营助手",
+    "directories": { "output": "release" },
+    "files": ["main.cjs", "preload.cjs", "package.json"],
+    "extraResources": [
+      { "from": "../server/dist", "to": "server/dist" },
+      { "from": "../server/node_modules", "to": "server/node_modules", "filter": ["**/*"] },
+      { "from": "../node_modules", "to": "node_modules", "filter": ["**/*"] },
+      { "from": "../web/dist", "to": "web/dist" },
+      { "from": "../agent", "to": "agent" }
+    ],
+    "win": { "target": "nsis" },
+    "mac": { "target": "dmg", "category": "public.app-category.productivity" }
+  }
+}

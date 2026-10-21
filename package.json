@@ -1,0 +1,39 @@
+{
+  "name": "content-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w web",
+    "lint": "eslint .",
+    "test": "npm run test -w server && npm run test -w web",
+    "coverage": "npm run coverage -w server && npm run coverage -w web",
+    "build": "npm run build -w server && npm run build -w web",
+    "start": "node server/dist/index.js",
+    "e2e": "node server/dist/scripts/e2e.js",
+    "ci": "bash scripts/ci.sh",
+    "package": "bash scripts/package.sh",
+    "app:android": "bash scripts/build-android-debug.sh",
+    "app:ios": "bash scripts/build-ios.sh",
+    "app:desktop": "bash scripts/build-desktop.sh",
+    "dev:server": "npm run dev -w server",
+    "dev:web": "npm run dev -w web"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^5.0.5",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}

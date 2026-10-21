@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+data/
+release/
+*.log
+.env
+.env.*
+secrets.enc.json
+master.key
+mobile/android/
+mobile/ios/
+out/

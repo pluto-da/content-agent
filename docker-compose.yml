@@ -1,0 +1,13 @@
+services:
+  content-agent:
+    build: .
+    image: content-agent:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8787:8787"   # 默认只对本机开放；局域网访问请改为 "8787:8787" 并务必设置 CA_ACCESS_TOKEN
+    environment:
+      CA_ACCESS_TOKEN: ${CA_ACCESS_TOKEN:-}
+      CA_MASTER_KEY: ${CA_MASTER_KEY:-}
+      CA_SCHEDULER: ${CA_SCHEDULER:-0}
+    volumes:
+      - ./data:/data

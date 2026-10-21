@@ -1,0 +1,15 @@
+---
+name: x-post
+description: 把选题改写成 X 帖子（280 字符以内）
+platform: x_post
+tools: [llm.chat, compliance.check, handoff.x_intent]
+models: [llm]
+version: 1
+---
+## 步骤
+1. 正文不超过 280 字符（中文约 140 字），一个核心观点。
+2. 可附 1–2 个话题标签。
+3. 如需展开，另给出 2–4 条串帖内容，放在 body 中用“---”分隔。
+
+## 输出格式
+{"title":"","body":"","tags":[""]}

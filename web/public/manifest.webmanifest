@@ -1,0 +1,15 @@
+{
+  "name": "内容运营助手 Content Agent",
+  "short_name": "内容助手",
+  "description": "合规的多平台内容获取与运营助手：发布由你本人完成",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#ea580c",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
