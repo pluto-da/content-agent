@@ -1,0 +1,12 @@
+name: diag
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          mkdir /tmp/d && cd /tmp/d && echo ok > ok.txt && git init -q && git checkout -q -b diag-ok
+          git config user.email ci@local && git config user.name ci && git add -A && git commit -qm ok
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" diag-ok
