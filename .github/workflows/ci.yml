@@ -13,6 +13,7 @@ jobs:
       - run: npm ci
       - run: bash scripts/ci.sh
         continue-on-error: true
+        continue-on-error: true
   android-debug-apk:
     runs-on: ubuntu-latest
     steps:
