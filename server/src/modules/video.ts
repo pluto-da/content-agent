@@ -72,7 +72,7 @@ let ffmpegOk: boolean | undefined;
 /** 检查 ffmpeg 是否可用（结果缓存）。 */
 export async function ffmpegAvailable(ffmpegPath = FFMPEG): Promise<boolean> {
   if (ffmpegOk !== undefined && ffmpegPath === FFMPEG) return ffmpegOk;
-  let ok = false;
+  let ok: boolean;
   try { ok = (await run(ffmpegPath, ['-hide_banner', '-version'], { timeoutMs: 10000 })).code === 0; } catch { ok = false; }
   if (ffmpegPath === FFMPEG) ffmpegOk = ok;
   return ok;
