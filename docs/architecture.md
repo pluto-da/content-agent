@@ -40,10 +40,12 @@ flowchart LR
 | 任务队列 | `queue.ts`：并发上限 3、指数退避（1s 起，上限 60s）、超时；“未配置/robots 禁止”为不可重试错误；任务写入 tasks 表 |
 | 采集合规 | `sources/web.ts`：robots 解析（最长匹配），5xx 视为禁止；`HostRateLimiter` 同域名默认 ≥5 秒；拒绝内网地址 |
 | 系统文件 | `modules/agentfiles.ts`：编辑即生成版本，回滚生成新记录，历史不删；每日日志与主题记忆；APPROVAL 只能更严格 |
-| 发布交接 | `modules/handoff.ts`：只做草稿箱推送、复制、深链接；没有任何发布接口调用 |
+| 发布交接 | `modules/handoff.ts`：只做草稿箱推送、复制、深链接；没有任何发布接口调用。知乎：复制后打开专栏写作页或用户提供的问题页 |
+| 登录保持 | `desktop/main.cjs`：每平台持久分区 `persist:creator-<平台>`；跳转/每 60 秒/退出前 `cookies.flushStore()`；启动不清理；`creator-state.json` 记录上次地址；“退出登录/清除登录”是唯一的 `clearStorageData` 调用；状态只按域名 Cookie 数量判断 |
+| 本地应用 | `modules/localapps.ts`（`local_apps` 表、校验、导入导出）；客户端 `web/src/native.ts`：Android/iOS 原生插件 `LocalApps`（`mobile/native/`，由 `mobile/scripts/apply-native.mjs` 注入工程），桌面经 IPC 用 `shell.openPath`/`openExternal`；只启动与分享，不做界面自动化 |
 | 安全 | CSP、X-Frame-Options、访问口令（定时比较）、密钥不回显、日志脱敏、前端包密钥扫描、npm audit |
 | 离线 | Service Worker：外壳缓存 + 接口 GET 网络优先回落缓存；前端显示“离线” |
 
 ## 数据表
 
-sources、runs、items、topics、drafts、draft_edits、handoffs、metrics、versions、tasks、usage、hot_items、hot_runs、settings。
+sources、runs、items、topics、drafts、draft_edits、handoffs、metrics、versions、tasks、usage、hot_items、hot_runs、local_apps、settings。

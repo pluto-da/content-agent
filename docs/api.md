@@ -34,10 +34,15 @@
 | GET | `/api/drafts/:id` | 草稿详情与修改记录 / 编辑草稿（留痕） |
 | PUT | `/api/drafts/:id` | 草稿详情与修改记录 / 编辑草稿（留痕） |
 | POST | `/api/drafts/:id/status` | 审核状态流转 |
-| GET | `/api/drafts/:id/handoff` | 发布交接卡 |
+| GET | `/api/drafts/:id/handoff` | 发布交接卡；`?questionUrl=` 知乎问题链接（仅接受 zhihu.com/question/数字），返回 `jumpUrl` |
 | POST | `/api/drafts/:id/handoff/copy` | 记录复制交接（需已通过） |
 | POST | `/api/drafts/:id/handoff/wechat-draft` | 推送公众号草稿箱（不发布） |
-| GET | `/api/creator-centers` | 官方创作中心列表 |
+| GET | `/api/creator-centers` | 官方创作中心列表（含官方 App 包名与 Scheme 预设） |
+| GET | `/api/local-apps` | 本地应用条目、各平台官方 App 预设 |
+| PUT | `/api/local-apps` | 新增或更新条目（同平台同系统唯一）：`{platform, os: android/ios/windows/mac, label, package_name, deep_link, url_scheme, exec_path, protocol}` |
+| DELETE | `/api/local-apps/:id` | 删除条目 |
+| GET | `/api/local-apps/export` | 导出本地应用 JSON（`format: content-agent-local-apps`） |
+| POST | `/api/local-apps/import` | 导入本地应用 JSON（逐条校验，返回无效条目） |
 | POST | `/api/replies/draft` | 评论/私信回复草稿（不发送） |
 | GET | `/api/hot` | 热榜最新状态、跨榜合并、关键词命中 |
 | POST | `/api/hot/fetch` | 采集热榜（robots 检查、限速、缓存） |

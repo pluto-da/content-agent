@@ -34,8 +34,18 @@ git pull && npm ci && npm run build && 重启
 ```
 数据库表结构使用 `CREATE TABLE IF NOT EXISTS`，向后兼容新增表；大版本升级前先导出备份。
 
+## 4.1 电脑 App 的登录数据
+- 位置：系统应用数据目录（Windows `%APPDATA%/内容运营助手`，macOS `~/Library/Application Support/内容运营助手`）下的 `Partitions/creator-<平台>`，以及记录上次地址的 `creator-state.json`。
+- 升级安装不会清理；修改 `productName` 会改变该目录，导致需要重新登录。
+
+## 4.2 移动端原生插件
+- `npx cap add android|ios` 之后运行 `node mobile/scripts/apply-native.mjs`（`scripts/build-android-debug.sh` / `build-ios.sh` 已自动调用）：写入 LocalApps 插件、Android `<queries>` 与 FileProvider、iOS `LSApplicationQueriesSchemes`。
+- iOS 首次需在 Xcode 中把 `LocalAppsPlugin.swift`、`MainViewController.swift` 加入 App target。
+- 额外 Android 包名：`CA_EXTRA_PACKAGES=com.a.b,com.c.d`。
+
 ## 5. 备份与恢复
 - 界面：设置 → 备份 → 导出 / 导入（导入前自动备份到 `data/backups/`）。
+- 备份包含本地应用登记（`local_apps`），不包含任何平台登录信息。
 - 文件级：停止服务后复制整个 `data/` 目录。**主密钥丢失将无法解密密钥库**，需重新填写各平台密钥。
 
 ## 6. 排障
