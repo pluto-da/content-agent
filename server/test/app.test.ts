@@ -139,7 +139,7 @@ describe('API 全流程（mock 模型）', () => {
     const by = Object.fromEntries(r.body.results.map((x: any) => [x.board, x]));
     expect(by.baidu.status).toBe('ok');
     expect(by.weibo.status).toBe('robots_disallow');
-    expect(by.douyin.status).toBe('parse_error');
+    expect(by.douyin.status).toBe('needs_official_api');
     expect(by.bilibili.status).toBe('network_error');
     expect(by.x_trends.status).toBe('not_configured');
     expect(by.google_trends.status).toBe('ok');

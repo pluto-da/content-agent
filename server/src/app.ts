@@ -49,6 +49,7 @@ export class AppError extends Error {
 
 export const SECRET_NAMES = [
   'wechat.appid', 'wechat.secret', 'wechat.thumb_media_id', 'x.bearer', 'douyin.access_token', 'douyin.open_id',
+  'douyin.client_key', 'douyin.client_secret', 'douyin.client_token',
   'model.dashscope.key', 'model.deepseek.key', 'model.zhipu.key', 'model.ark.key', 'model.minimax.key', 'model.kimi.key',
   'model.openai.key', 'model.anthropic.key', 'model.gemini.key', 'model.elevenlabs.key',
 ];
