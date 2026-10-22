@@ -27,6 +27,8 @@ export interface ProviderDef {
   nativeBaseURL?: string;
   capabilities: Capability[];
   secretName: string; // 空字符串表示无需密钥（mock、本地）
+  /** 密钥库没有时，从该环境变量读取密钥（服务器部署用，如 MIMO_API_KEY） */
+  envSecret?: string;
   useProxy: boolean;
   local?: boolean;
   region: 'cn' | 'global' | 'local' | 'test';
@@ -44,6 +46,31 @@ export interface ProviderDef {
   contextWindow?: number;
   /** 单次最大输出 token 上限（默认值会被它截断） */
   maxOutputTokens?: number;
+  /** 设置里可选的模型（下拉提示用；用户仍可手填） */
+  modelOptions?: string[];
+  /** 可一键切换的基础地址（如 MiMo 按量 / Token Plan） */
+  baseURLPresets?: { label: string; url: string }[];
+  /** 内置默认单价（键为模型名；用户在设置里填的单价优先） */
+  defaultPrices?: Record<string, ModelPrice>;
+  /** OpenAI 协议方言差异（只影响对话请求） */
+  chatDialect?: ChatDialect;
+}
+
+/** 单价：token 为每百万；image 为每张；char 为每万字符；second 为每分钟；call 为每次。cachedInput：缓存命中输入每百万（不填按 input 计）。 */
+export interface ModelPrice { input?: number; output?: number; cachedInput?: number }
+
+/** OpenAI 兼容服务商的请求差异。 */
+export interface ChatDialect {
+  /** 输出上限参数名（默认 max_tokens） */
+  maxTokensParam?: 'max_tokens' | 'max_completion_tokens';
+  /** 思考开关写法：type = thinking: {type: enabled|disabled}（MiMo 等）；不填则不传 */
+  thinkingParam?: 'type';
+  /** 思考模式下服务商会强制采样参数，此时不传 temperature（避免误以为确定性） */
+  thinkingIgnoresSampling?: boolean;
+  /** temperature 取值范围（超出则截断） */
+  temperatureRange?: [number, number];
+  /** 视为“输出被截断、可重试一次”的 finish_reason（如 MiMo 的 repetition_truncation） */
+  retryFinishReasons?: string[];
 }
 
 export interface ChatMessage {
@@ -59,6 +86,8 @@ export interface Usage {
   output: number;
   /** 输入中命中服务商上下文缓存的 token 数（取得到才有） */
   cachedInput?: number;
+  /** 输出中的思考 token 数（取得到才有，已包含在 output 内） */
+  reasoningOutput?: number;
 }
 
 /** 结构化输出约束：原生 Schema 或仅 JSON 模式。 */
@@ -88,6 +117,10 @@ export interface ChatResult extends BaseResult {
   content: string;
   /** 思考内容：只供调试查看，不进入成稿与日志正文 */
   reasoning?: string;
+  /** 服务商返回的 finish_reason */
+  finishReason?: string;
+  /** 非致命告警（如 repetition_truncation 重试后仍被截断） */
+  warnings?: string[];
 }
 export interface ImageResult extends BaseResult { images: { url?: string; b64?: string }[] }
 export interface AudioResult extends BaseResult { audio: Buffer; mime: string }

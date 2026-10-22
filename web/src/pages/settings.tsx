@@ -9,7 +9,7 @@ export type Theme = 'light' | 'dark' | 'system';
 const SECRET_LABELS: Record<string, string> = {
   'wechat.appid': '公众号 AppID', 'wechat.secret': '公众号 AppSecret', 'wechat.thumb_media_id': '公众号默认封面 media_id',
   'x.bearer': 'X Bearer Token', 'douyin.access_token': '抖音 access_token（用户授权）', 'douyin.open_id': '抖音 open_id',
-  'model.dashscope.key': '百炼 DashScope API Key', 'model.deepseek.key': 'DeepSeek API Key', 'model.zhipu.key': '智谱 API Key', 'model.ark.key': '火山方舟 API Key',
+  'model.dashscope.key': '百炼 DashScope API Key', 'model.deepseek.key': 'DeepSeek API Key', 'model.mimo.key': '小米 MiMo API Key（sk- 按量 / tp- Token Plan）', 'model.zhipu.key': '智谱 API Key', 'model.ark.key': '火山方舟 API Key',
   'model.minimax.key': 'MiniMax API Key', 'model.kimi.key': 'Kimi API Key', 'model.openai.key': 'OpenAI API Key', 'model.anthropic.key': 'Anthropic API Key',
   'model.gemini.key': 'Gemini API Key', 'model.elevenlabs.key': 'ElevenLabs API Key',
 };
@@ -105,20 +105,36 @@ function Models() {
   const [prices, setPrices] = useState('{}');
   const [err, setErr] = useState<any>(null);
   const [toast, say] = useToast();
-  useEffect(() => { if (m.data) { setRoutes(m.data.routes ?? {}); setPrices(JSON.stringify(m.data.prices ?? {}, null, 2)); } }, [m.data]);
+  const [dirty, setDirty] = useState(false);
+  // 重新加载（如切换接入地址）时不覆盖尚未保存的路由修改
+  useEffect(() => { if (m.data) { if (!dirty) setRoutes(m.data.routes ?? {}); setPrices(JSON.stringify(m.data.prices ?? {}, null, 2)); } }, [m.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const providersFor = (cap: string) => (m.data?.providers ?? []).filter((p: any) => p.capabilities.includes(cap));
   const setRoute = (cap: string, key: 'default' | 'fallback', provider: string, model?: string) => {
     const r = { ...(routes[cap] ?? {}) };
-    if (!provider) delete r[key]; else r[key] = { provider, model: model || undefined };
+    const prev = r[key] ?? {};
+    // 换提供方时清掉旧模型名；保留思考模式等其他字段
+    if (!provider) delete r[key]; else r[key] = { ...prev, provider, model: (prev.provider === provider ? model : undefined) || undefined };
     setRoutes({ ...routes, [cap]: r });
+    setDirty(true);
   };
+  const setThinking = (cap: string, v: string) => {
+    const r = { ...(routes[cap] ?? {}) };
+    if (!r.default) return;
+    const d = { ...r.default };
+    if (v === '') delete d.thinking; else d.thinking = v === 'on';
+    setRoutes({ ...routes, [cap]: { ...r, default: d } });
+    setDirty(true);
+  };
+  const providerOf = (id?: string) => (m.data?.providers ?? []).find((p: any) => p.id === id);
+  const presetProviders = (m.data?.providers ?? []).filter((p: any) => p.baseURLPresets?.length);
+  const defaultPrices: Record<string, any> = m.data?.defaultPrices ?? {};
   return (
     <Card icon="cpu" title={`${t('模型')}（按能力分模块）`}>
       {toast}
       <ErrorBox error={err ?? m.error} />
       <div className="table-wrap">
         <table className="table">
-          <thead><tr><th>能力</th><th>{t('提供方')}</th><th>模型名</th><th>备用</th><th>{t('状态')}</th></tr></thead>
+          <thead><tr><th>能力</th><th>{t('提供方')}</th><th>模型名</th><th>思考</th><th>备用</th><th>{t('状态')}</th></tr></thead>
           <tbody>
             {m.data?.capabilities?.map((c: any) => {
               const st = m.data.status.find((x: any) => x.capability === c.id);
@@ -127,7 +143,15 @@ function Models() {
                 <tr key={c.id}>
                   <td>{c.label}</td>
                   <td><select aria-label={`${c.label} 提供方`} value={r.default?.provider ?? ''} onChange={(e) => setRoute(c.id, 'default', e.target.value, r.default?.model)}><option value="">{t('未配置')}</option>{providersFor(c.id).map((p: any) => <option key={p.id} value={p.id}>{p.label}{p.ready.ok ? '' : '（缺密钥）'}</option>)}</select></td>
-                  <td><input aria-label={`${c.label} 模型名`} value={r.default?.model ?? ''} placeholder={providersFor(c.id).find((p: any) => p.id === r.default?.provider)?.models?.[c.id] ?? ''} onChange={(e) => setRoute(c.id, 'default', r.default?.provider ?? '', e.target.value)} /></td>
+                  <td>
+                    <input aria-label={`${c.label} 模型名`} list={`models-${c.id}`} value={r.default?.model ?? ''} placeholder={providerOf(r.default?.provider)?.models?.[c.id] ?? ''} onChange={(e) => setRoute(c.id, 'default', r.default?.provider ?? '', e.target.value)} />
+                    <datalist id={`models-${c.id}`}>{(providerOf(r.default?.provider)?.modelOptions ?? []).map((x: string) => <option key={x} value={x} />)}</datalist>
+                  </td>
+                  <td>{c.id === 'llm' ? (
+                    <select aria-label={`${c.label} 思考模式`} disabled={!r.default?.provider} value={r.default?.thinking === undefined ? '' : r.default.thinking ? 'on' : 'off'} onChange={(e) => setThinking(c.id, e.target.value)}>
+                      <option value="">自动</option><option value="on">开</option><option value="off">关</option>
+                    </select>
+                  ) : <span className="muted">—</span>}</td>
                   <td><select aria-label={`${c.label} 备用`} value={r.fallback?.provider ?? ''} onChange={(e) => setRoute(c.id, 'fallback', e.target.value)}><option value="">无</option>{providersFor(c.id).map((p: any) => <option key={p.id} value={p.id}>{p.label}</option>)}</select></td>
                   <td>{st?.configured ? <Badge tone={st.provider === 'mock' ? 'info' : 'ok'}>{st.provider === 'mock' ? t('模拟输出') : t('已配置')}</Badge> : <Badge tone="warn" >{t('未配置')}</Badge>}</td>
                 </tr>
@@ -137,12 +161,23 @@ function Models() {
         </table>
       </div>
       <div className="actions">
-        <button className="primary" onClick={async () => { setErr(null); try { await put('/api/models/routes', { routes }); say('路由已保存'); m.reload(); } catch (e) { setErr(e); } }}>{t('保存')}</button>
+        <button className="primary" onClick={async () => { setErr(null); try { await put('/api/models/routes', { routes }); setDirty(false); say('路由已保存'); m.reload(); } catch (e) { setErr(e); } }}>{t('保存')}</button>
         <button onClick={async () => { setErr(null); try { const r = await post('/api/models/test/llm'); say(`${r.provider}/${r.model}：${r.sample}`); } catch (e) { setErr(e); } }}>{t('测试')} LLM</button>
       </div>
+      <p className="muted small">思考：自动＝按模型名判断（MiMo 等未写明的按“关”处理）；开＝输出更稳但慢且贵，思考内容只留调试，不进成稿；评测始终关闭思考、temperature 0。</p>
+      {presetProviders.map((p: any) => (
+        <Field key={p.id} label={`${p.label} 接入地址`}>
+          <select aria-label={`${p.label} 接入地址`} value={p.baseURL} onChange={async (e) => { setErr(null); try { await put(`/api/models/providers/${p.id}`, { baseURL: e.target.value }); say('接入地址已切换'); m.reload(); } catch (x) { setErr(x); } }}>
+            {p.baseURLPresets.map((o: any) => <option key={o.url} value={o.url}>{o.label}</option>)}
+            {!p.baseURLPresets.some((o: any) => o.url === p.baseURL) && <option value={p.baseURL}>自定义：{p.baseURL}</option>}
+          </select>
+          {p.modelOptions?.length ? <p className="muted small">可选模型：{p.modelOptions.join('、')}</p> : null}
+        </Field>
+      ))}
       <details>
         <summary>单价（用于成本统计）</summary>
         <p className="muted small">键为“提供方”或“提供方:模型”。token 为每百万；image 每张；char 每万字；second 每分钟。例如 {'{"deepseek": {"input": 2, "output": 8}}'}</p>
+        {Object.keys(defaultPrices).length ? <p className="muted small">内置默认价（元/百万 token，缓存命中/未命中/输出，可在下方同名键覆盖）：{Object.entries(defaultPrices).map(([k, v]) => `${k} ${v.cachedInput ?? '-'}/${v.input ?? '-'}/${v.output ?? '-'}`).join('；')}</p> : null}
         <textarea className="mono" rows={5} value={prices} onChange={(e) => setPrices(e.target.value)} aria-label="单价 JSON" />
         <div className="actions"><button onClick={async () => { setErr(null); try { await put('/api/models/prices', { prices: JSON.parse(prices) }); say('已保存'); } catch (e) { setErr(e); } }}>{t('保存')}</button></div>
       </details>

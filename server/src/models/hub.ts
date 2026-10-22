@@ -9,7 +9,7 @@ import { mockAdapter } from './mock.js';
 import type { WsFactory } from './cosyvoice.js';
 import { estimateTokens, isThinkingModel, planMaxTokens } from './util.js';
 import type {
-  AsrResult, AudioResult, BaseResult, Capability, ChatMessage, ChatOptions, ChatResult, EmbedResult, ImageEditOptions, ImageInput, ImageResult, ProviderAdapter, ProviderDef, RerankResult, Usage, VideoResult,
+  AsrResult, AudioResult, BaseResult, Capability, ChatMessage, ChatOptions, ChatResult, EmbedResult, ImageEditOptions, ImageInput, ImageResult, ModelPrice, ProviderAdapter, ProviderDef, RerankResult, Usage, VideoResult,
 } from './types.js';
 import { CAPABILITIES, CAPABILITY_LABELS, NotConfiguredError, NotSupportedError } from './types.js';
 
@@ -19,7 +19,14 @@ export interface CapabilityRoute { default?: RouteTarget; fallback?: RouteTarget
 export type Routes = Partial<Record<Capability, CapabilityRoute>>;
 export interface ProviderOverride { baseURL?: string; nativeBaseURL?: string; useProxy?: boolean; models?: Partial<Record<Capability, string>>; imageEditModel?: string; ttsVoice?: string }
 /** 单价：token 为每百万；image 为每张；char 为每万字符；second 为每分钟；call 为每次。cachedInput：缓存命中输入每百万（不填按 input 计）。 */
-export interface Price { input?: number; output?: number; cachedInput?: number }
+export type Price = ModelPrice;
+
+/** 内置默认单价（键为 提供方:模型），用户设置的同名键覆盖它。 */
+export function builtinPrices(): Record<string, Price> {
+  const out: Record<string, Price> = {};
+  for (const p of BUILTIN_PROVIDERS) for (const [model, price] of Object.entries(p.defaultPrices ?? {})) out[`${p.id}:${model}`] = price;
+  return out;
+}
 
 /** 健康路由：近 windowMin 分钟内样本 ≥ minSamples 且失败率 ≥ maxFailRate 视为不健康，主路不健康时先走备用。 */
 export interface HealthPolicy { windowMin: number; minSamples: number; maxFailRate: number }
@@ -59,7 +66,7 @@ export class ModelHub {
     private readonly db: DB,
     private readonly vault: SecretVault,
     private readonly http: HttpClient = defaultHttp,
-    private readonly opts: { pollMs?: number; pollMax?: number; wsFactory?: WsFactory } = {},
+    private readonly opts: { pollMs?: number; pollMax?: number; wsFactory?: WsFactory; /** 非致命告警（如 MiMo repetition_truncation）回调，通常接日志 */ onWarn?: (msg: string, fields: Record<string, unknown>) => void } = {},
   ) {}
 
   /** 测试用：替换某个提供方的适配器。 */
@@ -80,14 +87,23 @@ export class ModelHub {
 
   routes(): Routes { return getSetting<Routes>(this.db, 'models.routes', {}); }
   setRoutes(r: Routes): void { setSetting(this.db, 'models.routes', r); }
-  prices(): Record<string, Price> { return getSetting<Record<string, Price>>(this.db, 'models.prices', {}); }
+  /** 生效单价：内置默认价（如 MiMo）+ 用户设置（同键覆盖）。 */
+  prices(): Record<string, Price> { return { ...builtinPrices(), ...this.userPrices() }; }
+  /** 用户在设置里填写的单价（不含内置默认）。 */
+  userPrices(): Record<string, Price> { return getSetting<Record<string, Price>>(this.db, 'models.prices', {}); }
 
   private provider(id: string): ProviderDef | undefined { return this.providers().find((p) => p.id === id); }
+
+  /** 密钥：密钥库优先，其次 envSecret 指定的环境变量。 */
+  private secretFor(def: ProviderDef): string {
+    if (!def.secretName) return '';
+    return (this.vault.has(def.secretName) ? this.vault.get(def.secretName) : undefined) || (def.envSecret ? process.env[def.envSecret]?.trim() ?? '' : '');
+  }
 
   /** 判断某提供方是否已具备调用条件。 */
   providerReady(def: ProviderDef): { ok: boolean; reason?: string } {
     if (def.protocol === 'mock') return { ok: true };
-    if (def.secretName && !this.vault.has(def.secretName)) return { ok: false, reason: `缺少密钥 ${def.secretName}` };
+    if (def.secretName && !this.secretFor(def)) return { ok: false, reason: `缺少密钥 ${def.secretName}${def.envSecret ? `（或环境变量 ${def.envSecret}）` : ''}` };
     if (!def.baseURL || def.baseURL.includes('{')) return { ok: false, reason: '基础地址未填写完整' };
     return { ok: true };
   }
@@ -116,7 +132,7 @@ export class ModelHub {
     if (o) return o;
     if (def.protocol === 'mock') return mockAdapter();
     return createAdapter({
-      def, apiKey: def.secretName ? (this.vault.get(def.secretName) ?? '') : '', http: this.http,
+      def, apiKey: this.secretFor(def), http: this.http,
       proxy: getSetting<string>(this.db, 'proxy.url', '') || undefined,
       pollMs: this.opts.pollMs, pollMax: this.opts.pollMax,
       comfyWorkflow: getSetting<string>(this.db, 'models.comfyui.workflow', '') || undefined,
@@ -148,6 +164,8 @@ export class ModelHub {
         if (!p) throw new NotSupportedError(def.label, cap);
         const r = await p;
         this.record(cap, kind === 'edit' ? `edit:${task}` : task, r, def, model, true, Date.now() - started);
+        const warns = (r as { warnings?: string[] }).warnings;
+        if (warns?.length) this.opts.onWarn?.('模型输出告警', { capability: cap, task, provider: def.id, model, warnings: warns });
         return r;
       } catch (e) {
         this.record(cap, kind === 'edit' ? `edit:${task}` : task, null, def, model, false, Date.now() - started);

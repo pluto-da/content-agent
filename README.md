@@ -15,6 +15,12 @@ npm start                 # 打开 http://127.0.0.1:8787
 - 演示流程（Mock 模型 + 真实公开 RSS 与热榜）：`npm run e2e`
 - Docker：`cp .env.example .env && docker compose up -d --build`
 
+## 接入小米 MiMo（0.4.1）
+1. 设置中心 → 密钥：填“小米 MiMo API Key”（或服务器环境变量 `MIMO_API_KEY`）。
+2. 设置中心 → 模型：文本/对话、视觉理解选“小米 MiMo”，默认 `mimo-v2.6-flash`，可下拉选 `mimo-v2.6-pro`；Token Plan Key（tp-/ttp-）把“接入地址”切到 Token Plan。
+3. 真实联调：`MIMO_API_KEY=sk-xxx npm run mimo:smoke`，报告在 `out/mimo-smoke-report.json`。
+细节（max_completion_tokens、thinking 开关、json_object 降级、缓存命中、默认价）见 [docs/models.md](docs/models.md#小米-mimo-接入041)。
+
 ## 三端
 | 端 | 形态 | 构建 |
 |---|---|---|

@@ -24,6 +24,26 @@ export const BUILTIN_PROVIDERS: ProviderDef[] = [
     capabilities: ['llm'], models: { llm: 'deepseek-v4-pro' }, jsonMode: 'json_object',
   },
   {
+    // 小米 MiMo（2026-10-22 核实 mimo.mi.com）：OpenAI 兼容；max_completion_tokens（默认且上限 131072）；
+    // thinking {type} 默认 enabled，思考时 temperature/top_p 被强制为 1.0/0.95；response_format 仅 text / json_object；
+    // finish_reason 可能为 repetition_truncation。按量 Key 前缀 sk-；Token Plan Key（tp-/ttp-）需把 baseURL 切到 token-plan-cn。
+    id: 'mimo', label: '小米 MiMo', protocol: 'openai', baseURL: 'https://api.xiaomimimo.com/v1', secretName: 'model.mimo.key', envSecret: 'MIMO_API_KEY', useProxy: false, region: 'cn',
+    capabilities: ['llm', 'vision'], models: { llm: 'mimo-v2.6-flash', vision: 'mimo-v2.6-flash' },
+    modelOptions: ['mimo-v2.6-flash', 'mimo-v2.6-pro', 'mimo-v2.6-pro-ultraspeed'],
+    baseURLPresets: [
+      { label: '按量付费（sk- Key）', url: 'https://api.xiaomimimo.com/v1' },
+      { label: 'Token Plan（tp- / ttp- Key）', url: 'https://token-plan-cn.xiaomimimo.com/v1' },
+    ],
+    // 元 / 百万 token（国内价）：缓存命中 / 未命中 / 输出
+    defaultPrices: {
+      'mimo-v2.6-flash': { cachedInput: 0.02, input: 1, output: 2 },
+      'mimo-v2.6-pro': { cachedInput: 0.025, input: 3, output: 6 },
+      'mimo-v2.6-pro-ultraspeed': { cachedInput: 0.25, input: 30, output: 60 },
+    },
+    jsonMode: 'json_object', maxOutputTokens: 131072,
+    chatDialect: { maxTokensParam: 'max_completion_tokens', thinkingParam: 'type', thinkingIgnoresSampling: true, temperatureRange: [0, 1.5], retryFinishReasons: ['repetition_truncation'] },
+  },
+  {
     id: 'zhipu', label: '智谱（GLM/CogView/CogVideoX）', protocol: 'zhipu', baseURL: 'https://open.bigmodel.cn/api/paas/v4', secretName: 'model.zhipu.key', useProxy: false, region: 'cn',
     capabilities: ['llm', 'vision', 'ocr', 'image', 'video', 'embedding', 'tts', 'asr'],
     models: { llm: 'glm-4-flash', vision: 'glm-4v-flash', ocr: 'glm-4v-flash', image: 'cogview-3-flash', video: 'cogvideox-flash', embedding: 'embedding-3', tts: 'cogtts', asr: 'glm-asr' }, jsonMode: 'json_object',

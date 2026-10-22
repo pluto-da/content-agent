@@ -160,3 +160,35 @@ describe('推理效率', () => {
     await waitFor(() => expect(puts).toEqual([{ draftVerify: { enabled: true } }]));
   });
 });
+
+describe('模型设置：小米 MiMo', () => {
+  it('能选到小米 MiMo、看到可选模型、切换 Token Plan 地址与思考模式', async () => {
+    const { SettingsSection } = await import('./pages/settings');
+    const puts: { url: string; body: unknown }[] = [];
+    const mimo = {
+      id: 'mimo', label: '小米 MiMo', capabilities: ['llm', 'vision'], models: { llm: 'mimo-v2.6-flash', vision: 'mimo-v2.6-flash' }, ready: { ok: true },
+      baseURL: 'https://api.xiaomimimo.com/v1', modelOptions: ['mimo-v2.6-flash', 'mimo-v2.6-pro', 'mimo-v2.6-pro-ultraspeed'],
+      baseURLPresets: [{ label: '按量付费（sk- Key）', url: 'https://api.xiaomimimo.com/v1' }, { label: 'Token Plan（tp- / ttp- Key）', url: 'https://token-plan-cn.xiaomimimo.com/v1' }],
+    };
+    mockFetch((u, init) => {
+      if (init?.method === 'PUT') { puts.push({ url: u, body: JSON.parse(String(init.body)) }); return { ok: true }; }
+      if (u === '/api/models') return {
+        capabilities: [{ id: 'llm', label: '文本/对话' }], providers: [mimo], status: [{ capability: 'llm', label: '文本/对话', configured: false }],
+        routes: {}, prices: {}, defaultPrices: { 'mimo:mimo-v2.6-flash': { cachedInput: 0.02, input: 1, output: 2 } },
+      };
+      return { byCapability: [] };
+    });
+    render(<SettingsSection section="models" theme="light" setTheme={() => {}} lang="zh" setLang={() => {}} />);
+    const sel = await screen.findByLabelText('文本/对话 提供方') as HTMLSelectElement;
+    expect([...sel.options].map((o) => o.text)).toContain('小米 MiMo');
+    fireEvent.change(sel, { target: { value: 'mimo' } });
+    await waitFor(() => expect(document.querySelectorAll('#models-llm option')).toHaveLength(3));
+    expect((screen.getByLabelText('文本/对话 模型名') as HTMLInputElement).placeholder).toBe('mimo-v2.6-flash');
+    fireEvent.change(screen.getByLabelText('文本/对话 思考模式'), { target: { value: 'on' } });
+    expect(screen.getByText(/mimo:mimo-v2.6-flash 0.02\/1\/2/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('小米 MiMo 接入地址'), { target: { value: 'https://token-plan-cn.xiaomimimo.com/v1' } });
+    await waitFor(() => expect(puts).toContainEqual({ url: '/api/models/providers/mimo', body: { baseURL: 'https://token-plan-cn.xiaomimimo.com/v1' } }));
+    fireEvent.click(screen.getAllByRole('button', { name: '保存' })[0]!);
+    await waitFor(() => expect(puts).toContainEqual({ url: '/api/models/routes', body: { routes: { llm: { default: { provider: 'mimo', thinking: true } } } } }));
+  });
+});

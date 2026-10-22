@@ -73,39 +73,80 @@ function imgContent(images: ImageInput[]) {
   return images.map((i) => ({ type: 'image_url', image_url: { url: i.url ?? `data:${i.mime ?? 'image/png'};base64,${i.b64}` } }));
 }
 
-/* ---------------- OpenAI 风格（OpenAI、DeepSeek、方舟、Kimi、Gemini、Ollama、百炼兼容模式、智谱） ---------------- */
+/* ---------------- OpenAI 风格（OpenAI、DeepSeek、方舟、Kimi、Gemini、Ollama、MiMo、百炼兼容模式、智谱） ---------------- */
+
+/**
+ * 组装 OpenAI 兼容对话请求体，按提供方方言（chatDialect）调整：
+ * - 输出上限参数名（MiMo 用 max_completion_tokens）
+ * - 思考开关 thinking: {type: enabled|disabled}；思考模式下服务商强制采样参数时不传 temperature
+ * - temperature 按范围截断；response_format：仅 json_object 的服务商把 json_schema 降级（本地再做 Schema 校验）
+ */
+export function buildChatBody(def: ProviderDef, messages: unknown[], model: string, opts: ChatOptions = {}): Record<string, unknown> {
+  const d = def.chatDialect ?? {};
+  const body: Record<string, unknown> = { model, messages };
+  if (opts.maxTokens) body[d.maxTokensParam ?? 'max_tokens'] = opts.maxTokens;
+  const thinking = !!opts.thinking;
+  if (d.thinkingParam === 'type') body.thinking = { type: thinking ? 'enabled' : 'disabled' };
+  if (opts.temperature !== undefined && !(thinking && d.thinkingIgnoresSampling)) {
+    const [lo, hi] = d.temperatureRange ?? [0, 2];
+    body.temperature = Math.min(hi, Math.max(lo, opts.temperature));
+  }
+  if (opts.seed !== undefined && def.supportsSeed) body.seed = opts.seed;
+  const rf = opts.responseFormat;
+  if (rf?.type === 'json_schema' && def.jsonMode === 'json_schema') body.response_format = { type: 'json_schema', json_schema: { name: rf.name, schema: stripExtensions(rf.schema), strict: false } };
+  else if (rf && def.jsonMode) body.response_format = { type: 'json_object' };
+  return body;
+}
+
+/** 解析 OpenAI 兼容对话返回：正文 / 思考分离、finish_reason、缓存命中与思考 token。 */
+export function parseChatResponse(text: string): { content: string; reasoning?: string; finishReason?: string; usage: ChatResult['usage'] } {
+  const j = JSON.parse(text) as {
+    choices?: { finish_reason?: string | null; message?: { content?: string | null; reasoning_content?: string; reasoning?: string } }[];
+    usage?: { prompt_tokens?: number; completion_tokens?: number; prompt_cache_hit_tokens?: number; prompt_tokens_details?: { cached_tokens?: number }; completion_tokens_details?: { reasoning_tokens?: number } };
+  };
+  const choice = j.choices?.[0];
+  const msg = choice?.message;
+  const raw = msg?.content;
+  if (typeof raw !== 'string') throw new Error('对话接口返回格式不符合 OpenAI 协议');
+  const { content, reasoning } = splitReasoning(raw, msg?.reasoning_content ?? msg?.reasoning);
+  // 缓存命中：DeepSeek 为 prompt_cache_hit_tokens；OpenAI / MiMo / 百炼兼容 / Kimi 等为 prompt_tokens_details.cached_tokens
+  const cached = j.usage?.prompt_cache_hit_tokens ?? j.usage?.prompt_tokens_details?.cached_tokens;
+  const rt = j.usage?.completion_tokens_details?.reasoning_tokens;
+  return {
+    content, ...(reasoning ? { reasoning } : {}), ...(choice?.finish_reason ? { finishReason: choice.finish_reason } : {}),
+    usage: { unit: 'token', input: j.usage?.prompt_tokens ?? 0, output: j.usage?.completion_tokens ?? 0, ...(typeof cached === 'number' ? { cachedInput: cached } : {}), ...(typeof rt === 'number' ? { reasoningOutput: rt } : {}) },
+  };
+}
 
 export function openaiAdapter(ctx: AdapterCtx): ProviderAdapter {
   const { json, proxy } = base(ctx);
   const root = trim(ctx.def.baseURL);
   const chatCall = async (messages: unknown[], model: string, opts: ChatOptions = {}): Promise<ChatResult> => {
     const t = Date.now();
-    const body: Record<string, unknown> = { model, messages };
-    if (opts.maxTokens) body.max_tokens = opts.maxTokens;
-    if (opts.temperature !== undefined) body.temperature = opts.temperature;
-    if (opts.seed !== undefined && ctx.def.supportsSeed) body.seed = opts.seed;
-    const rf = opts.responseFormat;
-    if (rf?.type === 'json_schema' && ctx.def.jsonMode === 'json_schema') body.response_format = { type: 'json_schema', json_schema: { name: rf.name, schema: stripExtensions(rf.schema), strict: false } };
-    else if (rf && ctx.def.jsonMode) body.response_format = { type: 'json_object' };
-    const res = await json(`${root}/chat/completions`, body, {}, '对话接口');
-    const j = JSON.parse(res.text) as {
-      choices?: { message?: { content?: string | null; reasoning_content?: string; reasoning?: string } }[];
-      usage?: { prompt_tokens?: number; completion_tokens?: number; prompt_cache_hit_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } };
+    const body = buildChatBody(ctx.def, messages, model, opts);
+    const once = async () => {
+      const res = await json(`${root}/chat/completions`, body, {}, '对话接口');
+      return parseChatResponse(res.text);
     };
-    const msg = j.choices?.[0]?.message;
-    const raw = msg?.content;
-    if (typeof raw !== 'string') throw new Error('对话接口返回格式不符合 OpenAI 协议');
-    const { content, reasoning } = splitReasoning(raw, msg?.reasoning_content ?? msg?.reasoning);
-    // 缓存命中：DeepSeek 为 prompt_cache_hit_tokens；OpenAI / 百炼兼容 / Kimi 等为 prompt_tokens_details.cached_tokens
-    const cached = j.usage?.prompt_cache_hit_tokens ?? j.usage?.prompt_tokens_details?.cached_tokens;
+    let r = await once();
+    const retryOn = ctx.def.chatDialect?.retryFinishReasons ?? [];
+    const warnings: string[] = [];
+    if (r.finishReason && retryOn.includes(r.finishReason)) {
+      // 例：MiMo 检测到复读被截断（repetition_truncation）→ 重试一次；仍截断则带告警返回，由上层决定是否采用
+      const first = r.finishReason;
+      r = await once();
+      warnings.push(r.finishReason && retryOn.includes(r.finishReason) ? `${first}：重试后仍被截断，输出可能不完整` : `${first}：已自动重试一次`);
+    }
     return {
-      ...meta(ctx, model, t), content, ...(reasoning ? { reasoning } : {}),
-      usage: { unit: 'token', input: j.usage?.prompt_tokens ?? 0, output: j.usage?.completion_tokens ?? 0, ...(typeof cached === 'number' ? { cachedInput: cached } : {}) },
+      ...meta(ctx, model, t), content: r.content, ...(r.reasoning ? { reasoning: r.reasoning } : {}),
+      ...(r.finishReason ? { finishReason: r.finishReason } : {}), ...(warnings.length ? { warnings } : {}),
+      usage: r.usage,
     };
   };
   return {
     chat: (messages: ChatMessage[], model, opts) => chatCall(messages, model, opts),
-    vision: (images, prompt, model) => chatCall([{ role: 'user', content: [{ type: 'text', text: prompt }, ...imgContent(images)] }], model),
+    // 视觉理解不需要思考：有思考开关的服务商（MiMo 默认开启）显式关掉，省时省钱
+    vision: (images, prompt, model) => chatCall([{ role: 'user', content: [{ type: 'text', text: prompt }, ...imgContent(images)] }], model, ctx.def.chatDialect?.thinkingParam ? { thinking: false } : {}),
     async image(prompt, model, opts) {
       const t = Date.now();
       const res = await json(`${root}/images/generations`, { model, prompt, n: opts?.n ?? 1, ...(opts?.size ? { size: opts.size } : {}) }, {}, '图像接口');

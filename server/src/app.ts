@@ -9,7 +9,7 @@ import { defaultHttp, HostRateLimiter, isPublicHttpUrl, type HttpClient } from '
 import { Logger } from './logger.js';
 import { TaskQueue } from './queue.js';
 import { HARD_BOUNDARIES, ALLOWED_TOOLS } from './boundaries.js';
-import { ModelHub, type Routes } from './models/hub.js';
+import { ModelHub, builtinPrices, type Routes } from './models/hub.js';
 import { CAPABILITIES, CAPABILITY_LABELS, NotConfiguredError } from './models/types.js';
 import { loadSkills, missingCapabilities } from './skills/loader.js';
 import { AgentFiles } from './modules/agentfiles.js';
@@ -52,7 +52,7 @@ export class AppError extends Error {
 export const SECRET_NAMES = [
   'wechat.appid', 'wechat.secret', 'wechat.thumb_media_id', 'x.bearer', 'douyin.access_token', 'douyin.open_id',
   'douyin.client_key', 'douyin.client_secret', 'douyin.client_token',
-  'model.dashscope.key', 'model.deepseek.key', 'model.zhipu.key', 'model.ark.key', 'model.minimax.key', 'model.kimi.key',
+  'model.dashscope.key', 'model.deepseek.key', 'model.mimo.key', 'model.zhipu.key', 'model.ark.key', 'model.minimax.key', 'model.kimi.key',
   'model.openai.key', 'model.anthropic.key', 'model.gemini.key', 'model.elevenlabs.key',
 ];
 
@@ -70,7 +70,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   const logger = new Logger(join(opts.dataDir, 'logs', 'app.jsonl'), 1000, opts.logEcho ?? false);
   const queue = new TaskQueue(db, logger, 3);
   const limiter = new HostRateLimiter(opts.rateLimitMs ?? getSetting<number>(db, 'crawl.minIntervalMs', 5000));
-  const hub = new ModelHub(db, vault, http, { pollMs: opts.pollMs });
+  const hub = new ModelHub(db, vault, http, { pollMs: opts.pollMs, onWarn: (msg, fields) => logger.warn('models', msg, fields) });
   const agent = new AgentFiles(db, join(opts.dataDir, 'agent'));
   agent.init(opts.agentDefaultsDir);
   const skills = () => loadSkills(join(agent.dir, 'skills')).skills;
@@ -111,7 +111,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   };
 
   /* ---------- 基础 ---------- */
-  app.get('/api/health', async () => ({ ok: true, version: '0.4.0' }));
+  app.get('/api/health', async () => ({ ok: true, version: '0.4.1' }));
   app.get('/api/boundaries', async () => ({ boundaries: HARD_BOUNDARIES, tools: ALLOWED_TOOLS }));
 
   /* ---------- 设置与密钥 ---------- */
@@ -149,7 +149,8 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
     capabilities: CAPABILITIES.map((c) => ({ id: c, label: CAPABILITY_LABELS[c] })),
     providers: hub.providers().map((p) => ({ ...p, ready: hub.providerReady(p) })),
     routes: hub.routes(),
-    prices: hub.prices(),
+    prices: hub.userPrices(),
+    defaultPrices: builtinPrices(),
     status: hub.status(),
     imageEdit: hub.imageEditStatus(),
   }));

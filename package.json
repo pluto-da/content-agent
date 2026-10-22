@@ -1,6 +1,6 @@
 {
   "name": "content-agent",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -15,6 +15,7 @@
     "build": "npm run build -w server && npm run build -w web",
     "start": "node server/dist/index.js",
     "e2e": "node server/dist/scripts/e2e.js",
+    "mimo:smoke": "npm run build -w server --silent && node server/dist/scripts/mimo-smoke.js",
     "ci": "bash scripts/ci.sh",
     "package": "bash scripts/package.sh",
     "app:android": "bash scripts/build-android-debug.sh",

@@ -209,3 +209,88 @@ describe('协议适配器（假 HTTP）', () => {
     expect(mockAdapter().chat).toBeTypeOf('function');
   });
 });
+
+describe('小米 MiMo 适配', () => {
+  const mimo = () => BUILTIN_PROVIDERS.find((p) => p.id === 'mimo')!;
+  const reply = (extra: Record<string, unknown> = {}) => JSON.stringify({
+    choices: [{ finish_reason: 'stop', message: { content: '{"title":"t","body":"b"}', reasoning_content: '先想一想' } }],
+    usage: { prompt_tokens: 1200, completion_tokens: 50, prompt_tokens_details: { cached_tokens: 1024 }, completion_tokens_details: { reasoning_tokens: 30 } },
+    ...extra,
+  });
+  const bodyOf = (http: ReturnType<typeof fakeHttp>, i = 0) => JSON.parse(String(http.calls[i]!.opts.body)) as Record<string, unknown>;
+
+  it('传 max_completion_tokens（不传 max_tokens），读取 reasoning_content / cached_tokens / reasoning_tokens', async () => {
+    const http = fakeHttp([(u) => (u === 'https://api.xiaomimimo.com/v1/chat/completions' ? { text: reply() } : undefined)]);
+    const r = await openaiAdapter({ def: mimo(), apiKey: 'sk-k', http }).chat!([{ role: 'user', content: 'hi' }], 'mimo-v2.6-flash', { maxTokens: 8192 });
+    const b = bodyOf(http);
+    expect(b.max_completion_tokens).toBe(8192);
+    expect(b).not.toHaveProperty('max_tokens');
+    expect(http.calls[0]!.opts.headers?.authorization).toBe('Bearer sk-k');
+    expect(r.content).toBe('{"title":"t","body":"b"}');
+    expect(r.reasoning).toBe('先想一想');
+    expect(r.usage).toMatchObject({ input: 1200, output: 50, cachedInput: 1024, reasoningOutput: 30 });
+    // 其他 OpenAI 兼容服务商仍用 max_tokens
+    const h2 = fakeHttp([() => ({ text: reply() })]);
+    await openaiAdapter({ def: def('deepseek'), apiKey: 'k', http: h2 }).chat!([{ role: 'user', content: 'hi' }], 'm', { maxTokens: 100 });
+    expect(bodyOf(h2).max_tokens).toBe(100);
+    expect(bodyOf(h2)).not.toHaveProperty('thinking');
+  });
+
+  it('thinking 开关：关闭时传 disabled + temperature；开启时传 enabled 且不传 temperature；评测确定性强制关闭', async () => {
+    const http = fakeHttp([() => ({ text: reply() })]);
+    const a = openaiAdapter({ def: mimo(), apiKey: 'k', http });
+    await a.chat!([{ role: 'user', content: 'x' }], 'mimo-v2.6-flash', { thinking: false, temperature: 0 });
+    expect(bodyOf(http, 0)).toMatchObject({ thinking: { type: 'disabled' }, temperature: 0 });
+    await a.chat!([{ role: 'user', content: 'x' }], 'mimo-v2.6-flash', { thinking: true, temperature: 0 });
+    expect(bodyOf(http, 1).thinking).toEqual({ type: 'enabled' });
+    expect(bodyOf(http, 1)).not.toHaveProperty('temperature');
+    await a.chat!([{ role: 'user', content: 'x' }], 'mimo-v2.6-flash', { temperature: 3 });
+    expect(bodyOf(http, 2).temperature).toBe(1.5);
+    await a.vision!([{ url: 'https://x/a.png' }], '描述', 'mimo-v2.6-flash');
+    expect(bodyOf(http, 3).thinking).toEqual({ type: 'disabled' });
+
+    // 经 hub：路由开了思考，评测（deterministicChat）仍强制 thinking disabled + temperature 0
+    const { hub, vault } = setup(http);
+    vault.set('model.mimo.key', 'k');
+    hub.setRoutes({ llm: { default: { provider: 'mimo', thinking: true } } });
+    const { deterministicChat } = await import('../src/modules/evals.js');
+    await deterministicChat(hub, undefined, 'sys', 'user');
+    const last = bodyOf(http, http.calls.length - 1);
+    expect(last).toMatchObject({ model: 'mimo-v2.6-flash', thinking: { type: 'disabled' }, temperature: 0 });
+    expect(last).not.toHaveProperty('seed');
+    await hub.chat('rewrite', [{ role: 'user', content: 'x' }]);
+    expect(bodyOf(http, http.calls.length - 1).thinking).toEqual({ type: 'enabled' });
+    expect(bodyOf(http, http.calls.length - 1).max_completion_tokens).toBe(65536);
+  });
+
+  it('json_schema 降级为 json_object；repetition_truncation 重试一次并告警；默认单价含缓存价', async () => {
+    let n = 0;
+    const http = fakeHttp([() => ({ text: reply({ choices: [{ finish_reason: n++ < 2 ? 'repetition_truncation' : 'stop', message: { content: '{}' } }] }) })]);
+    const a = openaiAdapter({ def: mimo(), apiKey: 'k', http });
+    const r = await a.chat!([{ role: 'user', content: 'x' }], 'mimo-v2.6-flash', { responseFormat: { type: 'json_schema', name: 'o', schema: { type: 'object', properties: { title: { type: 'string', maxLength: 20 } } } } });
+    expect(bodyOf(http).response_format).toEqual({ type: 'json_object' });
+    expect(http.calls).toHaveLength(2);
+    expect(r.finishReason).toBe('repetition_truncation');
+    expect(r.warnings?.[0]).toContain('重试后仍被截断');
+    const r2 = await a.chat!([{ role: 'user', content: 'x' }], 'mimo-v2.6-flash');
+    expect(r2.warnings).toBeUndefined();
+
+    const { hub, db } = setup();
+    expect(hub.prices()['mimo:mimo-v2.6-flash']).toEqual({ cachedInput: 0.02, input: 1, output: 2 });
+    expect(hub.prices()['mimo:mimo-v2.6-pro']).toEqual({ cachedInput: 0.025, input: 3, output: 6 });
+    // 100 万输入（其中 50 万命中缓存）+ 10 万输出，pro：0.5×3 + 0.5×0.025 + 0.1×6
+    expect(computeCost({ unit: 'token', input: 1_000_000, cachedInput: 500_000, output: 100_000 }, hub.prices()['mimo:mimo-v2.6-pro'])).toBeCloseTo(2.1125);
+    setSetting(db, 'models.prices', { 'mimo:mimo-v2.6-pro': { input: 9 } });
+    expect(hub.prices()['mimo:mimo-v2.6-pro']).toEqual({ input: 9 });
+  });
+});
+
+describe('MiMo 非思考返回 usage 细节为 null', () => {
+  it('prompt_tokens_details / completion_tokens_details 为 null 时不报错、不记缓存', async () => {
+    const http = fakeHttp([() => ({ text: JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: '好', reasoning_content: null } }], usage: { prompt_tokens: 12, completion_tokens: 3, prompt_tokens_details: null, completion_tokens_details: null } }) })]);
+    const r = await openaiAdapter({ def: BUILTIN_PROVIDERS.find((p) => p.id === 'mimo')!, apiKey: 'k', http }).chat!([{ role: 'user', content: 'x' }], 'mimo-v2.6-flash', { thinking: false });
+    expect(r.content).toBe('好');
+    expect(r.reasoning).toBeUndefined();
+    expect(r.usage).toEqual({ unit: 'token', input: 12, output: 3 });
+  });
+});

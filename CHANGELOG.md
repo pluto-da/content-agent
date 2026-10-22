@@ -1,5 +1,16 @@
 # 变更日志
 
+## 0.4.1（2026-10-22）
+接入小米 MiMo（OpenAI 兼容，官方文档 2026-10-22 核实）。
+- 提供方 `mimo`（小米 MiMo，region cn）：能力 llm / vision，默认 mimo-v2.6-flash，可选 mimo-v2.6-pro、mimo-v2.6-pro-ultraspeed；密钥 `model.mimo.key`，密钥库为空时读环境变量 `MIMO_API_KEY`；接入地址可在设置中切换按量（api.xiaomimimo.com/v1）与 Token Plan（token-plan-cn.xiaomimimo.com/v1）。
+- 内置默认价（含缓存价）：flash 0.02/1/2、pro 0.025/3/6、pro-ultraspeed 0.25/30/60 元/百万 token；`GET /api/models` 新增 `defaultPrices`，`prices` 只返回用户自填（同键覆盖默认）。
+- 适配器方言 `chatDialect`：`max_completion_tokens`；`thinking:{type}` 显式下发（视觉固定关闭；思考时不下发 temperature）；temperature 截断 [0,1.5]；json_schema → json_object 降级；读取 `reasoning_content`、`cached_tokens`、`reasoning_tokens`（details 为 null 时容错）；`repetition_truncation` 自动重试一次，仍截断则 `warnings` + warn 日志。
+- 确定性评测强制 thinking disabled + temperature 0。
+- 设置 → 模型：模型名下拉候选、llm“思考”列（自动/开/关）、带预设的提供方“接入地址”切换、内置默认价提示；切换地址不再冲掉未保存的路由修改。
+- 新增 `npm run mimo:smoke`（server/src/scripts/mimo-smoke.ts）：a–f 六项真实联调，报告写 `out/mimo-smoke-report.json`，不含密钥。首次实跑 6/6 通过，合计约 ¥0.013。
+- 测试：server 新增 MiMo 适配 4 项（max_completion_tokens、thinking 与评测、json_schema 降级 + 截断重试 + 默认价、usage details 为 null）；前端新增模型设置 MiMo 1 项。
+- 版本 0.4.1；Android versionName 0.4.1 / versionCode 401。硬边界未变。
+
 ## 0.4.0（2026-10-22）
 把 DeepInfer 蒸馏原则（design/deepinfer-distilled.md）落到调用编排层：每一份调用只做一次有效的工作。
 - 稳定前缀：系统提示词统一为 硬边界 → soul → 规则（working-method、USER、输出规则）→ skill → 平台规范（Schema 键排序序列化），逐字节稳定；素材、时间、用户输入只在 user 消息。多平台改写共享 skill 之前的前缀（按顺序发出，后一次可命中缓存）。读取服务商缓存命中字段（DeepSeek `prompt_cache_hit_tokens`、OpenAI 兼容 `prompt_tokens_details.cached_tokens`、Anthropic `cache_read_input_tokens`），Usage 新增 `cachedInput`，usage 表新增 `cached_tokens`；价格支持 `cachedInput` 缓存价。Anthropic system 段加 `cache_control`。

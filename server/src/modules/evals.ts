@@ -17,7 +17,7 @@ export interface EvalCase {
 
 export interface CaseResult { id: string; passed: boolean; failures: string[]; cached?: boolean; model?: string; promptHash?: string; inputHash?: string }
 
-/** 确定性评测参数：temperature=0，支持 seed 的服务商固定传 seed。确定性≠正确性，只让评测可复现。 */
+/** 确定性评测参数：temperature=0、强制关闭思考（MiMo 等思考模式会把 temperature 强制为 1.0），支持 seed 的服务商固定传 seed。确定性≠正确性，只让评测可复现。 */
 export const EVAL_TEMPERATURE = 0;
 export const EVAL_SEED = 20261022;
 
@@ -40,7 +40,7 @@ export async function deterministicChat(hub: ModelHub, db: DB | undefined, syste
   const key = evalCacheKey(info.provider, info.model, promptHash, inputHash, seed);
   const hit = db?.prepare('SELECT output FROM eval_cache WHERE key = ?').get(key) as { output: string } | undefined;
   if (hit) return { content: hit.output, cached: true, provider: info.provider, model: info.model, promptHash, inputHash };
-  const r = await hub.chat('eval', [{ role: 'system', content: system }, { role: 'user', content: user }], { temperature: EVAL_TEMPERATURE, ...(seed !== null ? { seed } : {}) });
+  const r = await hub.chat('eval', [{ role: 'system', content: system }, { role: 'user', content: user }], { temperature: EVAL_TEMPERATURE, thinking: false, ...(seed !== null ? { seed } : {}) });
   // 只缓存与解析时一致的模型（主路失败切了备用则不缓存，避免把备用结果记在主路名下）
   if (db && r.provider === info.provider && r.model === info.model) {
     db.prepare('INSERT OR REPLACE INTO eval_cache(key, provider, model, prompt_hash, input_hash, output) VALUES(?,?,?,?,?,?)').run(key, r.provider, r.model, promptHash, inputHash, r.content);
