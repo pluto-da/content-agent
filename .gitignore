@@ -11,3 +11,4 @@ master.key
 mobile/android/
 mobile/ios/
 out/
+!web/src/data/

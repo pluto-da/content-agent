@@ -11,7 +11,7 @@
 - **硬缺陷修复**：状态栏安全区（@capacitor/status-bar、overlaysWebView=false、viewport-fit=cover、env(safe-area-inset-*)，顶栏 / 侧栏 / Sheet 标题 / 底部导航 / 悬浮按钮避让）；“添加软件”与平台列表改读打包进前端的静态平台数据，无服务端也显示全部 7 个平台；开启 CapacitorHttp。
 - **反馈规则**：失败一律“白话原因 + 一个下一步按钮”；热点读不到时显示原因并给“手动输入”；长说明收进“?”弹出。
 - 测试：前端 75 项（重写 app.test.tsx）、server 75/75；typecheck、eslint、build 通过。验收截图与脚本：shots-v6/、work/v6/。
-- 主包 394.9 kB（gzip 约 125 kB），比 0.5.0 增加（本机层进首屏）。
+- 主包 394.9 kB（vite 报告 gzip 126.5 kB），比 0.5.0 增加（本机层进首屏）。
 - 版本 0.6.0；Android versionName 0.6.0 / versionCode 600。硬边界未变：不自动发布、不自动点赞 / 评论 / 私信 / 关注，发布由用户在平台 App 里本人点击。
 
 ## 0.5.0（2026-10-22）「一个前台」
