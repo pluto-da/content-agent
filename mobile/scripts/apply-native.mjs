@@ -6,6 +6,10 @@
  *  - 复制 LocalAppsPlugin.java、BuiltinWebPlugin.java + InAppWebActivity.java（0.7.0 内置网页）、SplitScreenPlugin.java（0.7.0 平板分屏）、
  *    MainActivity.java（注册插件）、res/xml/file_paths.xml；
  *  - AndroidManifest.xml 声明 InAppWebActivity（不导出，configChanges 避免旋转 / 分屏调整大小时重载网页）；
+ *  - 0.8.0：复制 BrowserHostPlugin / PlatformWebClient / StreamHttpPlugin / ShareReceiverActivity / ProcessTextActivity；
+ *    声明 ShareReceiverActivity（ACTION_SEND text/plain、image/*，标签“超级工作台”）与 ProcessTextActivity（ACTION_PROCESS_TEXT，标签“发给 Agent”），
+ *    均为透明、exported=true、只接收文字 / 图片；<queries> 增加 PROCESS_TEXT intent；app/build.gradle 增加 androidx.webkit 依赖（多 Profile）；
+ *    MainActivity 保持 singleTask（不改动模板的 launchMode）。
  *  - AndroidManifest.xml 增加 <queries>：只声明各平台官方 App 的包名与 URL Scheme（不申请 QUERY_ALL_PACKAGES，
  *    以符合 Google Play 包可见性政策）；增加 FileProvider（分享草稿素材用）。
  *  - 额外包名：环境变量 CA_EXTRA_PACKAGES="com.a.b,com.c.d"。
@@ -41,6 +45,7 @@ function android() {
   m = m.replace(/\s*<!-- ca:queries -->[\s\S]*?<!-- \/ca:queries -->/, '');
   m = m.replace(/\s*<!-- ca:provider -->[\s\S]*?<!-- \/ca:provider -->/, '');
   m = m.replace(/\s*<!-- ca:inappweb -->[\s\S]*?<!-- \/ca:inappweb -->/, '');
+  m = m.replace(/\s*<!-- ca:inbox -->[\s\S]*?<!-- \/ca:inbox -->/, '');
   const inAppWeb = [
     '        <!-- ca:inappweb -->',
     '        <activity android:name=".InAppWebActivity" android:exported="false" android:theme="@style/AppTheme.NoActionBar"',
@@ -49,11 +54,38 @@ function android() {
     '        <!-- /ca:inappweb -->',
   ].join('\n');
   m = m.replace(/<\/application>/, `${inAppWeb}\n    </application>`);
+  // 0.8.0：系统分享目标 + 选中文字菜单（透明、只读，收到后立即交给 MainActivity）
+  const inbox = [
+    '        <!-- ca:inbox -->',
+    '        <activity android:name=".ShareReceiverActivity" android:exported="true" android:label="超级工作台" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:noHistory="true" android:taskAffinity="">',
+    '            <intent-filter>',
+    '                <action android:name="android.intent.action.SEND" />',
+    '                <category android:name="android.intent.category.DEFAULT" />',
+    '                <data android:mimeType="text/plain" />',
+    '            </intent-filter>',
+    '            <intent-filter>',
+    '                <action android:name="android.intent.action.SEND" />',
+    '                <category android:name="android.intent.category.DEFAULT" />',
+    '                <data android:mimeType="image/*" />',
+    '            </intent-filter>',
+    '        </activity>',
+    '        <activity android:name=".ProcessTextActivity" android:exported="true" android:label="发给 Agent" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:noHistory="true" android:taskAffinity="">',
+    '            <intent-filter>',
+    '                <action android:name="android.intent.action.PROCESS_TEXT" />',
+    '                <category android:name="android.intent.category.DEFAULT" />',
+    '                <data android:mimeType="text/plain" />',
+    '            </intent-filter>',
+    '        </activity>',
+    '        <!-- /ca:inbox -->',
+  ].join('\n');
+  m = m.replace(/<\/application>/, `${inbox}\n    </application>`);
+  if (/android:name="\.MainActivity"/.test(m) && !/android:launchMode="singleTask"/.test(m)) console.warn('警告：MainActivity 不是 singleTask，分享 / 选中文字会打开新实例');
   const queries = [
     '    <!-- ca:queries -->',
     '    <queries>',
     ...pkgs.map((p) => `        <package android:name="${p}" />`),
     ...KNOWN_SCHEMES.map((s) => `        <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="${s}" /></intent>`),
+    '        <intent><action android:name="android.intent.action.PROCESS_TEXT" /><data android:mimeType="text/plain" /></intent>',
     '    </queries>',
     '    <!-- /ca:queries -->',
   ].join('\n');
@@ -70,7 +102,7 @@ function android() {
   m = m.replace(/<\/manifest>/, `${queries}\n</manifest>`);
   if (/QUERY_ALL_PACKAGES/.test(m)) console.warn('警告：清单中存在 QUERY_ALL_PACKAGES，上架 Google Play 需要特别审批，建议移除');
   writeFileSync(manifestPath, m);
-  console.log(`Android：已写入 LocalApps / BuiltinWeb / SplitScreen 插件、InAppWebActivity 与 <queries>（${pkgs.length} 个包名）`);
+  console.log(`Android：已写入 LocalApps / BuiltinWeb / SplitScreen / BrowserHost / StreamHttp 插件、InAppWebActivity、ShareReceiverActivity、ProcessTextActivity 与 <queries>（${pkgs.length} 个包名 + PROCESS_TEXT）`);
 
   // 版本号与 mobile/package.json 保持一致：versionName = x.y.z，versionCode = x*10000 + y*100 + z
   const gradlePath = join(root, 'android', 'app', 'build.gradle');
@@ -78,9 +110,12 @@ function android() {
   const mv = /^(\d+)\.(\d+)\.(\d+)/.exec(version ?? '');
   if (existsSync(gradlePath) && mv) {
     const code = Number(mv[1]) * 10000 + Number(mv[2]) * 100 + Number(mv[3]);
-    const g = readFileSync(gradlePath, 'utf8')
+    let g = readFileSync(gradlePath, 'utf8')
       .replace(/versionCode\s+\d+/, `versionCode ${code}`)
       .replace(/versionName\s+"[^"]*"/, `versionName "${version}"`);
+    // 0.8.0：多 Profile 需要 androidx.webkit（与 Capacitor 8.5.3 core 相同版本 1.14.0），幂等写入
+    g = g.replace(/\s*\/\/ ca:webkit\n\s*implementation "androidx\.webkit:webkit:[^"]+"/, '');
+    g = g.replace(/dependencies\s*\{/, 'dependencies {\n    // ca:webkit\n    implementation "androidx.webkit:webkit:1.14.0"');
     writeFileSync(gradlePath, g);
     console.log(`Android：versionName ${version}，versionCode ${code}`);
   }
