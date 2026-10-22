@@ -5,6 +5,8 @@ import { translate } from './i18n';
 import { deviceClass, runtime, serverBase, copyText } from './runtime';
 import { api, ApiError, mediaUrl } from './api';
 import { StatusBadge, Badge } from './ui';
+import { normalize, parseHash } from './route';
+import { layoutOf } from './nav';
 
 function mockFetch(handler: (url: string, init?: RequestInit) => unknown) {
   const fn = vi.fn(async (url: string, init?: RequestInit) => {
@@ -61,16 +63,40 @@ describe('api 客户端', () => {
   });
 });
 
+describe('路由', () => {
+  it('旧 hash 重定向到新信息架构', () => {
+    expect(normalize('review')).toBe('create/drafts');
+    expect(normalize('status')).toBe('settings/status');
+    expect(normalize('overview')).toBe('today');
+    expect(normalize('creator')).toBe('create/publish');
+    expect(parseHash('#hot')).toEqual({ space: 'inspire', sub: 'hot', id: null });
+    expect(parseHash('#create/12')).toEqual({ space: 'create', sub: 'drafts', id: '12' });
+    expect(parseHash('#settings')).toEqual({ space: 'settings', sub: '', id: null });
+    expect(layoutOf(390)).toBe('phone');
+    expect(layoutOf(820)).toBe('tablet');
+    expect(layoutOf(1440)).toBe('desktop');
+  });
+});
+
 describe('界面', () => {
-  it('渲染导航、总览数据；硬边界与模型状态在运行状态页', async () => {
+  it('渲染导航与今天待办流；硬边界与模型状态在设置中心的运行状态', async () => {
     mockFetch((u) => DATA[u] ?? {});
     render(<App />);
     expect(screen.getByRole('navigation', { name: '主导航' })).toBeTruthy();
-    expect(screen.getAllByRole('link').length).toBeGreaterThanOrEqual(NAV.length);
+    expect(screen.getAllByRole('link').length).toBeGreaterThanOrEqual(5);
     await waitFor(() => expect(screen.getAllByText(/大模型降价/).length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByRole('link', { name: /运行状态/ })[0]!);
+    fireEvent.click(screen.getAllByRole('link', { name: /设置/ })[0]!);
+    await waitFor(() => expect(screen.getByRole('link', { name: /运行状态/ })).toBeTruthy());
+    fireEvent.click(screen.getByRole('link', { name: /运行状态/ }));
     await waitFor(() => expect(screen.getByText('不做反检测')).toBeTruthy());
     expect(screen.getAllByText('未配置').length).toBeGreaterThan(0);
+  });
+  it('旧地址 #review 进入创作', async () => {
+    mockFetch(() => ({}));
+    location.hash = 'review';
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: '创作' })).toBeTruthy());
+    expect(location.hash).toBe('#create/drafts');
   });
   it('切换语言与页面', async () => {
     mockFetch((u) => DATA[u] ?? { settings: {}, secrets: {}, capabilities: [], providers: [], status: [], routes: {}, prices: {}, byCapability: [] });

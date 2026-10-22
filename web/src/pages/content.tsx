@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { get, post, del } from '../api';
 import { useT } from '../i18n';
 import { Icon } from '../icons';
-import { notify, type Device } from '../runtime';
-import { Badge, Card, CountUp, Empty, ErrorBox, Field, Loading, Skeleton, SkeletonLines, Sparkline, StatusBadge, useLoad, useToast } from '../ui';
+import type { Device } from '../runtime';
+import { Badge, Card, CountUp, Empty, ErrorBox, Field, Loading, SkeletonLines, Sparkline, StatusBadge, useLoad, useToast } from '../ui';
 
 /* ---------- 总览 Dashboard ---------- */
 
@@ -29,7 +29,7 @@ function weekDelta(series: number[]): number | null {
   if (!b) return 100;
   return Math.round(((a - b) / b) * 100);
 }
-function ago(ts: string | undefined, lang: string): string {
+export function ago(ts: string | undefined, lang: string): string {
   if (!ts) return '';
   const t = Date.parse(ts.includes('T') ? ts : ts.replace(' ', 'T') + 'Z');
   if (!Number.isFinite(t)) return ts;
@@ -39,121 +39,6 @@ function ago(ts: string | undefined, lang: string): string {
   if (s < 3600) return zh ? `${Math.floor(s / 60)} 分钟前` : `${Math.floor(s / 60)}m ago`;
   if (s < 86400) return zh ? `${Math.floor(s / 3600)} 小时前` : `${Math.floor(s / 3600)}h ago`;
   return zh ? `${Math.floor(s / 86400)} 天前` : `${Math.floor(s / 86400)}d ago`;
-}
-
-function Kpi({ label, value, decimals, prefix, suffix, delta, deltaGoodWhenUp = true, loading, onClick, hint }: {
-  label: string; value: number; decimals?: number; prefix?: string; suffix?: string; delta?: number | null; deltaGoodWhenUp?: boolean;
-  loading: boolean; onClick?: () => void; hint?: string;
-}) {
-  const { t } = useT();
-  const good = delta == null ? null : (delta >= 0) === deltaGoodWhenUp;
-  return (
-    <button className="kpi" onClick={onClick} aria-label={`${label}：${loading ? t('加载中') : value.toFixed(decimals ?? 0)}${suffix ?? ''}`}>
-      <span className="kpi-top">
-        <span className="kpi-label">{label}</span>
-        <Icon name="arrowRight" size={14} className="kpi-go" />
-      </span>
-      {loading ? <Skeleton w="40%" h={32} r={6} style={{ margin: '4px 0' }} /> : <span className="kpi-value"><CountUp value={value} decimals={decimals} prefix={prefix} suffix={suffix} /></span>}
-      <span className="kpi-foot">
-        {delta != null && !loading
-          ? <span className={`delta ${good ? 'up' : 'down'}`}><Icon name={delta >= 0 ? 'arrowUp' : 'arrowDown'} size={12} />{Math.abs(delta)}%<span className="muted"> {t('较上周')}</span></span>
-          : <span className="muted">{hint ?? ''}</span>}
-      </span>
-    </button>
-  );
-}
-
-/** 总览：只回答“今天要处理什么”——4 个指标卡 + 待审队列 + 热点前 5。成本、模型、流水线、任务与硬边界见“运行状态”页。 */
-export function Overview({ go }: { go: (p: string) => void }) {
-  const { t, lang } = useT();
-  const n = useLoad(() => get('/api/notifications'));
-  const tasks = useLoad(() => get('/api/tasks?limit=200'));
-  const hot = useLoad(() => get('/api/hot'));
-  const drafts = useLoad(() => get('/api/drafts'));
-  const topics = useLoad(() => get('/api/topics'));
-  const [toast, say] = useToast();
-
-  const days = lastDays(14);
-  const draftRows: any[] = Array.isArray(drafts.data?.drafts) ? drafts.data.drafts : [];
-  const topicRows: any[] = Array.isArray(topics.data?.topics) ? topics.data.topics : [];
-  const merged: any[] = Array.isArray(hot.data?.merged) ? hot.data.merged : [];
-  const hotMatches: string[] = Array.isArray(n.data?.hotMatches) ? n.data.hotMatches : [];
-  const stats: Record<string, number> = tasks.data?.stats ?? {};
-
-  const draftSeries = perDay(draftRows, days);
-  const okN = stats.succeeded ?? 0;
-  const failN = stats.failed ?? 0;
-  const successRate = okN + failN ? (okN / (okN + failN)) * 100 : 0;
-  const pendingAll = draftRows.filter((d) => d.status === 'pending');
-  const pendingList = pendingAll.slice(0, 5);
-  const candidates = topicRows.filter((x) => x.status === 'candidate').length;
-  const dateStr = new Date().toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'long', day: 'numeric', weekday: 'long' });
-
-  return (
-    <div className="dash">
-      {toast}
-      <section className="dash-hero">
-        <div>
-          <p className="eyebrow">{dateStr}</p>
-          <h2 className="hero-title">{t('今天要处理什么')}</h2>
-        </div>
-        <div className="row wrap">
-          <button onClick={async () => {
-            const d = n.data;
-            const ok = await notify('内容运营助手', `待审草稿 ${d?.pendingDrafts ?? 0} 篇；热点命中 ${d?.hotMatches?.length ?? 0} 条`);
-            say(ok ? '已发送本地通知' : '通知权限未开启');
-          }}><Icon name="bell" />{t('开启通知')}</button>
-          <button className="primary" onClick={() => go('hot')}>{t('采集热榜')}</button>
-        </div>
-      </section>
-      <ErrorBox error={n.error} />
-
-      <div className="dash-grid">
-        <div className="kpis span-12">
-          <Kpi label={t('待审草稿')} value={Number(n.data?.pendingDrafts ?? 0)} loading={n.loading} onClick={() => go('review')} delta={weekDelta(draftSeries)} hint={t('去审核')} />
-          <Kpi label={t('候选选题')} value={candidates} loading={topics.loading} onClick={() => go('topics')} hint={t('待改写')} />
-          <Kpi label={t('热榜条目')} value={merged.length} loading={hot.loading} onClick={() => go('hot')} hint={`${t('热点命中')} ${hotMatches.length}`} />
-          <Kpi label={t('任务成功率')} value={successRate} decimals={0} suffix="%" loading={tasks.loading} onClick={() => go('tasks')} hint={`${t('失败任务')} ${failN}`} />
-        </div>
-
-        <Card className="span-7" title={t('审核队列')} subtitle={`${pendingAll.length} ${t('篇待审')}`} actions={<button className="ghost" onClick={() => go('review')}>{t('全部')}<Icon name="chevronRight" size={14} /></button>}>
-          {drafts.loading ? <SkeletonLines lines={4} /> : pendingList.length ? (
-            <ul className="list rows">
-              {pendingList.map((d) => (
-                <li key={d.id}>
-                  <button className="row-btn" onClick={() => go('review')}>
-                    <span className="plat">{PLATFORM_SHORT[d.platform] ?? d.platform}</span>
-                    <span className="grow ellipsis">{d.title || String(d.body ?? '').slice(0, 30)}</span>
-                    <span className="muted small nowrap">{ago(d.created_at, lang)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : <Empty icon="check">{t('没有待审草稿')}</Empty>}
-        </Card>
-
-        <Card className="span-5" title={t('热点前 5')} subtitle={t('跨榜单合并 · 最新')} actions={<button className="ghost" onClick={() => go('hot')}>{t('全部')}<Icon name="chevronRight" size={14} /></button>}>
-          {hotMatches.length > 0 && (
-            <div className="matches" aria-label={t('关注词命中')}>
-              <span className="muted small">{t('关注词命中')}</span>
-              <ul className="list match-list">{hotMatches.map((h) => <li key={h}><Badge tone="warn">{h}</Badge></li>)}</ul>
-            </div>
-          )}
-          {hot.loading ? <SkeletonLines lines={5} /> : merged.length ? (
-            <ol className="list hot-list">
-              {merged.slice(0, 5).map((m, i) => (
-                <li key={m.id ?? m.title}>
-                  <span className={`rank r${i + 1}`}>{i + 1}</span>
-                  <span className="grow ellipsis">{m.title}</span>
-                  <span className="muted small nowrap num">{(m.boards ?? []).length} {t('榜')}</span>
-                </li>
-              ))}
-            </ol>
-          ) : <Empty icon="hot">{t('暂无数据')}：{t('先采集热榜')}</Empty>}
-        </Card>
-      </div>
-    </div>
-  );
 }
 
 /** 运行状态（二级页）：成本、各能力成本、模型能力、流水线、最近任务、硬边界。从总览下沉，功能不变。 */
@@ -188,7 +73,7 @@ export function Status({ go }: { go: (p: string) => void }) {
 
   return (
     <div className="dash-grid">
-      <Card className="span-7" title={t('近 30 天成本')} actions={<button className="ghost" onClick={() => go('settings')}>{t('模型设置')}<Icon name="chevronRight" size={14} /></button>}>
+      <Card className="span-7" title={t('近 30 天成本')} actions={<button className="ghost" onClick={() => go('settings/models')}>{t('模型设置')}<Icon name="chevronRight" size={14} /></button>}>
         {costs.loading ? <SkeletonLines lines={2} /> : (
           <div className="status-cost">
             <div>
@@ -279,7 +164,6 @@ export function Status({ go }: { go: (p: string) => void }) {
   );
 }
 
-const PLATFORM_SHORT: Record<string, string> = { xiaohongshu: '小红书', douyin_script: '抖音', channels: '视频号', wechat_article: '公众号', xianyu: '闲鱼', x_post: 'X', zhihu_answer: '知乎', zhihu_article: '知乎' };
 
 export function Hot({ device, go }: { device: Device; go: (p: string) => void }) {
   const { t } = useT();
@@ -288,6 +172,7 @@ export function Hot({ device, go }: { device: Device; go: (p: string) => void })
   const [clusters, setClusters] = useState<any[] | null>(null);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState<any>(null);
+  const [made, setMade] = useState<string[]>([]);
   const [toast, say] = useToast();
   const run = async (key: string, fn: () => Promise<void>) => {
     setBusy(key); setErr(null);
@@ -325,11 +210,18 @@ export function Hot({ device, go }: { device: Device; go: (p: string) => void })
           </ul>
         </Card>
       )}
-      <Card icon="activity" title="跨榜单合并（最新）">
+      <Card icon="activity" title="跨榜单合并（最新）" subtitle={t('看中哪条，点“转选题”即生成选题卡')}>
         <Loading show={hot.loading} />
         <ol className="list compact hot-merged">
           {hot.data?.merged?.slice(0, 40).map((m: any) => (
-            <li key={m.id}><span>{m.title}</span> {m.boards.map((b: any) => <Badge key={b.board}>{b.board}#{b.rank}</Badge>)}</li>
+            <li key={m.id}>
+              <span className="hot-title">{m.title}</span> {(m.boards ?? []).map((b: any) => <Badge key={b.board}>{b.board}#{b.rank}</Badge>)}
+              <button className="ghost hot-to-topic" disabled={!!busy || made.includes(m.title)} aria-label={`${t('转选题')}：${m.title}`} onClick={() => run('t' + m.id, async () => {
+                const r = await post('/api/hot/research', { name: m.title, titles: [m.title] });
+                setMade((x) => [...x, m.title]);
+                say(`${t('已转为选题')} #${r.topicId}`);
+              })}>{made.includes(m.title) ? <><Icon name="check" size={14} />{t('已转')}</> : <><Icon name="plus" size={14} />{t('转选题')}</>}</button>
+            </li>
           ))}
         </ol>
         {!hot.loading && !hot.data?.merged?.length && <Empty icon="hot">{t('暂无数据')}</Empty>}

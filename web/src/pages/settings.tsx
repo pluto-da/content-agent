@@ -14,17 +14,29 @@ const SECRET_LABELS: Record<string, string> = {
   'model.gemini.key': 'Gemini API Key', 'model.elevenlabs.key': 'ElevenLabs API Key',
 };
 
-export function Settings({ theme, setTheme, lang, setLang }: { theme: Theme; setTheme: (t: Theme) => void; lang: Lang; setLang: (l: Lang) => void }) {
+/** 设置中心的“偏好”分组：general（主题/语言/连接/代理）、secrets、models、backup。原设置页功能拆分，不删减。 */
+export function SettingsSection({ section, theme, setTheme, lang, setLang }: { section: string; theme: Theme; setTheme: (t: Theme) => void; lang: Lang; setLang: (l: Lang) => void }) {
+  if (section === 'models') return <div className="grid"><Models /></div>;
+  if (section === 'backup') return <div className="grid"><Backup /></div>;
+  if (section === 'secrets') return <Secrets />;
+  return <General theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />;
+}
+
+/** 兼容旧调用：完整设置页（全部分组依次排列）。 */
+export function Settings(props: { theme: Theme; setTheme: (t: Theme) => void; lang: Lang; setLang: (l: Lang) => void }) {
+  return <div className="grid"><General {...props} /><Secrets /><Models /><Backup /></div>;
+}
+
+function General({ theme, setTheme, lang, setLang }: { theme: Theme; setTheme: (t: Theme) => void; lang: Lang; setLang: (l: Lang) => void }) {
   const { t } = useT();
   const s = useLoad(() => get('/api/settings'));
   const [proxy, setProxy] = useState('');
   const [kw, setKw] = useState('');
   const [server, setServer] = useState(localStorage.getItem('ca.server') ?? '');
   const [token, setToken] = useState(localStorage.getItem('ca.token') ?? '');
-  const [secretVals, setSecretVals] = useState<Record<string, string>>({});
   const [err, setErr] = useState<any>(null);
   const [toast, say] = useToast();
-  useEffect(() => { if (s.data) { setProxy(s.data.proxy); setKw((s.data.hotKeywords ?? []).join('，')); } }, [s.data]);
+  useEffect(() => { if (s.data) { setProxy(s.data.proxy ?? ''); setKw((s.data.hotKeywords ?? []).join('，')); } }, [s.data]);
   const act = async (fn: () => Promise<void>) => { setErr(null); try { await fn(); } catch (e) { setErr(e); } };
   return (
     <div className="grid">
@@ -35,25 +47,44 @@ export function Settings({ theme, setTheme, lang, setLang }: { theme: Theme; set
           <Field label={t('语言')}><select value={lang} onChange={(e) => setLang(e.target.value as Lang)}><option value="zh">简体中文</option><option value="en">English</option></select></Field>
         </div>
       </Card>
-      <Card icon="activity" title="连接">
+      <Card icon="activity" title={t('连接')}>
         {runtime() !== 'web' && <Field label={t('服务地址')} hint="运行后端的电脑或你自己的服务器，例如 http://192.168.1.10:8787"><input value={server} onChange={(e) => setServer(e.target.value)} /></Field>}
         <Field label={t('访问口令')} hint="与后端环境变量 CA_ACCESS_TOKEN 一致；仅保存在本机"><input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} /></Field>
-        <button onClick={() => { localStorage.setItem('ca.server', server); localStorage.setItem('ca.token', token); say('已保存到本机'); s.reload(); }}>{t('保存')}</button>
-        <p className="muted small">当前服务：{serverBase() || '同源'}</p>
+        <div className="actions">
+          <button className="primary" onClick={() => { localStorage.setItem('ca.server', server); localStorage.setItem('ca.token', token); say('已保存到本机'); s.reload(); }}>{t('保存')}</button>
+          <span className="muted small">当前服务：{serverBase() || '同源'}</span>
+        </div>
       </Card>
       <Card icon="hot" title={`${t('代理')} / 采集`}>
         <ErrorBox error={err ?? s.error} />
         <Field label={t('代理')} hint="境外模型、X API、Google Trends 走此代理（如本机 VPN 客户端的 HTTP 代理端口）；国内模型与平台默认直连"><input value={proxy} placeholder="http://127.0.0.1:7890" onChange={(e) => setProxy(e.target.value)} /></Field>
         <Field label="热点关注关键词（逗号分隔，用于本地通知）"><input value={kw} onChange={(e) => setKw(e.target.value)} /></Field>
-        <button onClick={() => act(async () => { await put('/api/settings', { proxy, hotKeywords: kw.split(/[,，]/).map((x) => x.trim()).filter(Boolean) }); say('已保存'); })}>{t('保存')}</button>
+        <div className="actions">
+          <button className="primary" onClick={() => act(async () => { await put('/api/settings', { proxy, hotKeywords: kw.split(/[,，]/).map((x) => x.trim()).filter(Boolean) }); say('已保存'); })}>{t('保存')}</button>
+        </div>
       </Card>
+    </div>
+  );
+}
+
+function Secrets() {
+  const { t } = useT();
+  const s = useLoad(() => get('/api/settings'));
+  const [secretVals, setSecretVals] = useState<Record<string, string>>({});
+  const [err, setErr] = useState<any>(null);
+  const [toast, say] = useToast();
+  const act = async (fn: () => Promise<void>) => { setErr(null); try { await fn(); } catch (e) { setErr(e); } };
+  return (
+    <div className="grid">
+      {toast}
       <Card icon="shield" title={t('密钥')}>
         <p className="muted small">密钥只保存在后端本机的加密密钥库（AES-256-GCM），界面只显示末四位；不会进入前端包、日志或备份。</p>
+        <ErrorBox error={err ?? s.error} />
         <ul className="secrets">
           {Object.entries(s.data?.secrets ?? {}).map(([name, v]: [string, any]) => (
             <li key={name}>
               <Field label={SECRET_LABELS[name] ?? name}>
-                <div className="row">
+                <div className="row secret-row">
                   <input type="password" autoComplete="off" placeholder={v.configured ? `${t('已配置')} ${v.hint}` : t('未配置')} value={secretVals[name] ?? ''} onChange={(e) => setSecretVals({ ...secretVals, [name]: e.target.value })} />
                   <button onClick={() => act(async () => { await put(`/api/secrets/${name}`, { value: secretVals[name] ?? '' }); setSecretVals({ ...secretVals, [name]: '' }); s.reload(); say('已更新'); })}>{t('保存')}</button>
                 </div>
@@ -62,8 +93,6 @@ export function Settings({ theme, setTheme, lang, setLang }: { theme: Theme; set
           ))}
         </ul>
       </Card>
-      <Models />
-      <Backup />
     </div>
   );
 }
@@ -107,7 +136,7 @@ function Models() {
           </tbody>
         </table>
       </div>
-      <div className="row wrap">
+      <div className="actions">
         <button className="primary" onClick={async () => { setErr(null); try { await put('/api/models/routes', { routes }); say('路由已保存'); m.reload(); } catch (e) { setErr(e); } }}>{t('保存')}</button>
         <button onClick={async () => { setErr(null); try { const r = await post('/api/models/test/llm'); say(`${r.provider}/${r.model}：${r.sample}`); } catch (e) { setErr(e); } }}>{t('测试')} LLM</button>
       </div>
@@ -115,7 +144,7 @@ function Models() {
         <summary>单价（用于成本统计）</summary>
         <p className="muted small">键为“提供方”或“提供方:模型”。token 为每百万；image 每张；char 每万字；second 每分钟。例如 {'{"deepseek": {"input": 2, "output": 8}}'}</p>
         <textarea className="mono" rows={5} value={prices} onChange={(e) => setPrices(e.target.value)} aria-label="单价 JSON" />
-        <button onClick={async () => { setErr(null); try { await put('/api/models/prices', { prices: JSON.parse(prices) }); say('已保存'); } catch (e) { setErr(e); } }}>{t('保存')}</button>
+        <div className="actions"><button onClick={async () => { setErr(null); try { await put('/api/models/prices', { prices: JSON.parse(prices) }); say('已保存'); } catch (e) { setErr(e); } }}>{t('保存')}</button></div>
       </details>
       <h3>{t('成本')}（近 30 天）：¥{Number(costs.data?.total ?? 0).toFixed(4)}</h3>
       <div className="table-wrap"><table className="table small">
@@ -134,7 +163,7 @@ function Backup() {
     <Card icon="inbox" title={t('备份')}>
       {toast}
       <p className="muted small">导出全部业务数据与系统文件为 JSON（不含任何密钥）。导入会覆盖当前数据，导入前自动备份。</p>
-      <div className="row wrap">
+      <div className="actions">
         <button onClick={async () => {
           setErr(null);
           try {

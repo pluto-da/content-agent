@@ -3,6 +3,22 @@ import { createContext, useContext } from 'react';
 export type Lang = 'zh' | 'en';
 
 const en: Record<string, string> = {
+  今天: 'Today', 灵感: 'Ideas', 创作: 'Create', 新建: 'New', 返回: 'Back', 草稿: 'Drafts', 看板: 'Board', 发布台: 'Publish desk', 草稿与审核: 'Drafts & review',
+  '从哪里开始？发布始终由你本人完成。': 'Where to start? You always publish yourself.', 从内容库选素材: 'Pick from library', 改写选题: 'Rewrite a topic', 导入数据复盘: 'Import data for review',
+  '抓取公开热榜，挑热点一键转选题': 'Fetch public boards, turn a trend into a topic', 勾选已采集内容生成选题: 'Select items to generate topics', '选平台，一次生成多平台草稿': 'Pick platforms, draft them all at once', '上传平台后台导出的 CSV': 'Upload CSV exported from the platform',
+  件事等你处理: 'things need you', 待审: 'Review', 待发布: 'To publish', 新热点: 'New trend', 转选题: 'To topic', 已转: 'Done', 已转为选题: 'Topic created', 查看: 'View',
+  '已通过，等你本人发布': 'Approved, waiting for you to publish', 命中你的关注词: 'Matches your keywords', 个榜单: 'boards', 待办: 'To-do', 今天没有待办: 'Nothing to do today', 去找灵感: 'Find ideas',
+  '处理中…': 'Working…', '发布由你本人在官方后台或 App 中点击完成；本应用不自动点赞、评论、私信或关注。': 'You publish yourself in the official app; this app never auto-likes, comments, DMs or follows.',
+  发布由你本人在官方后台或App中点击完成: 'You publish yourself', 状态筛选: 'Filter by status', 从左侧选择一篇草稿进行编辑与审核: 'Pick a draft on the left to edit and review', 编辑: 'Edit', 平台预览: 'Preview', 编辑或预览: 'Edit or preview',
+  更多操作: 'More actions', 退回待审: 'Back to pending', 发布交接: 'Hand-off', '修改会留痕；通过后可去发布': 'Edits are logged; publish after approval', 我的账号: 'My account', 预览: 'preview', 我: 'Me',
+  无配图: 'No image', '（正文为空）': '(empty)', '（口播字幕预览）': '(subtitle preview)', 标题: 'Title', 正文: 'Body', '中文计 2': 'CJK counts 2', 仅示意以平台实际显示为准: 'Approximate', '仅示意，以平台实际显示为准': 'Approximate; the platform decides',
+  生成中: 'Generating', 已发布: 'Published', 暂无: 'None', 等你审核: 'Waiting for review', 排队或运行中的任务: 'Queued or running', '已通过，等你本人发布 ': 'Approved', 已交接给你发布: 'Handed off to you',
+  设置分组: 'Settings sections', 扩展: 'Extensions', 偏好: 'Preferences', 插件: 'Plugins', 通用: 'General', '硬边界写在代码中，设置不能放宽。': 'Hard boundaries are enforced in code.', 连接: 'Connection',
+  '看中哪条，点“转选题”即生成选题卡': 'Click “To topic” to create a topic card', '待审、待发布、失败任务与新热点，一条待办流': 'Reviews, publishing, failures and trends in one feed', '热点、内容库与选题': 'Trends, library and topics',
+  '草稿、审核、平台预览与发布交接': 'Drafts, review, preview and hand-off', '运行状态、系统文件、插件、任务与偏好': 'Status, agent files, plugins, tasks and preferences', '主题、语言、连接、代理与采集': 'Theme, language, connection, proxy',
+  '平台与模型密钥（只显示末四位）': 'Platform and model keys (last 4 shown)', '按能力路由、备用、单价与成本': 'Routing, fallback, prices and cost', 导出与恢复业务数据: 'Export and restore data',
+  '编辑、审核、平台预览': 'Edit, review, preview', '选题 → 生成中 → 待审 → 待发布 → 已发布': 'Topic → generating → review → to publish → published', '官方创作后台与本地应用，由你本人发布': 'Official creator hubs and local apps; you publish',
+  '公开热榜采集、跨榜合并与聚类，一键转选题': 'Public boards, merged and clustered; one click to topic', 发布始终由你本人在官方后台或App中点击完成: 'You always publish yourself', '发布始终由你本人在官方后台或 App 中点击完成': 'You always publish yourself in the official app',
   总览: 'Overview', 热点: 'Trends', 内容库: 'Library', 选题: 'Topics', 审核: 'Review', 创作中心: 'Creator hubs', 复盘: 'Analytics',
   系统文件: 'Agent files', 改进与评测: 'Improve & eval', 插件管理: 'Plugins', 任务与日志: 'Tasks & logs', 设置: 'Settings',
   刷新: 'Refresh', 保存: 'Save', 取消: 'Cancel', 删除: 'Delete', 添加: 'Add', 运行: 'Run', 复制: 'Copy', 通过: 'Approve', 驳回: 'Reject',
