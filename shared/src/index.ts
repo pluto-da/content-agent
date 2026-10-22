@@ -8,3 +8,6 @@ export * from './feeds.js';
 export * from './skill.js';
 export * from './errors.js';
 export * from './robots.js';
+export * from './stream.js';
+export * from './toolcall.js';
+export * from './hotclean.js';

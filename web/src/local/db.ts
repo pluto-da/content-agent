@@ -3,11 +3,12 @@
  * 集合：drafts、topics、hot、apps、metrics、logs；键值：settings（含模型配置）。密钥只存本机，不写日志。
  */
 export type Row = Record<string, unknown> & { id: number };
-export const COLLECTIONS = ['drafts', 'topics', 'apps', 'metrics', 'logs'] as const;
+/** 0.8.0（DB_VERSION 2）只新增集合：conversations、messages、inbox、tasks、hot_snapshots；旧集合不改。 */
+export const COLLECTIONS = ['drafts', 'topics', 'apps', 'metrics', 'logs', 'conversations', 'messages', 'inbox', 'tasks', 'hot_snapshots'] as const;
 export type Collection = (typeof COLLECTIONS)[number];
 
 const DB_NAME = 'content-agent';
-const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 interface Backend {
   all(c: Collection): Promise<Row[]>;

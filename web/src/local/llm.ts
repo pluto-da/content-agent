@@ -11,6 +11,8 @@ import { runtime } from '../runtime';
 export interface ProviderConfig {
   id: string; label: string; protocol: Protocol; baseURL: string; apiKey: string; model: string;
   custom?: boolean;
+  /** 0.8.0：工具调用方式。native = OpenAI / Anthropic 原生 tools；json = 兼容模式（JSON 指令）。首次在 Agent 中使用时自动探测。 */
+  toolMode?: 'native' | 'json';
   /** 最近一次测试连接结果 */
   check?: { ok: boolean; at: string; ms?: number; model?: string; reason?: string };
 }
@@ -36,12 +38,16 @@ export function checkBaseURL(url: string): FriendlyError | null {
   return null;
 }
 
-async function timedFetch(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+export async function timedFetch(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), timeoutMs);
+  // 0.8.0：调用方的“停止”信号也能中止请求（停止 ≠ 超时，原样抛 AbortError）
+  const outer = init.signal;
+  if (outer) { if (outer.aborted) ctl.abort(); else outer.addEventListener('abort', () => ctl.abort(), { once: true }); }
   try {
     return await fetch(url, { ...init, signal: ctl.signal });
   } catch (e) {
+    if (outer?.aborted) throw new DOMException('已停止', 'AbortError');
     throw new ModelError(classifyThrown(e, { web: runtime() !== 'capacitor', timedOut: ctl.signal.aborted, offline: typeof navigator !== 'undefined' && navigator.onLine === false }));
   } finally {
     clearTimeout(t);

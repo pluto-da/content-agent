@@ -4,13 +4,11 @@
  */
 import { classifyThrown, isAllowedByRobots, parseBaiduHot, parseFeed, parseRobots } from '@content-agent/shared';
 import { runtime } from '../runtime';
+import { PUBLIC_SOURCES } from '../data/hotSources';
 
 export interface HotSource { id: string; label: string; kind: 'rss' | 'board'; url: string }
-export const HOT_SOURCES: HotSource[] = [
-  { id: 'baidu', label: '百度热搜', kind: 'board', url: 'https://top.baidu.com/api/board?platform=wise&tab=realtime' },
-  { id: 'solidot', label: 'Solidot（RSS）', kind: 'rss', url: 'https://www.solidot.org/index.rss' },
-  { id: 'sspai', label: '少数派（RSS）', kind: 'rss', url: 'https://sspai.com/feed' },
-];
+/** 0.8.0：来源表统一在 data/hotSources.ts（修订 R1-d）。 */
+export const HOT_SOURCES: HotSource[] = PUBLIC_SOURCES.map((s) => ({ id: s.id, label: s.kind === 'rss' ? `${s.label}（RSS）` : s.label, kind: s.kind, url: s.url }));
 
 export interface HotEntry { title: string; url?: string; source: string; rank: number }
 export interface SourceResult { id: string; label: string; ok: boolean; count: number; reason?: string }

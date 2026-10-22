@@ -19,7 +19,7 @@ const num = (s: string | undefined) => Number(s);
 const byNewest = (a: Row, b: Row) => b.id - a.id;
 const TRANSITIONS: Record<string, string[]> = { pending: ['approved', 'rejected'], rejected: ['pending'], approved: ['handed_off', 'pending'], handed_off: ['approved'] };
 
-on('GET', /^\/api\/health$/, async () => ({ ok: true, version: '0.7.0', mode: 'local' }));
+on('GET', /^\/api\/health$/, async () => ({ ok: true, version: '0.8.0', mode: 'local' }));
 
 /* ---------- 草稿 ---------- */
 on('GET', /^\/api\/drafts$/, async (_m, _b, q) => {
@@ -108,8 +108,12 @@ on('GET', /^\/api\/logs$/, async () => ({ logs: (await db.all('logs')).sort(byNe
 on('GET', /^\/api\/backup\/export$/, async (_m, _b, q) => {
   const withKeys = q.get('keys') === '1';
   const models = await getModels();
-  const data: Record<string, unknown> = { format: 'content-agent-local-backup', version: 1, exportedAt: new Date().toISOString(), includesKeys: withKeys };
-  for (const c of ['drafts', 'topics', 'apps', 'metrics'] as const) data[c] = await db.all(c);
+  const withInbox = q.get('inbox') !== '0';
+  // 备份 version 2（0.8.0）：多了会话、消息、素材箱（可取消勾选）、任务检查点与账号画像；数据源密钥永不导出
+  const data: Record<string, unknown> = { format: 'content-agent-local-backup', version: 2, exportedAt: new Date().toISOString(), includesKeys: withKeys };
+  for (const c of ['drafts', 'topics', 'apps', 'metrics', 'conversations', 'messages', 'tasks'] as const) data[c] = await db.all(c);
+  if (withInbox) data.inbox = await db.all('inbox');
+  data.profile = (await db.getKV('profile')) ?? null;
   data.prefs = await getPrefs();
   data.assistants = (await db.getKV('assistants')) ?? {};
   // 默认不含密钥：只保留服务商、地址与模型名
@@ -120,13 +124,15 @@ on('GET', /^\/api\/backup\/export$/, async (_m, _b, q) => {
 on('POST', /^\/api\/backup\/import$/, async (_m, b) => {
   if (!b || b.format !== 'content-agent-local-backup') throw new LocalError('import_failed', '这不是本应用导出的备份文件', '请选择“我的 → 备份”导出的 .json 文件');
   let n = 0;
-  for (const c of ['drafts', 'topics', 'apps', 'metrics'] as const) {
+  // 兼容 version 1（只有 drafts / topics / apps / metrics）与 version 2
+  for (const c of ['drafts', 'topics', 'apps', 'metrics', 'conversations', 'messages', 'tasks', 'inbox'] as const) {
     if (!Array.isArray(b[c])) continue;
     await db.clear(c);
     for (const r of b[c]) { await db.insert(c, r); n++; }
   }
   if (b.prefs) await setPrefs(b.prefs);
   if (b.assistants) await db.setKV('assistants', b.assistants);
+  if (b.profile) await db.setKV('profile', b.profile);
   if (b.models) {
     const cur = await getModels();
     const incoming = b.models as ModelsState;

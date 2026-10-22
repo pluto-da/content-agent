@@ -59,8 +59,13 @@ export async function setAssistantOverride(platform: string, o: AssistantOverrid
 }
 
 /* ---------- 偏好 ---------- */
-export interface Prefs { platforms: string[]; onboarded: boolean; backupHinted: boolean; hotSources: string[] }
-export const DEFAULT_PREFS: Prefs = { platforms: [], onboarded: false, backupHinted: false, hotSources: ['baidu', 'solidot', 'sspai'] };
+export interface Prefs {
+  platforms: string[]; onboarded: boolean; backupHinted: boolean; hotSources: string[];
+  /** 0.8.0 侧栏顺序、自定义网站、保活上限、平台↔会话绑定、关闭角标的平台、Agent 面板停靠边 */
+  platformOrder?: string[]; customSites?: { id: string; label: string; url: string }[]; keepAlive?: number;
+  bindSessions?: boolean; sessionBindings?: Record<string, string>; badgeOff?: string[]; agentDock?: 'right' | 'left'; newWindow?: 'inplace' | 'system';
+}
+export const DEFAULT_PREFS: Prefs = { platforms: [], onboarded: false, backupHinted: false, hotSources: ['baidu', 'solidot', 'sspai', '36kr'] };
 export async function getPrefs(): Promise<Prefs> { return { ...DEFAULT_PREFS, ...((await db.getKV<Prefs>('prefs')) ?? {}) }; }
 export async function setPrefs(p: Partial<Prefs>): Promise<Prefs> { const n = { ...(await getPrefs()), ...p }; await db.setKV('prefs', n); return n; }
 
