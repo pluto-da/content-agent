@@ -16,7 +16,12 @@ export async function getModels(): Promise<ModelsState> {
   // 注意：必须复制数组，避免 upsert 时 push 改到 EMPTY_MODELS 常量本身
   return { ...EMPTY_MODELS, ...(m ?? {}), providers: [...(m?.providers ?? [])], advanced: { ...EMPTY_MODELS.advanced, ...(m?.advanced ?? {}) } };
 }
-export async function saveModels(m: ModelsState): Promise<void> { await db.setKV('models', m); }
+export const MODELS_CHANGED = 'ca:models-changed';
+export async function saveModels(m: ModelsState): Promise<void> {
+  await db.setKV('models', m);
+  // 0.8.1：通知所有已挂载的页面（Agent 面板常驻不卸载）重新读取模型配置
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(MODELS_CHANGED));
+}
 
 export async function upsertProvider(cfg: ProviderConfig): Promise<ModelsState> {
   const m = await getModels();
@@ -35,13 +40,34 @@ export async function removeProvider(id: string): Promise<ModelsState> {
   return m;
 }
 
-/** 当前可用于写作的服务（默认 → 任一已连通）。 */
-export async function activeProvider(override?: { providerId?: string | null; model?: string | null }): Promise<ProviderConfig | null> {
-  const m = await getModels();
-  const pick = (id?: string | null) => (id ? m.providers.find((p) => p.id === id) : undefined);
-  const base = pick(override?.providerId) ?? pick(m.defaultProvider) ?? m.providers.find((p) => p.check?.ok) ?? null;
+/**
+ * 0.8.1：唯一的“是否已配置”判断——首页、Agent 面板、模型胶囊、写作页、生成全都用它，避免一处说“未连接”另一处能发。
+ * 填了 Key 即视为已配置（免 Key 服务如 Ollama 填了地址即可）；“测试连接”没通过或没测只做提示，不拦发送，发送失败由模型层给白话原因。
+ */
+export function isConfigured(p: ProviderConfig): boolean {
+  if (p.apiKey?.trim()) return true;
+  if (presetOf(p.id)?.noKey) return !!p.baseURL?.trim();
+  return !!p.check?.ok;
+}
+export function configuredProviders(m: Pick<ModelsState, 'providers'>): ProviderConfig[] { return m.providers.filter(isConfigured); }
+export function hasConfiguredModel(m: Pick<ModelsState, 'providers'> | null | undefined): boolean { return !!m && m.providers.some(isConfigured); }
+/** 测试状态（只用于提示）：ok 已连通 / untested 没测过 / failed 上次测试没通过。 */
+export function checkState(p: ProviderConfig): 'ok' | 'untested' | 'failed' { return p.check?.ok ? 'ok' : p.check ? 'failed' : 'untested'; }
+
+/** 选择用哪个服务：指定的 → 默认 → 任一已连通 → 任一已填 Key；都只在“已配置”的服务里选。 */
+export function resolveProvider(m: ModelsState, override?: { providerId?: string | null; model?: string | null }): ProviderConfig | null {
+  const usable = configuredProviders(m);
+  const byId = (id?: string | null) => (id ? usable.find((p) => p.id === id) : undefined);
+  const base = byId(override?.providerId) ?? byId(m.defaultProvider) ?? usable.find((p) => p.check?.ok) ?? usable[0] ?? null;
   if (!base) return null;
-  return override?.model ? { ...base, model: override.model } : base;
+  // 指定的模型名只用在它所属的服务上；指定服务不可用而回退时，用回退服务自己的模型
+  const modelFits = !!override?.model && (!override.providerId || override.providerId === base.id);
+  return modelFits ? { ...base, model: override!.model! } : base;
+}
+
+/** 当前可用于写作的服务。 */
+export async function activeProvider(override?: { providerId?: string | null; model?: string | null }): Promise<ProviderConfig | null> {
+  return resolveProvider(await getModels(), override);
 }
 
 export function newProviderConfig(id: string): ProviderConfig {

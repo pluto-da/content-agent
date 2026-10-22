@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useStoreChange } from '../local/useStore';
 import { ApiError, del, get, put } from '../api';
 import { useT } from '../i18n';
 import { Icon } from '../icons';
@@ -22,6 +23,8 @@ export function Write({ filter, id, go, lay }: { filter: string; id: string | nu
   const [err, setErr] = useState<ApiError | null>(null);
   const load = useCallback(() => { listDrafts().then((d) => { setDrafts(d); setErr(null); }).catch((e) => setErr(e instanceof ApiError ? e : new ApiError('error', String(e)))); }, []);
   useEffect(load, [load]);
+  // 0.8.1：Agent 写的草稿、别处审核的状态立即出现在列表里
+  useStoreChange(['drafts'], load);
   const shown = useMemo(() => (drafts ?? []).filter((d) => filter === 'all' || d.status === filter), [drafts, filter]);
   const count = (f: string) => (drafts ?? []).filter((d) => f === 'all' || d.status === f).length;
   const phone = lay === 'phone';

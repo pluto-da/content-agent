@@ -79,17 +79,29 @@ function be(): Backend {
 /** 测试用：换成全新的内存库。 */
 export function resetLocalDb(): void { backend = memory(); }
 
+/* ---------- 0.8.1：本机数据变更订阅（常驻 / 保活组件据此重新读取，不用刷新页面） ---------- */
+/** 变更键：集合名（drafts、conversations…）或 `kv:<键>`（kv:models、kv:prefs、kv:profile…）。 */
+export type StoreKey = Collection | `kv:${string}`;
+export const STORE_CHANGED = 'ca:store-changed';
+const subs = new Set<(k: StoreKey) => void>();
+export function onStoreChange(fn: (k: StoreKey) => void): () => void { subs.add(fn); return () => { subs.delete(fn); }; }
+export function emitStoreChange(k: StoreKey): void {
+  for (const fn of [...subs]) { try { fn(k); } catch { /* 单个订阅者出错不影响其他 */ } }
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(STORE_CHANGED, { detail: k }));
+}
+const after = async <T,>(p: Promise<T>, k: StoreKey): Promise<T> => { const r = await p; emitStoreChange(k); return r; };
+
 export const db = {
   all: (c: Collection) => be().all(c),
   async get(c: Collection, id: number): Promise<Row | undefined> { return (await be().all(c)).find((r) => r.id === id); },
-  insert: (c: Collection, row: Record<string, unknown>) => be().put(c, { ...row, created_at: row.created_at ?? new Date().toISOString(), updated_at: new Date().toISOString() }),
+  insert: (c: Collection, row: Record<string, unknown>) => after(be().put(c, { ...row, created_at: row.created_at ?? new Date().toISOString(), updated_at: new Date().toISOString() }), c),
   async update(c: Collection, id: number, patch: Record<string, unknown>): Promise<Row> {
     const cur = await this.get(c, id);
     if (!cur) throw new Error('记录不存在');
-    return be().put(c, { ...cur, ...patch, id, updated_at: new Date().toISOString() });
+    return after(be().put(c, { ...cur, ...patch, id, updated_at: new Date().toISOString() }), c);
   },
-  del: (c: Collection, id: number) => be().del(c, id),
-  clear: (c: Collection) => be().clear(c),
+  del: (c: Collection, id: number) => after(be().del(c, id), c),
+  clear: (c: Collection) => after(be().clear(c), c),
   getKV: <T,>(k: string) => be().getKV<T>(k),
-  setKV: (k: string, v: unknown) => be().setKV(k, v),
+  setKV: (k: string, v: unknown) => after(be().setKV(k, v), `kv:${k}`),
 };

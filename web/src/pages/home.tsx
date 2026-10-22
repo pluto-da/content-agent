@@ -6,7 +6,8 @@ import { center, writePlatform } from '../data/platforms';
 import { builtinMode, builtinOpenLabel, canSplitScreen, currentEnv, openBuiltin, openSplit, splitLabel } from '../builtin';
 import { useLocalApps } from '../format';
 import { appOs } from '../runtime';
-import { getModels } from '../local/store';
+import { getModels, hasConfiguredModel } from '../local/store';
+import { useStoreChange } from '../local/useStore';
 import { apiMode } from '../api';
 import { listDrafts, loadHot, STATUS_LABEL, type Draft } from '../services';
 import { nextStep, type Snapshot } from '../state';
@@ -37,7 +38,7 @@ export function Home({ go }: { go: (to: string) => void }) {
   const load = useCallback(async () => {
     try {
       const [drafts, hot, models] = await Promise.all([listDrafts(), loadHot().catch(() => ({ items: [] })), getModels()]);
-      const hasModel = apiMode() === 'server' || models.providers.some((p) => p.check?.ok);
+      const hasModel = apiMode() === 'server' || hasConfiguredModel(models);
       setSnap({
         hasModel, hotCount: hot.items.length, drafts: drafts.length,
         pending: drafts.filter((d) => d.status === 'pending').length, approved: drafts.filter((d) => d.status === 'approved').length, published: drafts.filter((d) => d.status === 'handed_off').length,
@@ -47,6 +48,7 @@ export function Home({ go }: { go: (to: string) => void }) {
     } catch (e) { setErr(e instanceof ApiError ? e : new ApiError('error', String(e), '刷新一下页面')); }
   }, []);
   useEffect(() => { void load(); }, [load]);
+  useStoreChange(['drafts', 'kv:models', 'kv:hot.cache'], () => void load(), { onNavigate: true });
   const step = snap ? nextStep(snap) : null;
 
   return (

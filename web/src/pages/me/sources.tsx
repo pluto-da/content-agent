@@ -3,6 +3,7 @@
  * 凭证本机加密保存（AES-GCM），只显示末四位；可测试连接；未连接显示申请指引；没有公开 API 的标“暂不支持”。
  */
 import { useCallback, useEffect, useState } from 'react';
+import { useStoreChange } from '../../local/useStore';
 import { CONNECTORS, DOUYIN_OPEN, PATROL_STOPS, PLATFORM_SOURCES, PUBLIC_SOURCES, ROUTE_LABEL, type ConnectorMeta } from '../../data/hotSources';
 import { isConnected, listCreds, removeCred, saveCred, tail4, unseal, type SourceCred } from '../../local/secure';
 import { getPrefs, setPrefs, type Prefs } from '../../local/store';
@@ -21,6 +22,7 @@ export function SourcesPage() {
   const [prefs, setP] = useState<Prefs | null>(null);
   const load = useCallback(async () => { setCreds(await listCreds()); setP(await getPrefs()); }, []);
   useEffect(() => { void load(); }, [load]);
+  useStoreChange(['kv:sources.creds', 'kv:prefs'], () => void load());
   return (
     <div className="page page-narrow" data-testid="sources-page">
       <p className="m-0 mb-4 text-[14px] text-muted">Agent 会按你连接 / 启用的来源自动规划“五路并行”收集热点；它不会在平台页面里点击、滚动或读取内容。凭证只存在这台设备上（加密），界面只显示末四位。</p>

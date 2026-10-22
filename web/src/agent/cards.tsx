@@ -30,6 +30,8 @@ function Src({ source, route }: { source: string; route?: string }) {
 
 export function ToolCard({ card, actions }: { card: CardData; actions: CardActions }) {
   const [open, setOpen] = useState(false);
+  // 收起时保留内容到过渡结束（高度过渡），第一次展开前不渲染
+  const [ever, setEver] = useState(false);
   const spec = toolByName(card.tool);
   const label = spec?.label ?? card.tool;
   return (
@@ -39,12 +41,12 @@ export function ToolCard({ card, actions }: { card: CardData; actions: CardActio
         <span className="font-medium text-fg">{label}</span>
         <span className={cn(card.status === 'error' && 'text-bad')}>{STATUS[card.status]}</span>
         {card.ms !== undefined && <span className="tabular-nums">{(card.ms / 1000).toFixed(1)} 秒</span>}
-        <button type="button" className="!ml-auto !min-h-8 !border-0 !bg-transparent !px-1 !text-[13px] !text-muted" aria-expanded={open} onClick={() => setOpen((x) => !x)}>{open ? '收起' : '详情'}</button>
+        <button type="button" className="!ml-auto !min-h-8 !border-0 !bg-transparent !px-1 !text-[13px] !text-muted" aria-expanded={open} onClick={() => { setEver(true); setOpen((x) => !x); }}>{open ? '收起' : '详情'}</button>
       </header>
       <div className="px-3 py-2 text-[14px] text-fg-2">
         {card.status === 'error' ? <ErrorBody card={card} actions={actions} /> : card.status === 'done' ? <Body card={card} actions={actions} /> : <p className="m-0 text-muted">{card.status === 'running' ? '正在执行…' : '准备参数…'}</p>}
       </div>
-      {open && <pre className="m-0 max-h-56 overflow-auto border-t border-line bg-surface-2 px-3 py-2 text-[12px] leading-snug text-muted" data-testid="card-debug">{JSON.stringify({ args: card.args, data: card.type === 'hot' ? { sources: card.data?.sources, count: card.data?.items?.length } : card.data }, null, 2).slice(0, 4000)}</pre>}
+      <div className="card-details" data-open={open} aria-hidden={!open} inert={!open}><div>{ever && <pre className="m-0 max-h-56 overflow-auto border-t border-line bg-surface-2 px-3 py-2 text-[12px] leading-snug text-muted" data-testid="card-debug">{JSON.stringify({ args: card.args, data: card.type === 'hot' ? { sources: card.data?.sources, count: card.data?.items?.length } : card.data }, null, 2).slice(0, 4000)}</pre>}</div></div>
     </section>
   );
 }

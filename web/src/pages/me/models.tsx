@@ -7,6 +7,7 @@ import { PROVIDERS } from '../../data/providers';
 import type { ProviderConfig } from '../../local/llm';
 import { getModels, newProviderConfig, removeProvider, saveModels, type ModelsState } from '../../local/store';
 import { GroupList, ListRow, StatusDot } from '../../ui';
+import { useStoreChange } from '../../local/useStore';
 import { ProviderForm } from '../../components/ProviderForm';
 
 /**
@@ -19,6 +20,7 @@ export function ModelsPage({ id, go, lay }: { id: string | null; go: (to: string
   const [more, setMore] = useState(false);
   const reload = () => void getModels().then(setM);
   useEffect(reload, []);
+  useStoreChange(['kv:models'], reload);
   if (!m) return null;
   const cfgOf = (pid: string): ProviderConfig => m.providers.find((p) => p.id === pid) ?? newProviderConfig(pid);
   const ok = m.providers.filter((p) => p.check?.ok);

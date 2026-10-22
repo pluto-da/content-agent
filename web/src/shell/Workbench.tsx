@@ -14,6 +14,7 @@ import { Drawer, DrawerContent, DrawerItem } from '../components/ui/drawer';
 import type { Route } from '../route';
 import { CENTERS, center } from '../data/platforms';
 import { getPrefs, setPrefs, type Prefs } from '../local/store';
+import { useStoreChange } from '../local/useStore';
 import { browserHost, BrowserHostNative, overlayManager } from '../browser/browserHost';
 import { launchLocalApp, type LocalAppEntry } from '../native';
 import { appOs, openExternal } from '../runtime';
@@ -62,6 +63,9 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
   useEffect(reloadPrefs, [reloadPrefs]);
   const refreshBadges = useCallback(() => void computeBadges().then(setBadges), []);
   useEffect(() => { refreshBadges(); const off = bus.on((e) => { if (e.type === 'drafts-changed' || e.type === 'inbox-changed') refreshBadges(); }); const iv = setInterval(refreshBadges, 30000); return () => { off(); clearInterval(iv); }; }, [refreshBadges]);
+  // 0.8.1：侧栏常驻——平台列表在“我的→平台”里改、草稿在写作页审核、素材从分享进来，都要立刻反映到侧栏与角标
+  useStoreChange(['kv:prefs'], reloadPrefs);
+  useStoreChange(['drafts', 'inbox', 'kv:prefs', 'kv:hot.cache'], refreshBadges);
   useEffect(() => { if (prefs?.keepAlive) browserHost.setLimit(prefs.keepAlive); }, [prefs?.keepAlive]);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2400); };
 
@@ -202,7 +206,7 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
   // 底部抽屉（手机 / 平板竖屏）
   const sheetH = sheet === 'full' ? '92dvh' : sheet === 'half' ? '50dvh' : '56px';
   const sheetEl = sheetMode && route.space === 'p' && sheet !== 'closed' && (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex flex-col rounded-t-[16px] border-t border-line bg-canvas shadow-pop transition-[height] duration-200 motion-reduce:transition-none" style={{ height: sheet === 'peek' ? 'auto' : sheetH, left: isPhone ? 0 : 72 }} data-testid="agent-sheet" data-snap={sheet}>
+    <div className="anim-sheet-up fixed inset-x-0 bottom-0 z-40 flex flex-col rounded-t-[16px] border-t border-line bg-canvas shadow-pop transition-[height] duration-200 motion-reduce:transition-none" style={{ height: sheet === 'peek' ? 'auto' : sheetH, left: isPhone ? 0 : 72 }} data-testid="agent-sheet" data-snap={sheet}>
       <button type="button" aria-label={sheet === 'full' ? '缩小' : '展开'} className="!mx-auto !min-h-11 !w-full !rounded-none !border-0 !bg-transparent !p-0" onClick={() => setSheet((s) => (s === 'peek' ? 'half' : s === 'half' ? 'full' : 'half'))}><span className="mx-auto block h-1 w-9 rounded-full bg-line-strong" /></button>
       {sheet === 'peek' ? (
         <div className="flex items-center gap-2 px-3 pb-[calc(8px+var(--sa-bottom))]">
@@ -244,13 +248,13 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
       {sheetEl}
       {isPhone && phoneSide && (
         <div className="fixed inset-0 z-50" data-testid="side-drawer">
-          <button type="button" aria-label="关闭平台侧栏" className="absolute inset-0 !min-h-0 !rounded-none !border-0 !bg-black/30 !p-0" onClick={() => setPhoneSide(false)} />
-          <div className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-side shadow-pop safe-top">{sidebar}</div>
+          <button type="button" aria-label="关闭平台侧栏" className="anim-overlay absolute inset-0 !min-h-0 !rounded-none !border-0 !bg-black/30 !p-0" onClick={() => setPhoneSide(false)} />
+          <div className="anim-drawer-left absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-side shadow-pop safe-top">{sidebar}</div>
         </div>
       )}
       <AddPlatformSheet open={addOpen} onOpenChange={setAddOpen} prefs={prefs} onSaved={() => { reloadPrefs(); refreshBadges(); }} onRegisterApp={(p) => { setAddOpen(false); addApp.open(p); }} />
       <SendPreview item={preview} onClose={() => setPreview(null)} onSend={async (d, toChat) => { setPreview(null); const it = await addInbox(d); flash(toChat ? '已发送到当前会话' : '已存进素材箱'); if (toChat) { if (sheetMode && route.space === 'p') setSheet('half'); void a.send(`【素材 #${it.id}${d.platform ? ` · ${center(d.platform)?.label ?? d.platform}` : ''}】${d.title ?? ''} ${d.url ?? ''}\n${d.text ?? ''}${d.note ? `\n说明：${d.note}` : ''}`.trim()); } }} />
-      {toast && <div role="status" className="fixed left-1/2 top-4 z-[60] -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-[14px] text-ink-fg shadow-pop" data-testid="toast">{toast}</div>}
+      {toast && <div role="status" className="anim-toast fixed left-1/2 top-4 z-[60] -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-[14px] text-ink-fg shadow-pop" data-testid="toast">{toast}</div>}
     </div>
   );
 }

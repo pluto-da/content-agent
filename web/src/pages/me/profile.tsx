@@ -1,11 +1,13 @@
 /** 我的 → 账号画像（0.8.0）：Agent 记忆。只服务用户本人一个账号；Agent 只能提议修改，用户点“采纳”才写入。 */
 import { useEffect, useState } from 'react';
+import { useStoreChange } from '../../local/useStore';
 import { EMPTY_PROFILE, getProfile, saveProfile, type Profile } from '../../agent/store';
 
 export function ProfilePage() {
   const [p, setP] = useState<Profile>(EMPTY_PROFILE);
   const [msg, setMsg] = useState('');
   useEffect(() => { void getProfile().then(setP); }, []);
+  useStoreChange(['kv:profile'], () => void getProfile().then(setP));
   const list = (s: string) => s.split(/[，,、\n]/).map((x) => x.trim()).filter(Boolean);
   return (
     <form className="page page-narrow flex flex-col gap-3" data-testid="profile-page" onSubmit={async (e) => { e.preventDefault(); await saveProfile(p); setMsg('已保存。Agent 每轮都会带上这份画像。'); }}>

@@ -191,7 +191,9 @@ export function App() {
       <main id="main" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto pb-[calc(24px+var(--sa-bottom))] outline-none">
         <ErrorBoundary key={route.sub}>
           <Suspense fallback={<div className="page"><Loading show lines={5} /></div>}>
+            <div key={`${route.sub}/${route.id ?? ''}`} className="anim-page">
             <Me sub={route.sub} id={route.id} go={go} lay={lay} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />
+            </div>
           </Suspense>
         </ErrorBoundary>
       </main>

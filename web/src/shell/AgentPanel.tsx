@@ -9,7 +9,10 @@ import { Drawer, DrawerContent, DrawerItem } from '../components/ui/drawer';
 import type { Layout } from '../nav';
 import { presetOf } from '../data/providers';
 import { center } from '../data/platforms';
-import { getModels, type ModelsState } from '../local/store';
+import { checkState, configuredProviders, resolveProvider } from '../local/store';
+import { useModels } from '../local/useModels';
+import { useStoreChange, useStoreValue } from '../local/useStore';
+import { SkeletonLines } from '../ui';
 import type { ProviderConfig } from '../local/llm';
 import { runTurn, type AgentEvent } from '../agent/loop';
 import { ConfirmCard, ToolCard, type CardActions } from '../agent/cards';
@@ -69,18 +72,22 @@ export function useAgent() {
   const [msgs, setMsgs] = useState<StoredMsg[]>([]);
   const [running, setRunning] = useState(false);
   const [confirm, setConfirm] = useState<Pending | null>(null);
-  const [models, setModels] = useState<ModelsState | null>(null);
+  // 0.8.1：Agent 面板常驻不卸载，模型在“我的→模型”里保存后必须重新读取，否则会一直显示“未连接模型”
+  const [models] = useModels();
   const [pick, setPick] = useState<{ providerId: string; model: string } | null>(null);
   const [notice, setNotice] = useState('');
   const abort = useRef<AbortController | null>(null);
   const refreshConvs = useCallback(async () => setConvs(await listConversations()), []);
-  useEffect(() => { void refreshConvs(); void getModels().then(setModels); }, [refreshConvs]);
-  useEffect(() => { if (cid) void listMessages(cid).then(setMsgs); else setMsgs([]); }, [cid]);
-  const cfg = useMemo<ProviderConfig | null>(() => {
-    if (!models) return null;
-    const p = (pick && models.providers.find((x) => x.id === pick.providerId)) || models.providers.find((x) => x.id === models.defaultProvider) || models.providers.find((x) => x.check?.ok) || null;
-    return p ? { ...p, model: pick?.providerId === p.id ? pick.model : p.model } : null;
-  }, [models, pick]);
+  useEffect(() => { void refreshConvs(); }, [refreshConvs]);
+  // 0.8.1：会话可能在别处新建（分享 / 发给 Agent / 平台绑定），会话列表跟着变
+  useStoreChange(['conversations'], () => void refreshConvs());
+  const runningRef = useRef(false);
+  const reloadMsgs = useCallback(() => { if (runningRef.current) return; if (cid) void listMessages(cid).then((m) => { if (!runningRef.current) setMsgs(m); }); else setMsgs([]); }, [cid]);
+  useEffect(reloadMsgs, [reloadMsgs]);
+  // 运行中由流式事件维护消息，避免库里的半截内容覆盖屏幕上的增量；空闲时外部写入（如分享进来的素材消息）立即显示
+  useStoreChange(['messages'], reloadMsgs);
+  const cfg = useMemo<ProviderConfig | null>(() => (models ? resolveProvider(models, pick ?? undefined) : null), [models, pick]);
+  const cfgState = cfg ? checkState(cfg) : null;
 
   const onEvent = useCallback((e: AgentEvent) => {
     if (e.type === 'message') setMsgs((m) => { const i = m.findIndex((x) => x.id === e.msg.id); if (i >= 0) { const n = [...m]; n[i] = { ...n[i]!, ...e.msg, cards: e.msg.cards ?? n[i]!.cards }; return n; } return [...m, e.msg]; });
@@ -92,17 +99,25 @@ export function useAgent() {
 
   const send = useCallback(async (text: string) => {
     const t = text.trim();
-    if (!t || running) return;
-    if (!cfg) { setNotice('先连接一个模型，Agent 才能工作'); return; }
-    let id = cid;
-    if (!id) { const c = await createConversation(); id = c.id; setCid(id); setMsgs([]); }
+    if (!t || running || runningRef.current) return;
+    if (!cfg) { setNotice(models?.providers.length ? '模型还没填 Key：到“我的 → 模型”填好 Key 再发' : '先连接一个模型，Agent 才能工作'); return; }
+    // 0.8.1：运行状态用 ref 兜底；任何一步抛错都要复位“停止”按钮并用白话说明，不能卡在运行中或静默失败
+    runningRef.current = true;
     setRunning(true);
-    abort.current = new AbortController();
-    if (pick) await updateConversation(id, { model: `${cfg.label} · ${cfg.model}` });
-    await runTurn({ conversationId: id, text: t, cfg, signal: abort.current.signal, onEvent: (e) => { onEvent(e); if (e.type === 'done') { setRunning(false); setMsgs((m) => m.map((x) => ({ ...x, meta: { ...(x.meta ?? {}), streaming: false }, stopped: e.stopped && x.meta?.streaming ? true : x.stopped }))); void refreshConvs(); } } });
-    setRunning(false);
-    void getModels().then(setModels);
-  }, [cfg, cid, onEvent, pick, refreshConvs, running]);
+    setNotice('');
+    try {
+      let id = cid;
+      if (!id) { const c = await createConversation(); id = c.id; setCid(id); setMsgs([]); }
+      abort.current = new AbortController();
+      if (pick) await updateConversation(id, { model: `${cfg.label} · ${cfg.model}` });
+      await runTurn({ conversationId: id, text: t, cfg, signal: abort.current.signal, onEvent: (e) => { onEvent(e); if (e.type === 'done') { setMsgs((m) => m.map((x) => ({ ...x, meta: { ...(x.meta ?? {}), streaming: false }, stopped: e.stopped && x.meta?.streaming ? true : x.stopped }))); if (e.error && cfgState !== 'ok') setNotice(`发送失败：${e.error}。这个模型还没测试通过，可到“我的 → 模型”点“测试连接”看具体原因`); void refreshConvs(); } } });
+    } catch (e) {
+      setNotice(`发送失败：${e instanceof Error ? e.message : String(e)}。可以再发一次，或到“我的 → 模型”检查设置`);
+    } finally {
+      runningRef.current = false;
+      setRunning(false);
+    }
+  }, [cfg, cfgState, cid, models, onEvent, pick, refreshConvs, running]);
 
   // 首启引导第 3 步：进入首页后真实发送第一句话
   useEffect(() => {
@@ -115,14 +130,13 @@ export function useAgent() {
     if (!spec) return null;
     return spec.run(args, { conversationId: cid ?? 0, cfg });
   }, [cfg, cid]);
-  return { convs, cid, setCid, msgs, running, send, stop, confirm, setConfirm, cfg, models, pick, setPick, notice, setNotice, refreshConvs, userTool };
+  return { convs, cid, setCid, msgs, running, send, stop, confirm, setConfirm, cfg, cfgState, models, pick, setPick, notice, setNotice, refreshConvs, userTool };
 }
 export type AgentState = ReturnType<typeof useAgent>;
 
 /* ---------- 总览卡 ---------- */
 function OverviewCard({ onOpen, onResume }: { onOpen: (p: string) => void; onResume: () => void }) {
-  const [o, setO] = useState<Overview | null>(null);
-  useEffect(() => { void computeOverview().then(setO); }, []);
+  const o = useStoreValue<Overview>(computeOverview, ['drafts', 'inbox', 'tasks', 'kv:prefs', 'kv:hot.cache']).value ?? null;
   if (!o || (!o.rows.length && !o.resume)) return null;
   return (
     <section className="mb-4 rounded-[12px] border border-line bg-surface" data-testid="overview" aria-label="工作台总览">
@@ -177,7 +191,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
   const actions: CardActions = { ask: (t) => void a.send(t), userTool: a.userTool, openDraft: (id) => go(`agent/drafts/${id}`) };
   const submit = () => { const t = text; setText(''); void a.send(t); };
   const visible = a.msgs.filter((m) => m.role !== 'tool' && !m.meta?.toolResult);
-  const connected = (a.models?.providers ?? []).filter((p) => p.check?.ok || p.apiKey);
+  const connected = a.models ? configuredProviders(a.models) : [];
 
   const header = (
     <header className="flex min-h-12 shrink-0 items-center gap-1 border-b border-line px-2" data-testid="agent-header">
@@ -190,7 +204,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
         </button>
       )}
       <button type="button" aria-label="模型" data-testid="model-pill" className="!min-h-9 max-w-[42%] !rounded-full !px-3 !text-[13px] !font-normal" onClick={() => setModelOpen(true)}>
-        <span className="truncate">{a.cfg ? `${presetOf(a.cfg.id)?.label ?? a.cfg.label} · ${a.cfg.model}` : '未连接模型'}</span><Icon name="chevronDown" size={14} />
+        {a.models === null ? <span className="skeleton inline-block h-3 w-24" aria-label="正在读取模型" /> : <span key={a.cfg ? `${a.cfg.id}:${a.cfg.model}` : 'none'} className="anim-swap truncate" data-testid="model-pill-label">{a.cfg ? `${presetOf(a.cfg.id)?.label ?? a.cfg.label} · ${a.cfg.model}` : '未连接模型'}</span>}{a.cfgState && a.cfgState !== 'ok' && <span className="shrink-0 text-[12px] text-muted" data-testid="model-untested">{a.cfgState === 'failed' ? '测试未通过' : '未测试'}</span>}<Icon name="chevronDown" size={14} />
       </button>
       <button type="button" aria-label="新会话" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => { a.setCid(null); setTab('chat'); }}><Icon name="newChat" size={18} /></button>
       {!showSideList && <button type="button" aria-label="会话列表" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => setSessionsOpen(true)}><Icon name="history" size={18} /></button>}
@@ -207,7 +221,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
   );
 
   const empty = (
-    <div className="mx-auto w-full max-w-[720px] px-4 pt-6" data-testid="agent-empty">
+    <div className="anim-fade mx-auto w-full max-w-[720px] px-4 pt-6" data-testid="agent-empty">
       {!connected.length ? (
         <div className="py-8 text-center" data-testid="no-model">
           <h2 className="text-[22px]">超级工作台</h2>
@@ -232,9 +246,9 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
       {visible.map((m) => (
         <Fragment key={m.id}>
           {m.role === 'user' ? (
-            <div className="ml-auto max-w-[85%] whitespace-pre-wrap rounded-[12px] bg-surface-2 px-3 py-2 text-[15px] text-fg" data-testid="msg-user">{m.content}</div>
+            <div className="anim-msg ml-auto max-w-[85%] whitespace-pre-wrap rounded-[12px] bg-surface-2 px-3 py-2 text-[15px] text-fg" data-testid="msg-user">{m.content}</div>
           ) : (
-            <div className="max-w-full text-[15px] leading-relaxed text-fg" data-testid="msg-agent" data-streamed={m.streamed ? 'true' : 'false'}>
+            <div className="anim-msg max-w-full text-[15px] leading-relaxed text-fg" data-testid="msg-agent" data-streamed={m.streamed ? 'true' : 'false'}>
               {m.reasoning && <details className="mb-1 text-[13px] text-muted"><summary>已思考</summary><div className="whitespace-pre-wrap">{m.reasoning.slice(0, 3000)}</div></details>}
               {m.content && <div className={cn(!!m.meta?.error && 'text-bad')}><Markdown text={m.content} /></div>}
               {!!m.meta?.streaming && <span className="stream-caret" aria-hidden="true" />}
@@ -268,7 +282,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
   );
 
   const body = tab === 'chat' ? (visible.length ? thread : empty)
-    : tab === 'drafts' ? <Suspense fallback={<p className="p-4 text-muted">加载中…</p>}><Write filter={route.query?.filter ?? 'all'} id={route.id} go={go} lay={variant === 'full' ? lay : 'phone'} /></Suspense>
+    : tab === 'drafts' ? <Suspense fallback={<div className="p-4" aria-label="加载中"><SkeletonLines lines={4} /></div>}><Write filter={route.query?.filter ?? 'all'} id={route.id} go={go} lay={variant === 'full' ? lay : 'phone'} /></Suspense>
     : <InboxTab onUse={(i) => { setTab('chat'); void a.send(`结合这条素材：${i.title || i.text || i.url}`); }} />;
 
   return (
@@ -282,7 +296,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {header}
         {tabs}
-        <div className="min-h-0 flex-1 overflow-y-auto" data-testid="agent-scroll">{body}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto" data-testid="agent-scroll"><div key={tab} className="anim-page">{body}</div></div>
         {tab === 'chat' && input}
       </div>
 
@@ -327,7 +341,7 @@ function SessionList({ a, onPick, onDelete }: { a: AgentState; onPick: () => voi
   const shown = a.convs.filter((c) => !q || c.title.includes(q));
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索会话标题" aria-label="搜索会话" className="!mx-2 !mb-2 !min-h-9 !text-[14px]" />
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索会话标题" aria-label="搜索会话" className="!mx-2 !mb-2 !w-[calc(100%-16px)] !min-h-9 !text-[14px]" />
       <ul className="m-0 min-h-0 flex-1 list-none overflow-y-auto p-0 px-1">
         {shown.map((c) => (
           <li key={c.id} className={cn('group flex items-center rounded-[10px]', c.id === a.cid && 'bg-side-active')}>
@@ -348,6 +362,7 @@ function InboxTab({ onUse }: { onUse: (i: InboxItem) => void }) {
   const [items, setItems] = useState<InboxItem[]>([]);
   const load = useCallback(() => void listInbox().then(setItems), []);
   useEffect(() => { load(); return bus.on((e) => { if (e.type === 'inbox-changed') load(); }); }, [load]);
+  useStoreChange(['inbox'], load);
   const [paste, setPaste] = useState('');
   return (
     <div className="mx-auto w-full max-w-[760px] p-3" data-testid="inbox-tab">

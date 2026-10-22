@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useStoreChange } from '../local/useStore';
 import { ApiError, apiMode, del, get, post } from '../api';
 import { useT, type Lang } from '../i18n';
 import { Icon } from '../icons';
@@ -39,6 +40,7 @@ function MeIndex({ go }: { go: (to: string) => void }) {
   const { t } = useT();
   const [u, setU] = useState<UsageDay | null>(null);
   useEffect(() => { void usageToday().then(setU); }, []);
+  useStoreChange(['kv:usage'], () => void usageToday().then(setU));
   const mode = apiMode();
   return (
     <div className="page page-narrow">
@@ -66,6 +68,7 @@ function PlatformsSub({ go }: { go: (to: string) => void }) {
   const [prefs, setP] = useState<Prefs | null>(null);
   const [toast, show] = useToast();
   useEffect(() => { void getPrefs().then(setP); }, []);
+  useStoreChange(['kv:prefs'], () => void getPrefs().then(setP));
   const toggle = async (id: string) => {
     if (!prefs) return;
     const on = prefs.platforms.includes(id);
@@ -119,6 +122,7 @@ function AgentSub({ go }: { go: (to: string) => void }) {
   const [open, setOpen] = useState<string | null>(null);
   const [toast, show] = useToast();
   useEffect(() => { void getAssistantOverrides().then(setOv); }, []);
+  useStoreChange(['kv:assistants'], () => void getAssistantOverrides().then(setOv));
   const a = ASSISTANTS.find((x) => x.platform === open);
   return (
     <div className="page page-narrow">
@@ -160,6 +164,7 @@ function PrefsSub({ theme, setTheme, lang, setLang }: { theme: Theme; setTheme: 
   const { t } = useT();
   const [prefs, setP] = useState<Prefs | null>(null);
   useEffect(() => { void getPrefs().then(setP); }, []);
+  useStoreChange(['kv:prefs'], () => void getPrefs().then(setP));
   const seg = <T extends string>(val: T, opts: [T, string][], on: (v: T) => void, label: string) => (
     <div className="seg" role="group" aria-label={label}>{opts.map(([v, l]) => <button key={v} type="button" aria-pressed={val === v} onClick={() => on(v)}>{t(l)}</button>)}</div>
   );

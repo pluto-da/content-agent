@@ -1,5 +1,17 @@
 # 变更日志
 
+## 0.8.1（2026-10-22）热修：模型连接后首页仍显示“未连接” + 深度修复 + 界面动效
+**用户真机反馈**：在“我的 → 模型”连接了大模型，回到首页 Agent 仍显示“未连接模型 / 先连接一个模型”。
+**根因**：Agent 面板常驻不卸载，useAgent 只在挂载时 getModels 一次，之后保存模型它看不到；另外选模型的回退只认“测试通过”的服务，填了 Key 但测试失败 / 没测的服务被忽略，而空状态又用“有 Key”判断——两处标准不一致。
+- **统一订阅机制**：web/src/local/db.ts 每次写入（insert / update / del / clear / setKV）派发变更键（集合名或 `kv:<键>`）；新增 web/src/local/useStore.ts（useStoreValue / useStoreChange，同一轮多次写入合并成一次，可选在路由切换、窗口回到前台时重读，读失败给白话错误）与 useModels.ts。saveModels 仍额外派发 `ca:models-changed`（MODELS_CHANGED）。
+- **统一“已配置”判断**：store.ts 新增 isConfigured / configuredProviders / hasConfiguredModel / checkState / resolveProvider；有 Key（免 Key 服务填了地址）即视为已配置。Agent 面板、模型胶囊、首页“下一步”、写作页 ModelPicker、生成（activeProvider）全部改用它。未测试 / 测试未通过只在胶囊上提示“未测试 / 测试未通过”，不拦发送；发送失败在对话里给白话原因，并提示去“测试连接”。
+- **同类问题一并修复（常驻 / 保活组件读一次就不再更新）**：侧栏平台列表（在“我的 → 平台”改了要刷新才变）、侧栏角标（写作页审核、草稿卡“通过”直接改库不走事件总线，最长 30 秒才更新）、会话列表（分享 / 平台绑定新建的会话不出现）、当前会话消息（空闲时外部写入不显示）、总览卡、素材箱 Tab、草稿列表、首页快照、我的 → 模型 / 账号画像 / 数据源 / 偏好 / 用量 / 写作助手；平台↔会话绑定开关在“我的”里打开后要刷新才生效（Workbench 读的是旧 prefs）。
+- **发送按钮**：运行状态加 ref 兜底，任何一步抛错都复位“停止 → 发送”并显示白话原因（以前 createConversation 等出错会卡在运行中）；无模型时提示区分“没连接”与“没填 Key”；运行中不能重复发送。
+- **触控目标 ≥44px**：手机 / 平板（视口 <1300 或粗指针）所有按钮、Tab、菜单项、输入框、选择框、链接统一 ≥44px（base 层 !important 统一压过组件里零散的 !min-h-9 / !min-h-10），正文里的链接保持行内。
+- **界面动效**（150–250ms，ease-out / 轻回弹，只动 transform / opacity，全部遵守“减少动态”；没有引入动画库）：底部抽屉滑入时长 500→240ms + 遮罩淡入；手机平台侧栏抽屉滑入 + 遮罩淡入；Agent 底部面板上滑；页面切换（我的各子页）与 Tab 切换淡入 + 6px 位移；消息气泡进入；流式输出光标柔和闪烁；工具卡片“详情”展开 / 收起高度过渡（唯一用 grid-template-rows 的地方）；按钮按压 0.97 缩放 + 松开回弹；骨架屏（草稿 Tab 加载、模型胶囊读取中）；侧栏角标弹出（数字变化时重弹）；模型胶囊切换交叉淡入；空状态淡入；弹窗轻放大淡入；轻提示下滑淡入。
+- **测试**：新增 web/src/v081.test.tsx 34 项（根因回归 4、已配置判断 5、订阅机制 3、常驻组件 7、发送按钮 3、B3 补测 2、B6 补测 7、B13 补测 3）；前端 169 通过 + 2 跳过，server 75/75。根因用例在去掉订阅后 4/4 失败（已验证能抓住回归）。
+- 版本 0.8.1；Android versionName 0.8.1 / versionCode 801（根、shared、server、web、desktop、mobile 与 package-lock 中 @content-agent/shared 依赖同步）。
+
 ## 0.8.0（2026-10-22）「超级工作台」
 按 design/PROMPT-v8-agent-workspace.md（B1–B20，修订 R1–R3）把软件从“多页面工具”重构为一个 Agent 管理各大平台的工作台；产品名改为“超级工作台”，包名 local.contentagent.app 不变（可覆盖安装）。偏离见 design/deviations-v8.md。
 - **外壳**：web/src/shell/（Workbench、Sidebar、BrowserArea、AgentPanel）。首页即 Agent 对话；左侧平台栏（角标：待发布数字 / 新热点圆点，长按·右键菜单，排序态，自定义 https 网站）；主区内嵌平台网页 + 工具栏（后退 / 前进 / 刷新 / 域名 / 发给 Agent / ⋯）；平板·电脑 Agent 右栏（320–560px 可拖、Ctrl/⌘+J、可停靠左侧），手机与平板竖屏底部抽屉（收起 / 半屏 / 全屏）；手机平台栏为“☰”抽屉 + 左缘右滑；OverlayManager 浮层出现时隐藏原生网页。旧页面 home/topics/write/publish/results 不再是导航，V7_MAP 重定向。

@@ -648,3 +648,74 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), select { min-heig
 @keyframes caret-blink { to { visibility: hidden; } }
 @media (prefers-reduced-motion: reduce) { .stream-caret { animation: none; } }
 .workbench .app-side { border-right: 1px solid var(--border); }
+
+/* ==========================================================================
+   0.8.1 触控目标：手机 / 平板（视口 <1300 或粗指针）所有可点控件 ≥44px。
+   放在 base 层并用 !important：层叠层里“越早的层 !important 越优先”，因此能统一压过组件里零散的 !min-h-9 / !min-h-10 等工具类。
+   ========================================================================== */
+@layer base {
+  @media (max-width: 1299.98px), (pointer: coarse) {
+    button:not(.sr-only), [role='tab'], [role='menuitem'], .button-like { min-height: 44px !important; min-width: 44px !important; }
+    select, input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']) { min-height: 44px !important; }
+    a[href] { display: inline-flex; align-items: center; min-height: 44px !important; }
+    /* 正文里的链接（Agent 回复的 Markdown）保持行内，不撑开行高 */
+    [data-testid='msg-agent'] a[href], .prose a[href] { display: inline; min-height: 0 !important; }
+  }
+}
+
+/* ==========================================================================
+   0.8.1 动效：克制、快速（150–250ms，ease-out / 轻微回弹），只动 transform / opacity；全部遵守“减少动态”。
+   例外：工具卡片“详情”的展开 / 收起用 grid-template-rows 过渡（只作用于这一个小区域）。
+   ========================================================================== */
+:root { --d-enter: 220ms; --ease-spring: cubic-bezier(.34, 1.36, .64, 1); }
+@keyframes ca-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ca-rise { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: none; } }
+@keyframes ca-msg-in { from { opacity: 0; transform: translate3d(0, 8px, 0) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes ca-slide-left { from { transform: translate3d(-100%, 0, 0); } to { transform: none; } }
+@keyframes ca-sheet-up { from { opacity: 0; transform: translate3d(0, 32px, 0); } to { opacity: 1; transform: none; } }
+@keyframes ca-pop { 0% { opacity: 0; transform: scale(.4); } 60% { opacity: 1; transform: scale(1.15); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes ca-swap { from { opacity: 0; transform: translate3d(0, 4px, 0); } to { opacity: 1; transform: none; } }
+@keyframes ca-caret { 0%, 45% { opacity: 1; } 55%, 100% { opacity: .15; } }
+@keyframes ca-toast { from { opacity: 0; transform: translate3d(0, -8px, 0); } to { opacity: 1; transform: none; } }
+/* Tailwind v4 的 -translate-x-1/2 用的是独立的 translate 属性，这里只动 transform: scale，不会叠加位移 */
+@keyframes ca-pop-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+
+/* 页面 / Tab 切换：淡入 + 6px 上移 */
+.anim-page { animation: ca-rise var(--d-enter) var(--ease) both; }
+/* 空状态、总览卡淡入 */
+.anim-fade { animation: ca-fade var(--d-enter) var(--ease) both; }
+/* 消息气泡进入 */
+.anim-msg { animation: ca-msg-in 200ms var(--ease) both; transform-origin: 0 100%; }
+[data-testid='msg-user'].anim-msg { transform-origin: 100% 100%; }
+/* 角标弹出（数字变化时重新弹一次） */
+.anim-pop { animation: ca-pop 240ms var(--ease-spring) both; }
+/* 模型胶囊切换：文字交叉淡入 */
+.anim-swap { display: inline-block; animation: ca-swap 180ms var(--ease) both; }
+/* 流式输出光标：柔和闪烁（替代 0.8.0 的硬切换） */
+.stream-caret { border-radius: 1px; animation: ca-caret 1s var(--ease) infinite; }
+/* 手机侧栏抽屉 + 遮罩、Agent 底部面板、轻提示 */
+.anim-overlay { animation: ca-fade 200ms var(--ease) both; }
+.anim-drawer-left { animation: ca-slide-left 240ms var(--ease) both; }
+.anim-sheet-up { animation: ca-sheet-up 240ms var(--ease) both; }
+.anim-toast { animation: ca-toast 200ms var(--ease) both; }
+/* vaul 底部抽屉：时长从 500ms 收到 240ms，遮罩同步淡入 */
+[data-vaul-drawer][data-vaul-drawer] { animation-duration: 240ms; animation-timing-function: cubic-bezier(.2, 0, 0, 1); transition-duration: 240ms; }
+[data-vaul-overlay][data-vaul-overlay] { animation-duration: 200ms; animation-timing-function: cubic-bezier(.2, 0, 0, 1); }
+/* Radix 弹窗：内容轻微放大淡入 */
+[role='dialog'][data-state='open'].ca-dialog { animation: ca-pop-in 200ms var(--ease) both; }
+/* 按压反馈：按下 0.97，松开带一点回弹 */
+button:not(:disabled), .button-like { transition-timing-function: var(--ease-spring), var(--ease), var(--ease), var(--ease); }
+button:active:not(:disabled), .button-like:active { transform: scale(.97); transition-duration: 80ms; }
+/* 工具卡片详情：高度过渡 */
+.card-details { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 200ms var(--ease), opacity 200ms var(--ease); }
+.card-details[data-open='true'] { grid-template-rows: 1fr; opacity: 1; }
+.card-details > div { min-height: 0; overflow: hidden; }
+/* 骨架屏：柔和的明暗呼吸（只动 opacity） */
+.skeleton { border-radius: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-page, .anim-fade, .anim-msg, .anim-pop, .anim-swap, .anim-overlay, .anim-drawer-left, .anim-sheet-up, .anim-toast, .stream-caret,
+  [data-vaul-drawer][data-vaul-drawer], [data-vaul-overlay][data-vaul-overlay], [role='dialog'][data-state='open'].ca-dialog { animation: none !important; }
+  .card-details { transition: none; }
+  button:active:not(:disabled), .button-like:active { transform: none; }
+}

@@ -1,6 +1,6 @@
 {
   "name": "content-agent-mobile",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "private": true,
   "description": "超级工作台 Android / iOS（Capacitor 外壳，前端与网页版同一份代码）",
   "scripts": {

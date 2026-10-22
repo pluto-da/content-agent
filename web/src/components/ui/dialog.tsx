@@ -12,7 +12,7 @@ export function DialogContent({ className, children, ...props }: ComponentProps<
     <D.Portal>
       <D.Overlay className="fixed inset-0 z-[80] bg-black/32 data-[state=open]:animate-[fade-in_150ms_ease-out]" />
       <D.Content
-        className={cn('fixed left-1/2 top-[12vh] z-[81] w-[min(560px,calc(100vw-32px))] -translate-x-1/2 overflow-hidden rounded-card bg-surface text-fg shadow-pop outline-none', className)}
+        className={cn('ca-dialog fixed left-1/2 top-[12vh] z-[81] w-[min(560px,calc(100vw-32px))] -translate-x-1/2 overflow-hidden rounded-card bg-surface text-fg shadow-pop outline-none', className)}
         {...props}
       >
         {children}
