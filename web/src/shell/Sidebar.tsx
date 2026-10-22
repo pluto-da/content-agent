@@ -69,8 +69,8 @@ export function Sidebar(p: SidebarProps) {
             {isActive && <span aria-hidden="true" className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full bg-accent" />}
             <PlatformGlyph id={id} label={it.label} size={wide ? 28 : 26} />
             <span className={cn('truncate', wide ? 'min-w-0 flex-1 text-left' : 'max-w-[52px] leading-tight')}>{it.label}</span>
-            {!off && b?.count ? <span data-testid={`badge-${id}`} className={cn('inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-ink px-1 text-[12px] font-medium text-ink-fg', !wide && 'absolute right-1 top-1')}>{b.count}</span>
-              : !off && b?.dot ? <span data-testid={`dot-${id}`} aria-label="有新热点或素材" className={cn('h-1.5 w-1.5 rounded-full bg-accent', !wide && 'absolute right-2 top-2')} /> : null}
+            {!sorting && !off && b?.count ? <span data-testid={`badge-${id}`} className={cn('inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-ink px-1 text-[12px] font-medium text-ink-fg', !wide && 'absolute right-1 top-1')}>{b.count}</span>
+              : !sorting && !off && b?.dot ? <span data-testid={`dot-${id}`} aria-label="有新热点或素材" className={cn('h-1.5 w-1.5 rounded-full bg-accent', !wide && 'absolute right-2 top-2')} /> : null}
           </button>
           {sorting && (
             <span className="flex shrink-0 flex-row">
