@@ -1,5 +1,20 @@
 # 变更日志
 
+## 0.8.0（2026-10-22）「超级工作台」
+按 design/PROMPT-v8-agent-workspace.md（B1–B20，修订 R1–R3）把软件从“多页面工具”重构为一个 Agent 管理各大平台的工作台；产品名改为“超级工作台”，包名 local.contentagent.app 不变（可覆盖安装）。偏离见 design/deviations-v8.md。
+- **外壳**：web/src/shell/（Workbench、Sidebar、BrowserArea、AgentPanel）。首页即 Agent 对话；左侧平台栏（角标：待发布数字 / 新热点圆点，长按·右键菜单，排序态，自定义 https 网站）；主区内嵌平台网页 + 工具栏（后退 / 前进 / 刷新 / 域名 / 发给 Agent / ⋯）；平板·电脑 Agent 右栏（320–560px 可拖、Ctrl/⌘+J、可停靠左侧），手机与平板竖屏底部抽屉（收起 / 半屏 / 全屏）；手机平台栏为“☰”抽屉 + 左缘右滑；OverlayManager 浮层出现时隐藏原生网页。旧页面 home/topics/write/publish/results 不再是导航，V7_MAP 重定向。
+- **Agent**：web/src/agent/（loop、tools、prompts、cards、model、store、overview）。function calling 多步循环、流式、工具卡片、会话（conversations/messages）、会话内换模型、JSON 指令降级（toolMode）、L0–L2 权限分级（无 L3）、publish_check 质量门禁、账号画像（profile_update 需采纳）、技能路由、任务检查点与“接着上次继续”、总览卡（纯本机）。
+- **共用模块**：app/shared/ 新增 stream.ts（SSE / tool_calls 增量 / Anthropic 事件）、toolcall.ts（JSON 指令解析校验）、hotclean.ts（清洗、bigram 相似度、评分、趋势）。
+- **热点五路**：web/src/hot/（connectors：今日热榜等第三方数据源，本机 AES-GCM 加密；collect：a–e 规划与来源标注），web/src/data/hotSources.ts 逐平台来源表；热点巡视浮条。
+- **浏览器**：web/src/browser/（browserHost 三端统一接口、pool 保活 + LRU，默认 4，2–6 可调）。
+- **安卓原生**：BrowserHost 插件（原生 WebView 叠放在 Capacitor WebView 上，androidx.webkit 多 Profile `ca-<平台>`）、PlatformWebClient 共用类（与 InAppWebActivity 共用）、StreamHttp 流式插件、ShareReceiverActivity（ACTION_SEND）、ProcessTextActivity（PROCESS_TEXT）；apply-native 幂等写入（webkit 依赖、<queries> PROCESS_TEXT、singleTask 不变）。
+- **电脑端**：desktop/main.cjs + browser-views.cjs 迁移到 WebContentsView（partition persist:creator-<id>、sandbox、contextIsolation、无 preload），移除 <webview>；context-menu“发给 Agent”。
+- **数据**：IndexedDB DB_VERSION 2（新增 conversations、messages、inbox、tasks、hot_snapshots；kv profile），备份 version 2，兼容导入 version 1，默认不导出任何密钥。
+- **修复（发布前截图矩阵发现）**：平板竖屏 Agent 底部抽屉原先铺满全宽、盖住侧栏底部“添加平台 / Agent / 我的”，改为从 72px 侧栏右侧开始。
+- **测试**：前端 135 通过 + 2 跳过（真实 MiMo 联调用例，需 CA_REAL_MIMO=1；上一执行者真实运行 2/2 通过，日志 work/v8/real-mimo.log）；server 75/75。新增 agent.test.tsx、desktop.test.ts；app.test.tsx 断言随新导航改写（未删旧测试文件，builtin.test.tsx 保留）。
+- **真实 MiMo（B5）**：mimo-v2.6-flash 一次跑通“热点 → 分析 → 写小红书笔记”，6 次工具调用，标题 18 字、正文 599 字，Agent 轮次花费约 ¥0.027；整体 118.9 s（未达 30 s 目标，见偏离 F4）。
+- 版本 0.8.0；Android versionName 0.8.0 / versionCode 800。
+
 ## 0.7.0（2026-10-22）「内置平台」
 不用回桌面找别的 App：在本软件里打开各平台官方网页版，平板上可把官方 App 分屏放在旁边。安卓不能把另一个原生 App 嵌进本 App，所以做的是这两件事。偏离与说明见 design/deviations-v7.md。
 - **内置官方网页版（A）**：安卓 App 新增原生页面 InAppWebActivity（自写 WebView，不用 iframe——平台页面有 X-Frame-Options）。工具栏：返回（网页后退，退到头关闭）、标题 + 网址、刷新、⋯（打开官方 App / 用浏览器打开 / 复制网址 / 退出该平台登录）、关闭；顶部提示条“粘贴后由你本人点击发布”。登录 Cookie 由系统 CookieManager 持久化（离开页面即写盘），直到你点“退出该平台登录”或“清除全部内置网页数据”。iOS 用系统内置浏览器（SFSafariViewController）；电脑 / 网页在新标签页（Electron 为系统浏览器）打开。

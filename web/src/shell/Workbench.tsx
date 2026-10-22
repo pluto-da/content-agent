@@ -202,8 +202,8 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
   // 底部抽屉（手机 / 平板竖屏）
   const sheetH = sheet === 'full' ? '92dvh' : sheet === 'half' ? '50dvh' : '56px';
   const sheetEl = sheetMode && route.space === 'p' && sheet !== 'closed' && (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex flex-col rounded-t-[16px] border-t border-line bg-canvas shadow-pop transition-[height] duration-200 motion-reduce:transition-none" style={{ height: sheet === 'peek' ? 'auto' : sheetH }} data-testid="agent-sheet" data-snap={sheet}>
-      <button type="button" aria-label={sheet === 'full' ? '缩小' : '展开'} className="!mx-auto !min-h-6 !w-full !rounded-none !border-0 !bg-transparent !p-0" onClick={() => setSheet((s) => (s === 'peek' ? 'half' : s === 'half' ? 'full' : 'half'))}><span className="mx-auto block h-1 w-9 rounded-full bg-line-strong" /></button>
+    <div className="fixed inset-x-0 bottom-0 z-40 flex flex-col rounded-t-[16px] border-t border-line bg-canvas shadow-pop transition-[height] duration-200 motion-reduce:transition-none" style={{ height: sheet === 'peek' ? 'auto' : sheetH, left: isPhone ? 0 : 72 }} data-testid="agent-sheet" data-snap={sheet}>
+      <button type="button" aria-label={sheet === 'full' ? '缩小' : '展开'} className="!mx-auto !min-h-11 !w-full !rounded-none !border-0 !bg-transparent !p-0" onClick={() => setSheet((s) => (s === 'peek' ? 'half' : s === 'half' ? 'full' : 'half'))}><span className="mx-auto block h-1 w-9 rounded-full bg-line-strong" /></button>
       {sheet === 'peek' ? (
         <div className="flex items-center gap-2 px-3 pb-[calc(8px+var(--sa-bottom))]">
           <button type="button" className="!min-h-11 min-w-0 flex-1 !justify-start !rounded-full !px-4 !text-[15px] !font-normal !text-muted" onClick={() => setSheet('half')} data-testid="sheet-peek">问 Agent…</button>
@@ -216,7 +216,7 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
   );
 
   const phoneTop = isPhone && (
-    <header className="flex h-12 shrink-0 items-center gap-1 border-b border-line bg-canvas px-1 safe-top" data-testid="phone-top">
+    <header className="flex shrink-0 items-center gap-1 border-b border-line bg-canvas px-1 safe-top" style={{ height: 'calc(48px + var(--sa-top))' }} data-testid="phone-top">
       <button type="button" aria-label="打开平台侧栏" data-testid="open-side" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => setPhoneSide(true)}><Icon name="menu" size={20} /></button>
       <h1 className="min-w-0 flex-1 truncate text-center text-[16px]">{route.space === 'me' ? '我的' : route.space === 'p' ? target?.label ?? '' : a.convs.find((c) => c.id === a.cid)?.title ?? '超级工作台'}</h1>
       {header}

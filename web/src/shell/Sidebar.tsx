@@ -40,7 +40,9 @@ export function Sidebar(p: SidebarProps) {
   useEffect(() => (menuFor || help ? overlayManager.push() : undefined), [menuFor, help]);
   const press = useRef<ReturnType<typeof setTimeout> | null>(null);
   const long = useRef(false);
-  const wide = p.variant !== 'rail';
+  // 排序态在图标栏里放不下上移 / 下移按钮（44px 触控），临时展开为宽侧栏，点“完成”后恢复
+  const variant = sorting && p.variant === 'rail' ? 'wide' : p.variant;
+  const wide = variant !== 'rail';
   const byId = (id: string) => p.items.find((i) => i.id === id);
   const move = (id: string, d: number) => setOrder((o) => { const i = o.indexOf(id); const j = i + d; if (i < 0 || j < 0 || j >= o.length) return o; const n = [...o]; [n[i], n[j]] = [n[j]!, n[i]!]; return n; });
   const drag = useRef<string | null>(null);
@@ -52,7 +54,7 @@ export function Sidebar(p: SidebarProps) {
     const off = p.badgeOff.includes(id);
     const isActive = p.active === id;
     return (
-      <li key={id} draggable={!sorting && p.variant === 'wide'} onDragStart={() => { drag.current = id; }} onDragOver={(e) => e.preventDefault()} onDrop={() => { const from = drag.current; if (from && from !== id) { const o = order.filter((x) => x !== from); o.splice(o.indexOf(id), 0, from); setOrder(o); p.onReorder(o); } drag.current = null; }}>
+      <li key={id} draggable={!sorting && variant === 'wide'} onDragStart={() => { drag.current = id; }} onDragOver={(e) => e.preventDefault()} onDrop={() => { const from = drag.current; if (from && from !== id) { const o = order.filter((x) => x !== from); o.splice(o.indexOf(id), 0, from); setOrder(o); p.onReorder(o); } drag.current = null; }}>
         <div className={cn('relative flex items-center', sorting && 'gap-1')}>
           <button
             type="button" data-testid={`side-${id}`} aria-current={isActive ? 'page' : undefined}
@@ -71,9 +73,9 @@ export function Sidebar(p: SidebarProps) {
               : !off && b?.dot ? <span data-testid={`dot-${id}`} aria-label="有新热点或素材" className={cn('h-1.5 w-1.5 rounded-full bg-accent', !wide && 'absolute right-2 top-2')} /> : null}
           </button>
           {sorting && (
-            <span className="flex shrink-0 flex-col">
-              <button type="button" aria-label={`上移 ${it.label}`} className="!min-h-[22px] !min-w-9 !border-0 !bg-transparent !p-0" onClick={() => move(id, -1)}><Icon name="chevronUp" size={14} /></button>
-              <button type="button" aria-label={`下移 ${it.label}`} className="!min-h-[22px] !min-w-9 !border-0 !bg-transparent !p-0" onClick={() => move(id, 1)}><Icon name="chevronDown" size={14} /></button>
+            <span className="flex shrink-0 flex-row">
+              <button type="button" aria-label={`上移 ${it.label}`} className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => move(id, -1)}><Icon name="chevronUp" size={14} /></button>
+              <button type="button" aria-label={`下移 ${it.label}`} className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => move(id, 1)}><Icon name="chevronDown" size={14} /></button>
             </span>
           )}
         </div>
@@ -93,15 +95,15 @@ export function Sidebar(p: SidebarProps) {
   const it = menuFor ? byId(menuFor) : null;
   const known = it && CENTERS.some((c) => c.id === it.id);
   return (
-    <nav aria-label="平台侧栏" data-testid="sidebar" data-variant={p.variant} className={cn('app-side flex h-full shrink-0 flex-col bg-side', p.variant === 'rail' ? 'w-[72px] items-center px-2' : p.variant === 'wide' ? 'w-[200px] px-2' : 'w-full px-2')}>
-      <div className={cn('flex min-h-14 shrink-0 items-center gap-2', p.variant === 'rail' ? 'justify-center' : 'px-1')}>
+    <nav aria-label="平台侧栏" data-testid="sidebar" data-variant={variant} className={cn('app-side flex h-full shrink-0 flex-col bg-side', variant === 'rail' ? 'w-[72px] items-center px-2' : variant === 'wide' ? 'w-[200px] px-2' : 'w-full px-2')}>
+      <div className={cn('flex min-h-14 shrink-0 items-center gap-2', variant === 'rail' ? 'justify-center' : 'px-1')}>
         <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-ink text-ink-fg"><Icon name="bot" size={16} /></span>
         {wide && <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-fg" data-testid="brand">超级工作台</span>}
         {p.onToggleWide && p.variant !== 'drawer' && <button type="button" aria-label={wide ? '收起侧栏' : '展开侧栏'} className="!min-h-9 !min-w-9 !border-0 !bg-transparent !p-0" onClick={p.onToggleWide}><Icon name={wide ? 'collapse' : 'sidebar'} size={16} /></button>}
       </div>
       <div className={cn('flex items-center', wide ? 'justify-between px-2' : 'justify-center')}>
         {wide && <span className="text-[12px] text-muted">平台</span>}
-        <button type="button" aria-label="角标说明" className="!min-h-8 !min-w-8 !border-0 !bg-transparent !p-0 !text-[12px] !text-muted" onClick={() => setHelp(true)}>?</button>
+        <button type="button" aria-label="角标说明" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0 !text-[12px] !text-muted" onClick={() => setHelp(true)}>?</button>
       </div>
       <ul className={cn('m-0 flex min-h-0 flex-1 list-none flex-col gap-1 overflow-y-auto p-0', !wide && 'items-center')} aria-label="已登记平台" data-testid="platform-list">
         {order.map(row)}
