@@ -3,14 +3,16 @@ import { get, post } from '../api';
 import { useT } from '../i18n';
 import { copyText, electronBridge, openExternal, runtime, type LoginState } from '../runtime';
 import { Badge, Card, ErrorBox, Field, Loading, useLoad, useToast } from '../ui';
-import { LocalAppPanel, useLocalApps } from './localapps';
+import { LocalAppLauncher, useLocalApps } from './localapps';
+import { useAddApp } from '../components/addAppContext';
 
-export const PLATFORM_LABEL: Record<string, string> = { xiaohongshu: '小红书', douyin_script: '抖音', channels: '视频号', wechat_article: '公众号', xianyu: '闲鱼', x_post: 'X', zhihu_answer: '知乎回答', zhihu_article: '知乎文章' };
+export { PLATFORM_LABEL } from '../format';
+import { PLATFORM_LABEL } from '../format';
 
-const LOGIN_LABEL: Record<LoginState, [string, 'ok' | 'neutral' | 'warn']> = { saved: ['已保存会话', 'ok'], none: ['未登录', 'neutral'], expired: ['会话已被平台过期', 'warn'] };
+export const LOGIN_LABEL: Record<LoginState, [string, 'ok' | 'neutral' | 'warn']> = { saved: ['已保存会话', 'ok'], none: ['未登录', 'neutral'], expired: ['会话已被平台过期', 'warn'] };
 
 /** 桌面端各平台登录状态：只根据该平台分区内是否存在其域名的 Cookie（主进程只数数量，不读值）。 */
-function useLoginStatus(ids: string[]) {
+export function useLoginStatus(ids: string[]) {
   const [status, setStatus] = useState<Record<string, LoginState>>({});
   const key = ids.join(',');
   const refresh = useCallback(async () => {
@@ -43,7 +45,8 @@ function CreatorWebview({ center, onNavigate }: { center: any; onNavigate: () =>
 export function CreatorCenters({ active, setActive }: { active: string; setActive: (id: string) => void }) {
   const { t } = useT();
   const c = useLoad(() => get('/api/creator-centers'));
-  const apps = useLocalApps();
+  const { version } = useAddApp();
+  const apps = useLocalApps(version);
   const rt = runtime();
   const centers: any[] = c.data?.centers ?? [];
   const cur = centers.find((x) => x.id === active) ?? centers[0];
@@ -58,7 +61,7 @@ export function CreatorCenters({ active, setActive }: { active: string; setActiv
       <div role="tablist" className="tabs seg-tabs" aria-label="平台">
         {centers.map((x) => (
           <button key={x.id} role="tab" aria-selected={cur?.id === x.id} className={cur?.id === x.id ? 'active' : ''} onClick={() => setActive(x.id)}>
-            {x.label}{status[x.id] === 'saved' ? <span className="tab-dot ok" role="img" aria-label={t('已保存会话')} /> : status[x.id] === 'expired' ? <span className="tab-dot warn" role="img" aria-label={t('会话已被平台过期')} /> : null}
+            {String(x.label).replace(/创作者中心|创作服务平台|助手|创作中心/g, '').trim() || x.label}{status[x.id] === 'saved' ? <span className="tab-dot ok" role="img" aria-label={t('已保存会话')} /> : status[x.id] === 'expired' ? <span className="tab-dot warn" role="img" aria-label={t('会话已被平台过期')} /> : null}
           </button>
         ))}
       </div>
@@ -68,7 +71,7 @@ export function CreatorCenters({ active, setActive }: { active: string; setActiv
           <div className="row wrap between">
             <div role="tablist" className="tabs segmented" aria-label="方式">
               <button role="tab" aria-selected={mode === 'web'} className={mode === 'web' ? 'active' : ''} onClick={() => setMode('web')}>{t('网页端')}（{t('创作中心')}）</button>
-              <button role="tab" aria-selected={mode === 'app'} className={mode === 'app' ? 'active' : ''} onClick={() => setMode('app')}>{t('本地应用')}</button>
+              <button role="tab" aria-selected={mode === 'app'} className={mode === 'app' ? 'active' : ''} onClick={() => setMode('app')}>{t('本地软件')}</button>
             </div>
             {mode === 'web' && rt === 'electron' && (
               <div className="row wrap">
@@ -84,7 +87,7 @@ export function CreatorCenters({ active, setActive }: { active: string; setActiv
               </div>
             )}
           </div>
-          {mode === 'app' ? <LocalAppPanel platform={cur.id} data={apps.data} reload={apps.reload} /> : (
+          {mode === 'app' ? <LocalAppLauncher platform={cur.id} data={apps.data} /> : (
             <>
               <p className="muted small">由你本人登录与操作；登录态只保存在本机，直到你点击“退出登录/清除登录”（平台也可能因改密、安全校验等原因让会话失效，届时重新登录即可）。本应用不会在该页面中执行任何自动点击、脚本注入或数据读取。</p>
               {rt === 'electron'
@@ -149,7 +152,7 @@ export function Analytics() {
         </div>
         <ErrorBox error={err} />
       </Card>
-      <Card icon="analytics" title={t('复盘')} actions={<button disabled={!sum.data?.count} onClick={async () => { setErr(null); try { setReview(await post('/api/analytics/review')); } catch (x) { setErr(x); } }}>{t('生成复盘')}</button>}>
+      <Card icon="analytics" title={t('复盘')} actions={<button className="primary" disabled={!sum.data?.count} onClick={async () => { setErr(null); try { setReview(await post('/api/analytics/review')); } catch (x) { setErr(x); } }}>{t('生成复盘')}</button>}>
         {sum.data && (
           <>
             <p>样本 {sum.data.count} 条 {sum.data.note && <Badge tone="warn">{sum.data.note}</Badge>}</p>

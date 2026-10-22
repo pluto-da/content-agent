@@ -102,7 +102,12 @@ export function StatusBadge({ status }: { status: string }) {
     candidate: ['neutral', '候选'], adopted: ['info', '已采用'], dismissed: ['neutral', '已跳过'],
   };
   const [tone, label] = map[status] ?? ['neutral', status];
-  return <Badge tone={tone}>{label}</Badge>;
+  return <StatusDot tone={tone}>{label}</StatusDot>;
+}
+
+/** 状态：一个小圆点 + 文字（0.5.0 起替代列表里的彩色徽章，降低视觉噪声）。 */
+export function StatusDot({ tone = 'neutral', children }: { tone?: 'ok' | 'warn' | 'bad' | 'neutral' | 'info'; children: ReactNode }) {
+  return <span className={`status-dot ${tone}`}>{children}</span>;
 }
 
 /** 迷你折线（纯 SVG）。values 为空或全 0 时显示平线。 */

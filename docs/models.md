@@ -38,8 +38,8 @@
 
 ## 小米 MiMo 接入（0.4.1）
 **配置**
-1. 设置中心 → 密钥：填“小米 MiMo API Key”（`model.mimo.key`）。服务器部署也可只设环境变量 `MIMO_API_KEY`（密钥库没有时读取）。
-2. 设置中心 → 模型：文本/对话、视觉理解选“小米 MiMo”。默认模型 `mimo-v2.6-flash`；模型名输入框可下拉选 `mimo-v2.6-pro`、`mimo-v2.6-pro-ultraspeed`。可按任务分路由（如 `tasks.rewrite` 用 pro、`tasks.draft` 用 flash）。
+1. 模型 → 密钥：填“小米 MiMo API Key”（`model.mimo.key`）。服务器部署也可只设环境变量 `MIMO_API_KEY`（密钥库没有时读取）。
+2. 模型 → 路由：文本/对话、视觉理解选“小米 MiMo”。默认模型 `mimo-v2.6-flash`；模型名输入框可下拉选 `mimo-v2.6-pro`、`mimo-v2.6-pro-ultraspeed`。可按任务分路由（如 `tasks.rewrite` 用 pro、`tasks.draft` 用 flash）。
 3. “小米 MiMo 接入地址”：按量付费（`sk-` Key，https://api.xiaomimimo.com/v1）或 Token Plan（`tp-`/`ttp-` Key，https://token-plan-cn.xiaomimimo.com/v1）。
 4. 思考模式（模型表“思考”列）：自动＝按模型名推断，MiMo 视为关；开＝下发 `thinking:{type:"enabled"}`。
 - 已下线：mimo-v2.5-pro / mimo-v2.5（2026-10-21 10:00 北京时间），不要再用。

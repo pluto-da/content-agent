@@ -15,8 +15,11 @@ import { Badge, Empty, ErrorBox, Field, Loading, SkeletonLines, StatusBadge, use
 import { ago } from './content';
 import { useLocalApps } from './localapps';
 import { CreatorCenters, PLATFORM_LABEL } from './publish';
+import { ModelSwitch } from './modelswitch';
+import { MoreMenu } from '../components/MoreMenu';
 
-const FILTERS: [string, string][] = [['pending', '待审核'], ['approved', '已通过'], ['handed_off', '已交接'], ['rejected', '已驳回'], ['', '全部']];
+/** 4 个状态过滤（参考 postiz 列表视图：全部 / 草稿 / 已排期 / 已发布）；已驳回的在“全部”里查看。 */
+const FILTERS: [string, string][] = [['pending', '待审核'], ['approved', '已通过'], ['handed_off', '已交接'], ['', '全部']];
 
 /** 创作：草稿列表 + 编辑/审核详情 + 平台预览；审核通过后“去发布”交接到官方后台或本地应用，由用户本人点击发布。桌面可切看板。 */
 export function Create({ route, go, lay, openCenter, center, setCenter }: {
@@ -72,13 +75,12 @@ function Drafts({ selected, go, lay, openCenter }: { selected: number | null; go
                   type="button" onClick={() => select(d.id)} aria-current={selected === d.id ? 'true' : undefined}
                   className={cn('!flex !h-auto !min-h-0 w-full !flex-col !items-stretch !justify-start !gap-1 !whitespace-normal !rounded-none !border-0 !bg-transparent !px-4 !py-3 text-left !font-normal hover:!bg-surface-2', selected === d.id && '!bg-accent-soft')}
                 >
-                  <span className="flex items-center gap-2 text-[12px] text-muted">
-                    <span className="font-medium text-fg-2">{PLATFORM_LABEL[d.platform] ?? d.platform}</span>
-                    <span>#{d.id}</span>
-                    <span className="ml-auto"><StatusBadge status={d.status} /></span>
+                  <span className={cn('line-clamp-1 text-sm text-fg', selected === d.id && 'font-medium')}>{d.title || String(d.body ?? '').slice(0, 60)}</span>
+                  <span className="flex min-w-0 items-center gap-2 text-[12px] text-muted">
+                    <span className="text-fg-2">{PLATFORM_LABEL[d.platform] ?? d.platform}</span>
+                    <StatusBadge status={d.status} />
+                    <span className="ml-auto shrink-0">{ago(d.created_at, lang)}</span>
                   </span>
-                  <span className={cn('line-clamp-2 text-sm text-fg', selected === d.id && 'font-medium')}>{d.title || String(d.body ?? '').slice(0, 60)}</span>
-                  <span className="text-[12px] text-muted">{ago(d.created_at, lang)}</span>
                 </button>
               </li>
             ))}
@@ -89,7 +91,7 @@ function Drafts({ selected, go, lay, openCenter }: { selected: number | null; go
   );
 
   const detail = selected !== null
-    ? <DraftDetail key={selected} id={selected} onChange={drafts.reload} openCenter={openCenter} lay={lay} />
+    ? <DraftDetail key={selected} id={selected} onChange={drafts.reload} openCenter={openCenter} lay={lay} go={go} />
     : <div className="flex flex-1 items-center justify-center p-8"><Empty icon="create">{t('从左侧选择一篇草稿进行编辑与审核')}</Empty></div>;
 
   if (isPhone) return selected !== null ? detail : list;
@@ -121,7 +123,7 @@ function useWidthOf(): [(el: HTMLElement | null) => void, number] {
 interface Act { id: string; label: string; run: () => void; primary?: boolean; danger?: boolean; disabled?: boolean; hint?: string; group: 'review' | 'handoff' }
 
 /** 草稿详情：编辑、审核、合规提示、素材、平台预览、发布交接。所有接口调用与 0.2.x 审核页一致。 */
-function DraftDetail({ id, onChange, openCenter, lay }: { id: number; onChange: () => void; openCenter: (id: string) => void; lay: Layout }) {
+function DraftDetail({ id, onChange, openCenter, lay, go }: { id: number; onChange: () => void; openCenter: (id: string) => void; lay: Layout; go: (p: string) => void }) {
   const { t } = useT();
   const d = useLoad(() => get(`/api/drafts/${id}`), [id]);
   const [body, setBody] = useState('');
@@ -187,19 +189,25 @@ function DraftDetail({ id, onChange, openCenter, lay }: { id: number; onChange: 
     if (card.platform === 'wechat_article') acts.push({ id: 'wechat', group: 'handoff', label: t('推送公众号草稿箱'), disabled: !card.canPushWechatDraft, hint: card.canPushWechatDraft ? '' : '需配置 AppID、AppSecret 与封面素材 media_id', run: () => act(async () => { const r = await post(`/api/drafts/${id}/handoff/wechat-draft`); say(`已进入草稿箱 media_id=${r.media_id}`); }) });
   }
   const btn = (a: Act, size: 'sm' | 'md' | 'lg' = 'md') => (
-    <Button key={a.id} size={size} variant={a.primary ? 'primary' : a.danger ? 'danger' : 'default'} disabled={a.disabled} title={a.hint} onClick={a.run}>{a.label}</Button>
+    <Button key={a.id} size={size} variant={a === primary ? 'primary' : a.danger ? 'danger' : 'default'} disabled={a.disabled} title={a.hint} onClick={a.run}>{a.label}</Button>
   );
-  const primary = acts.find((a) => a.primary) ?? acts[0];
+  // 一屏一个主动作：通过后主动作是“去发布”，否则是“通过”；最多 2 个可见次按钮，其余进“⋯”。
+  const primary = acts.find((a) => a.id === 'publish') ?? acts.find((a) => a.primary) ?? acts[0];
   const rest = acts.filter((a) => a !== primary);
+  const ORDER = ['share', 'save', 'reject', 'back', 'partial', 'resume', 'intent', 'wechat', 'approve'];
+  const ranked = [...rest].sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+  const visible = ranked.slice(0, 2).map((a) => ({ ...a, primary: false }));
+  const overflow = ranked.slice(2);
 
   const editor = (
     <div className="min-w-0">
       {String(dr.model).startsWith('mock') && <div className="alert info">{t('模拟输出')}：当前使用 Mock 模型，仅用于演示流程。</div>}
-      {dr.confidence && <p className="small"><Badge tone={dr.confidence === 'high' ? 'ok' : dr.confidence === 'medium' ? 'info' : 'warn'}>{({ high: '高置信', medium: '中置信', low: '低置信' } as Record<string, string>)[dr.confidence] ?? dr.confidence}</Badge>{dr.first_pass === 0 && <span className="muted"> · Schema 修复过一次</span>}</p>}
+      {dr.confidence && <p className="small"><Badge tone={dr.confidence === 'high' ? 'ok' : dr.confidence === 'medium' ? 'info' : 'warn'}>{({ high: '高置信', medium: '中置信', low: '低置信' } as Record<string, string>)[dr.confidence] ?? dr.confidence}</Badge>{dr.first_pass === 0 && <span className="muted"> · 格式修复过一次</span>}</p>}
       <Field label="标题"><input value={title} onChange={(e) => setTitle(e.target.value)} disabled={locked} /></Field>
       <Field label="正文"><textarea ref={bodyRef} rows={isPhone ? 12 : 14} value={body} onChange={(e) => setBody(e.target.value)} disabled={locked} /></Field>
-      {!locked && <Field label={t('局部重写要求')} hint="选中正文一段后点“局部重写所选”"><input value={instr} onChange={(e) => setInstr(e.target.value)} placeholder="例如：更口语、更短（可留空）" /></Field>}
-      {dr.tags?.length > 0 && <div className="row wrap">{dr.tags.map((g: string) => <Badge key={g}>#{g}</Badge>)}</div>}
+      {!locked && <div className="mb-2"><ModelSwitch go={go} /></div>}
+      {!locked && <Field label={t('局部重写要求')} hint="选中正文一段后，在“⋯”里点“局部重写所选”"><input value={instr} onChange={(e) => setInstr(e.target.value)} placeholder="例如：更口语、更短（可留空）" /></Field>}
+      {dr.tags?.length > 0 && <p className="small muted">{dr.tags.map((g: string) => `#${g}`).join(' ')}</p>}
       {dr.pipeline?.length > 0 && <p className="small"><b>{t('流水线')}：</b>{dr.pipeline.map((s: any) => `${s.step}${s.ok ? '✓' : '✗'}${s.message ? '（' + s.message + '）' : ''}`).join(' → ')}</p>}
       {dr.assets?.length > 0 && (
         <div className="assets">
@@ -225,7 +233,6 @@ function DraftDetail({ id, onChange, openCenter, lay }: { id: number; onChange: 
               <input value={questionUrl} onChange={(e) => setQuestionUrl(e.target.value)} placeholder="https://www.zhihu.com/question/…" />
             </Field>
           )}
-          {!isPhone && <div className="actions">{acts.filter((a) => a.group === 'handoff').map((a) => btn(a))}</div>}
           <p className="muted small">{card.lastStep}</p>
         </div>
       )}
@@ -277,10 +284,10 @@ function DraftDetail({ id, onChange, openCenter, lay }: { id: number; onChange: 
         </>
       ) : (
         <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line bg-surface px-6 py-3">
-          {acts.filter((a) => a.group === 'review' && !a.primary).map((a) => btn(a))}
+          {visible.map((a) => btn(a))}
+          <MoreMenu label={t('更多操作')} items={overflow.map((a) => ({ label: a.label, hint: a.hint || undefined, disabled: a.disabled, danger: a.danger, onSelect: a.run }))} />
           <span className="flex-1" />
-          {acts.filter((a) => a.group === 'review' && a.primary).map((a) => btn(a))}
-          {card && acts.filter((a) => a.id === 'publish').map((a) => btn(a))}
+          {primary && btn(primary)}
         </div>
       ))}
     </div>
@@ -357,7 +364,7 @@ function Board({ go }: { go: (p: string) => void }) {
   const draftCard = (d: any) => ({ key: `d${d.id}`, title: d.title || String(d.body ?? '').slice(0, 40), meta: `${PLATFORM_LABEL[d.platform] ?? d.platform} · ${ago(d.created_at, lang)}`, to: `create/drafts/${d.id}` });
   const cols: { id: string; label: string; hint: string; items: { key: string; title: string; meta: string; to: string }[] }[] = [
     { id: 'topic', label: '选题', hint: '候选选题', items: tp.filter((x) => x.status === 'candidate').map((x) => ({ key: `t${x.id}`, title: x.title, meta: x.origin === 'hot' ? t('热点') : t('内容库'), to: 'inspire/topics' })) },
-    { id: 'running', label: '生成中', hint: '排队或运行中的任务', items: tk.filter((x) => x.status === 'running' || x.status === 'queued').map((x) => ({ key: `k${x.id}`, title: x.label, meta: ago(x.created_at, lang), to: 'settings/tasks' })) },
+    { id: 'running', label: '生成中', hint: '排队或运行中的任务', items: tk.filter((x) => x.status === 'running' || x.status === 'queued').map((x) => ({ key: `k${x.id}`, title: x.label, meta: ago(x.created_at, lang), to: 'prefs/logs' })) },
     { id: 'pending', label: '待审', hint: '等你审核', items: dr.filter((x) => x.status === 'pending').map(draftCard) },
     { id: 'approved', label: '待发布', hint: '已通过，等你本人发布', items: dr.filter((x) => x.status === 'approved').map(draftCard) },
     { id: 'handed_off', label: '已发布', hint: '已交接给你发布', items: dr.filter((x) => x.status === 'handed_off').map(draftCard) },

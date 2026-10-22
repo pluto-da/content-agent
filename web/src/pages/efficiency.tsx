@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { get, put } from '../api';
 import { useT } from '../i18n';
-import { Badge, Card, Empty, ErrorBox, SkeletonLines, useLoad, useToast } from '../ui';
+import { Badge, Card, Empty, ErrorBox, SkeletonLines, StatusDot, useLoad, useToast } from '../ui';
 import { PLATFORM_LABEL } from './publish';
 
 const pct = (v: number | null | undefined, d = 0) => (v == null ? '—' : `${(v * 100).toFixed(d)}%`);
@@ -48,7 +48,7 @@ export function EfficiencyPanel() {
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
               <Metric label={t('单篇成本')} value={yuan(d.costPerDraft)} hint={`${d.drafts} ${t('篇')} · ${t('生成类调用')} ${yuan(d.generationCost)}`} />
               <Metric label={t('缓存命中率')} value={pct(hit)} tone={hit != null && hit < 0.5 ? 'warn' : undefined} hint={hit == null ? t('服务商未返回命中字段') : `${t('目标')} > 50% · ${d.cache.reportedCalls} ${t('次')}`} />
-              <Metric label={t('一次通过率')} value={pct(d.firstPass.rate)} hint={`${d.firstPass.passed}/${d.firstPass.measured} ${t('篇 Schema 一次通过')}`} />
+              <Metric label={t('一次通过率')} value={pct(d.firstPass.rate)} hint={`${d.firstPass.passed}/${d.firstPass.measured} ${t('篇格式一次通过')}`} />
               <Metric label={t('返工放大系数')} value={amp == null ? '—' : `${amp.toFixed(2)}×`} tone={amp != null && amp > 1.5 ? 'warn' : undefined} hint={`${d.amplification.calls} / ${d.amplification.minCalls} ${t('次调用')}`} />
               <Metric label="p50" value={ms(d.latency.p50)} hint={`${d.latency.calls} ${t('次成功调用')}`} />
               <Metric label="p95" value={ms(d.latency.p95)} />
@@ -61,7 +61,7 @@ export function EfficiencyPanel() {
                     <thead><tr><th>{t('服务商')}</th><th>{t('调用')}</th><th>{t('失败率')}</th><th>p50</th><th>p95</th></tr></thead>
                     <tbody>{(d.providers ?? []).map((p: any) => (
                       <tr key={p.provider}><td>{p.provider}</td><td className="num">{p.calls}</td>
-                        <td>{p.failRate > 0 ? <Badge tone={p.failRate >= 0.5 ? 'bad' : 'warn'}>{pct(p.failRate, 1)}</Badge> : <span className="num muted">0%</span>}</td>
+                        <td>{p.failRate > 0 ? <StatusDot tone={p.failRate >= 0.5 ? 'bad' : 'warn'}>{pct(p.failRate, 1)}</StatusDot> : <span className="num muted">0%</span>}</td>
                         <td className="num">{ms(p.p50)}</td><td className="num">{ms(p.p95)}</td></tr>
                     ))}</tbody>
                   </table></div>
@@ -79,6 +79,7 @@ export function EfficiencyPanel() {
                 )}
               </div>
             </div>
+            <p className="muted small mt-3">{t('白话说明：单篇成本＝平均每篇草稿花了多少钱；缓存命中率越高越省钱；一次通过率＝第一次生成就符合格式的比例；p50 / p95＝一半 / 95% 的调用在这个时间内完成；失败率高的服务商会被自动绕开。')}</p>
             <p className="muted small mt-3">{t('单篇成本按任务归集估算（改写/草稿/复核的文本、配图、配音、字幕）；返工放大系数 = 实际调用次数 ÷ 理论最少调用次数，越接近 1 越好。')}</p>
           </>
         ) : !m.loading && !m.error ? <Empty icon="activity">{t('暂无调用记录')}</Empty> : null}

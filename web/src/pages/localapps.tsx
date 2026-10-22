@@ -2,31 +2,20 @@ import { useState } from 'react';
 import { del, get, post, put } from '../api';
 import { useT } from '../i18n';
 import { canListInstalled, launchLocalApp, listInstalledApps, pickDesktopApp, type KnownApp, type LocalAppEntry } from '../native';
+import { MoreMenu } from '../components/MoreMenu';
+import { useAddApp } from '../components/addAppContext';
 import { appOs, runtime, type AppOs } from '../runtime';
-import { Badge, Card, Empty, ErrorBox, Field, Loading, useLoad, useToast } from '../ui';
+import { Card, Empty, ErrorBox, Field, Loading, useToast } from '../ui';
 
-export const OS_LABEL: Record<AppOs, string> = { android: 'Android', ios: 'iOS', windows: 'Windows', mac: 'macOS' };
 
-export interface LocalAppsData { apps: (LocalAppEntry & { id: number })[]; known: KnownApp[] }
-
-export function useLocalApps() {
-  return useLoad<LocalAppsData>(() => get('/api/local-apps'));
-}
+export { OS_LABEL, presetFor, useLocalApps, type LocalAppsData } from '../format';
+import { OS_LABEL, presetFor, useLocalApps, type LocalAppsData } from '../format';
 
 /** 登记信息的简短描述。 */
 export function describeEntry(e: LocalAppEntry): string {
   if (e.os === 'android') return `${e.package_name ?? ''}${e.deep_link ? ` · ${e.deep_link}` : ''}`;
   if (e.os === 'ios') return e.url_scheme ?? '';
   return [e.exec_path, e.protocol].filter(Boolean).join(' · ');
-}
-
-/** 某平台在本机系统上的预设条目（官方包名 / Scheme）。 */
-export function presetFor(known: KnownApp[], platform: string, os: AppOs): LocalAppEntry {
-  const k = known.find((x) => x.platform === platform);
-  const base: LocalAppEntry = { platform, os, label: k?.label ?? platform };
-  if (os === 'android') return { ...base, package_name: k?.android ?? '' };
-  if (os === 'ios') return { ...base, url_scheme: k?.ios ?? '' };
-  return { ...base, protocol: '', exec_path: '' };
 }
 
 function downloadJson(name: string, data: unknown) {
@@ -84,84 +73,71 @@ export function LocalAppForm({ value, known, onSaved, onCancel }: { value: Local
   );
 }
 
-/** 插件管理中的“本地应用”：登记、导入导出。 */
-export function LocalAppsManager() {
+/** “平台”页里的本地软件管理列表：所有系统的登记、打开、编辑、删除，导入导出放在页面“⋯”菜单。 */
+export function LocalAppsList({ d, onChanged }: { d: ReturnType<typeof useLocalApps>; onChanged: () => void }) {
   const { t } = useT();
-  const d = useLocalApps();
   const [editing, setEditing] = useState<LocalAppEntry | null>(null);
   const [err, setErr] = useState<any>(null);
   const [toast, say] = useToast();
   const known = d.data?.known ?? [];
   const os = appOs() ?? 'android';
+  const apps = d.data?.apps ?? [];
   return (
-    <Card icon="creator" title={t('本地应用')} actions={<>
-      <button onClick={() => setEditing(presetFor(known, known[0]?.platform ?? 'douyin', os))} disabled={!known.length}>{t('添加')}</button>
-      <button onClick={async () => { setErr(null); try { downloadJson('content-agent-local-apps.json', await get('/api/local-apps/export')); } catch (x) { setErr(x); } }}>{t('导出')}</button>
-      <label className="button-like">{t('导入')}<input type="file" accept=".json,application/json" hidden onChange={async (e) => {
-        const f = e.target.files?.[0];
-        if (!f) return;
-        setErr(null);
-        try { const r = await post('/api/local-apps/import', JSON.parse(await f.text())); say(`导入 ${r.imported} 条${r.errors?.length ? `，${r.errors.length} 条无效` : ''}`); d.reload(); } catch (x) { setErr(x); }
-        e.target.value = '';
-      }} /></label>
-    </>}>
+    <Card title={t('已登记的本地软件')} subtitle={t('只保存启动信息（包名、URL Scheme、程序路径），不保存账号；会随备份一起导出。')}>
       {toast}
-      <p className="muted small">为每个平台登记手机或电脑上的官方 App，创作中心与发布交接会同时提供「网页端（创作中心）」和「本地应用」两种方式。这里只保存启动信息（包名、URL Scheme、程序路径），不保存账号；登记会随备份一起导出。</p>
       <ErrorBox error={err ?? d.error} />
       <Loading show={d.loading} />
-      {editing && <LocalAppForm key={`${editing.platform}-${editing.os}-${editing.id ?? 'new'}`} value={editing} known={known} onCancel={() => setEditing(null)} onSaved={() => { setEditing(null); say('已保存'); d.reload(); }} />}
-      <div className="table-wrap"><table className="table">
-        <thead><tr><th>平台</th><th>系统</th><th>启动信息</th><th></th></tr></thead>
-        <tbody>
-          {d.data?.apps?.map((a) => (
-            <tr key={a.id}>
-              <td><b>{a.label}</b></td>
-              <td>{OS_LABEL[a.os]} {a.os === os && <Badge tone="info">{t('本终端')}</Badge>}</td>
-              <td className="small mono">{describeEntry(a)}</td>
-              <td className="row wrap">
-                {a.os === os && <button onClick={async () => say((await launchLocalApp(a)).message)}>{t('打开应用')}</button>}
-                <button onClick={() => setEditing(a)}>编辑</button>
-                <button className="danger" onClick={async () => { setErr(null); try { await del(`/api/local-apps/${a.id}`); d.reload(); } catch (x) { setErr(x); } }}>{t('删除')}</button>
-              </td>
-            </tr>
+      {editing && <LocalAppForm key={`${editing.platform}-${editing.os}-${editing.id ?? 'new'}`} value={editing} known={known} onCancel={() => setEditing(null)} onSaved={() => { setEditing(null); say('已保存'); onChanged(); }} />}
+      {apps.length > 0 && (
+        <ul className="m-0 list-none p-0">
+          {apps.map((a) => (
+            <li key={a.id} className="flex items-center gap-3 border-t border-line py-2.5 first:border-t-0">
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm text-fg">{a.label} <span className="text-muted">· {OS_LABEL[a.os]}{a.os === os ? ` · ${t('本终端')}` : ''}</span></div>
+                <div className="truncate font-mono text-[12px] text-muted">{describeEntry(a)}</div>
+              </div>
+              {a.os === os && <button onClick={async () => say((await launchLocalApp(a)).message)}>{t('打开')}</button>}
+              <MoreMenu label={`${a.label} ${t('更多操作')}`} items={[
+                { label: t('编辑'), onSelect: () => setEditing(a) },
+                { label: t('删除登记'), danger: true, onSelect: async () => { setErr(null); try { await del(`/api/local-apps/${a.id}`); onChanged(); } catch (x) { setErr(x); } } },
+              ]} />
+            </li>
           ))}
-        </tbody>
-      </table></div>
-      {!d.loading && !d.data?.apps?.length && <Empty icon="creator">{t('暂无数据')}</Empty>}
+        </ul>
+      )}
+      {!d.loading && !apps.length && <Empty icon="creator">{t('还没有登记软件。点侧栏底部“添加软件”，3 步完成。')}</Empty>}
     </Card>
   );
 }
 
-/** 创作中心里某个平台的“本地应用”面板。 */
-export function LocalAppPanel({ platform, data, reload }: { platform: string; data: LocalAppsData | null; reload: () => void }) {
+/** 本地软件的导入 / 导出（平台页“⋯”菜单调用）。 */
+export async function exportLocalApps() { downloadJson('content-agent-local-apps.json', await get('/api/local-apps/export')); }
+export async function importLocalAppsFile(f: File): Promise<string> {
+  const r = await post('/api/local-apps/import', JSON.parse(await f.text()));
+  return `导入 ${r.imported} 条${r.errors?.length ? `，${r.errors.length} 条无效` : ''}`;
+}
+
+/** 发布台里某个平台的“本地软件”：只保留执行动作“打开”（分享在草稿的发布交接里）；没登记时给一句说明和“添加软件”。 */
+export function LocalAppLauncher({ platform, data }: { platform: string; data: LocalAppsData | null }) {
   const { t } = useT();
   const os = appOs();
+  const { open } = useAddApp();
   const [toast, say] = useToast();
-  const [editing, setEditing] = useState(false);
-  const known = data?.known ?? [];
   const entry = os ? data?.apps?.find((a) => a.platform === platform && a.os === os) : undefined;
-  const others = data?.apps?.filter((a) => a.platform === platform && a.os !== os) ?? [];
   return (
-    <Card icon="creator" title={t('本地应用')}>
+    <Card title={t('本地软件')}>
       {toast}
-      {!os && <p className="muted">无法识别本机系统，请在其他终端使用本地应用。</p>}
-      {os && entry && !editing && (
+      {!os && <p className="muted">{t('无法识别本机系统，请在手机或电脑 App 中使用本地软件。')}</p>}
+      {os && entry && (
         <>
           <p><b>{entry.label}</b>（{OS_LABEL[entry.os]}）<span className="muted small mono"> {describeEntry(entry)}</span></p>
-          <div className="row wrap">
-            <button className="primary" onClick={async () => say((await launchLocalApp(entry)).message)}>{t('打开应用')}</button>
-            <button onClick={() => setEditing(true)}>编辑</button>
-          </div>
-          <p className="muted small">在 App 中由你本人登录、编辑和发布；本应用不会操控 App 内的任何界面。</p>
+          <div className="row wrap"><button className="primary" onClick={async () => say((await launchLocalApp(entry)).message)}>{t('打开应用')}</button></div>
+          <p className="muted small">{t('在 App 中由你本人登录、编辑和发布；分享草稿请在草稿的“发布交接”里点“分享草稿到应用”。本应用不会操控 App 内的任何界面。')}</p>
         </>
       )}
-      {os && (!entry || editing) && (
-        <>
-          {!entry && <p className="muted small">还没有登记 {OS_LABEL[os]} 上的应用。可以用官方预设一键填写，按需修改后保存。</p>}
-          <LocalAppForm key={`${platform}-${os}`} value={entry ?? presetFor(known, platform, os)} known={known} onCancel={entry ? () => setEditing(false) : undefined} onSaved={() => { setEditing(false); say('已保存'); reload(); }} />
-        </>
+      {os && !entry && (
+        <div className="empty"><span>{t('还没有登记')} {OS_LABEL[os]} {t('上的这个软件。')}</span><button onClick={() => open(platform)}>{t('添加软件')}</button></div>
       )}
-      {others.length > 0 && <p className="muted small">其他系统已登记：{others.map((o) => OS_LABEL[o.os]).join('、')}</p>}
     </Card>
   );
 }

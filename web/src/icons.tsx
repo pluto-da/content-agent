@@ -2,7 +2,7 @@
 import {
   Activity, AlertTriangle, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, Bell, BookOpen, ChartColumn, Check, ChevronRight, CircleCheck,
   Coins, Command, Cpu, Ellipsis, ExternalLink, FileCode2, Flame, Inbox, Info, Kanban, Lightbulb, LayoutList, ListChecks, Menu, Monitor, Moon,
-  PanelLeft, PenLine, Plus, Puzzle, RefreshCw, Search, Send, Settings, Shield, Sparkles, Sun, Upload, WifiOff, X, CalendarCheck, KeyRound, DatabaseBackup, SlidersHorizontal, Eye, Smartphone,
+  PanelLeft, PenLine, Plus, Puzzle, RefreshCw, Search, Send, Settings, Shield, Sparkles, Sun, Upload, WifiOff, X, CalendarCheck, KeyRound, DatabaseBackup, SlidersHorizontal, Eye, Smartphone, LayoutGrid, RotateCcw, PanelLeftClose,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -13,7 +13,7 @@ const MAP: Record<string, LucideIcon> = {
   arrowRight: ArrowRight, arrowLeft: ArrowLeft, arrowUp: ArrowUpRight, arrowDown: ArrowDownRight, chevronRight: ChevronRight, sidebar: PanelLeft,
   more: Ellipsis, wifiOff: WifiOff, shield: Shield, cpu: Cpu, coin: Coins, activity: Activity, inbox: Inbox, command: Command, check: Check,
   alert: AlertTriangle, info: Info, plus: Plus, kanban: Kanban, list: LayoutList, send: Send, external: ExternalLink, upload: Upload,
-  key: KeyRound, backup: DatabaseBackup, sliders: SlidersHorizontal, eye: Eye, phone: Smartphone,
+  key: KeyRound, backup: DatabaseBackup, sliders: SlidersHorizontal, eye: Eye, phone: Smartphone, platforms: LayoutGrid, retry: RotateCcw, collapse: PanelLeftClose,
 };
 
 export type IconName = keyof typeof MAP;

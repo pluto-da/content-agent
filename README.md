@@ -11,15 +11,20 @@ npm ci
 npm run build
 npm start                 # 打开 http://127.0.0.1:8787
 ```
-- 首次打开所有模型模块显示“未配置”：到 **设置 → 模型** 选择提供方（可先选 Mock 体验流程），到 **设置 → 密钥** 填写各平台密钥。
+- 首次打开所有模型模块显示“未配置”：到 **模型 → 路由** 选择提供方（可先选 Mock 体验流程），到 **模型 → 密钥** 填写各平台密钥。
 - 演示流程（Mock 模型 + 真实公开 RSS 与热榜）：`npm run e2e`
 - Docker：`cp .env.example .env && docker compose up -d --build`
 
 ## 接入小米 MiMo（0.4.1）
-1. 设置中心 → 密钥：填“小米 MiMo API Key”（或服务器环境变量 `MIMO_API_KEY`）。
-2. 设置中心 → 模型：文本/对话、视觉理解选“小米 MiMo”，默认 `mimo-v2.6-flash`，可下拉选 `mimo-v2.6-pro`；Token Plan Key（tp-/ttp-）把“接入地址”切到 Token Plan。
+1. 模型 → 密钥：填“小米 MiMo API Key”（或服务器环境变量 `MIMO_API_KEY`）。
+2. 模型 → 路由：文本/对话、视觉理解选“小米 MiMo”，默认 `mimo-v2.6-flash`，可下拉选 `mimo-v2.6-pro`；Token Plan Key（tp-/ttp-）把“接入地址”切到 Token Plan。
 3. 真实联调：`MIMO_API_KEY=sk-xxx npm run mimo:smoke`，报告在 `out/mimo-smoke-report.json`。
 细节（max_completion_tokens、thinking 开关、json_object 降级、缓存命中、默认价）见 [docs/models.md](docs/models.md#小米-mimo-接入041)。
+
+## 界面结构（0.5.0「一个前台」）
+- 没有“后台/设置中心”。侧栏 8 项：工作流（今天、灵感、创作、复盘）+ 工作台（平台、模型、Agent、偏好）；页内用标签细分（每页 ≤3）。旧地址（`#settings/*`、`#review` 等）自动跳到新位置。
+- “添加软件”固定在侧栏底部（手机在“更多”抽屉底部和右下“＋”里），三步登记官方 App；只打开 App 或调用系统分享。
+- ⌘K / Ctrl+K 搜索 8 个页面和标签，旧名称（设置、密钥、插件、运行状态…）也能搜到。
 
 ## 三端
 | 端 | 形态 | 构建 |

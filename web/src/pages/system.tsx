@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { get, post, put } from '../api';
 import { useT } from '../i18n';
 import type { Device } from '../runtime';
-import { Badge, Card, ErrorBox, Field, Loading, StatusBadge, useLoad, useToast } from '../ui';
-import { LocalAppsManager } from './localapps';
+import { Badge, Card, ErrorBox, Field, Loading, StatusBadge, StatusDot, useLoad, useToast } from '../ui';
+
+const STATUS_LABEL: Record<string, string> = { succeeded: '成功', failed: '失败', running: '运行中', queued: '排队' };
 
 export function AgentFiles() {
   const { t } = useT();
@@ -20,14 +21,13 @@ export function AgentFiles() {
     <div className="split">
       <Card icon="agent" title={t('系统文件')}>
         <p className="muted small">soul、工作方式、用户画像、确认规则与 skills 均可编辑；每次保存生成新版本，可回滚。硬边界写在代码中，修改这些文件不能放宽。</p>
-        <ul className="list compact">
-          {files.data?.files?.map((f: string) => <li key={f}><button className={`linklike ${path === f ? 'active' : ''}`} onClick={() => setPath(f)}>{f}</button></li>)}
-        </ul>
-        <h3>{t('记忆')}</h3>
-        <ul className="list compact">
-          {files.data?.memory?.map((m: any) => <li key={m.path}><button className={`linklike ${path === m.path ? 'active' : ''}`} onClick={() => setPath(m.path)}>{m.path}</button></li>)}
-        </ul>
-        <p className="small">必须确认的操作：{files.data?.approval?.map((a: string) => <Badge key={a}>{a}</Badge>)}</p>
+        <Field label={t('文件')}>
+          <select value={path} onChange={(e) => setPath(e.target.value)} aria-label={t('选择文件')}>
+            <optgroup label={t('系统文件')}>{files.data?.files?.map((f: string) => <option key={f} value={f}>{f}</option>)}</optgroup>
+            {files.data?.memory?.length ? <optgroup label={t('记忆（只读）')}>{files.data.memory.map((m: any) => <option key={m.path} value={m.path}>{m.path}</option>)}</optgroup> : null}
+          </select>
+        </Field>
+        <p className="small">必须确认的操作：<span className="muted">{(files.data?.approval ?? []).join('、')}</span></p>
       </Card>
       <Card title={path}>
         {toast}
@@ -76,8 +76,8 @@ export function Improve() {
         <div className="table-wrap"><table className="table">
           <thead><tr><th>名称</th><th>需要的模型能力</th><th>{t('状态')}</th></tr></thead>
           <tbody>{skills.data?.skills?.map((s: any) => (
-            <tr key={s.name}><td><b>{s.name}</b><div className="muted small">{s.description}</div></td><td>{s.models.map((m: string) => <Badge key={m}>{m}</Badge>)}</td>
-              <td>{s.missing.length ? <Badge tone="warn">缺 {s.missing.join('/')}</Badge> : <Badge tone="ok">可用</Badge>}</td></tr>
+            <tr key={s.name}><td><b>{s.name}</b><div className="muted small">{s.description}</div></td><td className="small muted">{s.models.join(' · ')}</td>
+              <td>{s.missing.length ? <StatusDot tone="warn">缺 {s.missing.join('/')}</StatusDot> : <StatusDot tone="ok">可用</StatusDot>}</td></tr>
           ))}</tbody>
         </table></div>
         {skills.data?.errors?.map((e: any) => <div key={e.file} className="alert error">{e.file}：{e.error}</div>)}
@@ -99,6 +99,9 @@ export function Improve() {
   );
 }
 
+const PROVIDES: Record<string, string> = { source: '采集', rewrite: '改写', handoff: '发布交接', creator_center: '创作后台', hot_board: '热榜' };
+
+/** 平台模块开关（原“插件”页，0.5.0 并入“平台”页）。每个终端单独勾选。 */
 export function Plugins({ device }: { device: Device }) {
   const { t } = useT();
   const p = useLoad(() => get(`/api/plugins?device=${device}`), [device]);
@@ -107,28 +110,26 @@ export function Plugins({ device }: { device: Device }) {
   useEffect(() => { if (p.data) setSel(p.data.enabled); }, [p.data]);
   const label: Record<string, string> = { phone: '手机', tablet: '平板', desktop: '电脑（App）', web: '网页' };
   return (
-    <div className="grid">
-    <Card icon="plugins" title={`${t('插件管理')} · ${t('本终端')}：${label[device]}`} actions={<button className="primary" onClick={async () => { await put('/api/plugins', { device, enabled: sel }); say('已保存，本终端导航与改写目标已更新'); p.reload(); }}>{t('保存')}</button>}>
+    <Card title={`${t('平台模块')} · ${t('本终端')}：${label[device]}`} subtitle={t('未启用的模块不出现在改写目标与热榜采集中；模块只能声明白名单内的能力。')}
+      actions={<button className="primary" onClick={async () => { await put('/api/plugins', { device, enabled: sel }); say('已保存，本终端的改写目标已更新'); p.reload(); }}>{t('保存')}</button>}>
       {toast}
-      <p className="muted small">每个终端单独勾选要启用的平台模块；未启用的插件不出现在导航、改写目标与热榜采集中。插件只能声明白名单内的能力。</p>
       <ErrorBox error={p.error} />
       <ul className="plugins">
         {p.data?.plugins?.map((pl: any) => (
           <li key={pl.id}>
             <label className="row top">
               <input type="checkbox" checked={sel.includes(pl.id)} onChange={(e) => setSel(e.target.checked ? [...sel, pl.id] : sel.filter((x) => x !== pl.id))} />
-              <span className="grow"><b>{pl.label}</b> {pl.provides.map((x: string) => <Badge key={x}>{x}</Badge>)}<div className="muted small">{pl.description}</div></span>
+              <span className="grow"><b>{pl.label}</b><div className="muted small">{pl.provides.map((x: string) => t(PROVIDES[x] ?? x)).join(' · ')} — {pl.description}</div></span>
             </label>
           </li>
         ))}
       </ul>
     </Card>
-    <LocalAppsManager />
-    </div>
   );
 }
 
-export function Tasks() {
+/** 任务与日志。focus=任务 id 时只看该任务及其日志（从“今天”的失败任务跳来）。 */
+export function Tasks({ focus, onClear }: { focus?: number | null; onClear?: () => void }) {
   const { t } = useT();
   const tasks = useLoad(() => get('/api/tasks?limit=100'));
   const reloadTasks = tasks.reload;
@@ -138,20 +139,23 @@ export function Tasks() {
     const iv = setInterval(reloadTasks, 5000);
     return () => clearInterval(iv);
   }, [reloadTasks]);
+  const rows: any[] = (tasks.data?.tasks ?? []).filter((x: any) => !focus || x.id === focus);
+  const logRows: any[] = (logs.data?.logs ?? []).filter((l: any) => !focus || JSON.stringify(l).includes(`"taskId":${focus}`));
   return (
     <div className="grid">
-      <Card icon="tasks" title={t('任务')} actions={<button onClick={tasks.reload}>{t('刷新')}</button>}>
-        <div className="stats">{Object.entries(tasks.data?.stats ?? {}).map(([k, v]) => <div key={k} className="stat"><b>{String(v)}</b><span><StatusBadge status={k} /></span></div>)}</div>
+      {focus ? <div className="alert info" role="status"><span>{t('只显示任务')} #{focus} {t('及其日志')}</span>{onClear && <button className="ghost" onClick={onClear}>{t('显示全部')}</button>}</div> : null}
+      <Card title={t('任务')} actions={<button onClick={tasks.reload}>{t('刷新')}</button>}>
+        {!focus && <p className="muted small">{Object.entries(tasks.data?.stats ?? {}).map(([k, v]) => `${STATUS_LABEL[k] ?? k} ${String(v)}`).join(' · ')}</p>}
         <ErrorBox error={tasks.error} />
         <div className="table-wrap"><table className="table">
-          <thead><tr><th>#</th><th>任务</th><th>{t('状态')}</th><th>次数</th><th>耗时</th><th>错误</th></tr></thead>
-          <tbody>{tasks.data?.tasks?.map((x: any) => (
+          <thead><tr><th>#</th><th>任务</th><th>{t('状态')}</th><th>次数</th><th>耗时</th><th>原因</th></tr></thead>
+          <tbody>{rows.map((x: any) => (
             <tr key={x.id}><td>{x.id}</td><td>{x.label}</td><td><StatusBadge status={x.status} /></td><td>{x.attempts}</td><td>{x.ms ?? '–'}ms</td><td className="small">{x.error}</td></tr>
           ))}</tbody>
         </table></div>
       </Card>
-      <Card icon="activity" title="结构化日志" actions={<select aria-label="日志级别" value={level} onChange={(e) => setLevel(e.target.value)}><option value="">全部</option><option value="info">info</option><option value="warn">warn</option><option value="error">error</option></select>}>
-        <pre className="pre small">{logs.data?.logs?.map((l: any) => JSON.stringify(l)).join('\n')}</pre>
+      <Card title={t('运行日志')} actions={<select aria-label="日志级别" value={level} onChange={(e) => setLevel(e.target.value)}><option value="">全部</option><option value="info">info</option><option value="warn">warn</option><option value="error">error</option></select>}>
+        <pre className="pre small">{logRows.map((l: any) => JSON.stringify(l)).join('\n') || t('暂无日志')}</pre>
       </Card>
     </div>
   );

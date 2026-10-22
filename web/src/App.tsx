@@ -1,23 +1,32 @@
-import { Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import * as D from '@radix-ui/react-dialog';
 import { get } from './api';
 import { LangContext, translate, type Lang } from './i18n';
 import { Icon } from './icons';
 import { deviceClass, runtime, type Device } from './runtime';
-import { prefersReducedMotion } from './ui';
-import { NAV, NEW_ACTIONS, SETTINGS_NAV, SPACE_NAV, layoutOf, type Layout } from './nav';
+import { Loading, prefersReducedMotion } from './ui';
+import { NAV, NAV_GROUPS, NEW_ACTIONS, SIDEBAR_ITEMS, WORK_NAV, layoutOf, type NavItem } from './nav';
 import { normalize, parseHash, toHash, type Route } from './route';
 import { Button } from './components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from './components/ui/dialog';
 import { Drawer, DrawerContent, DrawerItem } from './components/ui/drawer';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './components/ui/dropdown';
 import { Tip, TooltipProvider } from './components/ui/tooltip';
 import { cn } from './components/ui/utils';
+import { AddAppButton } from './components/AddAppButton';
+import { AddAppSheet } from './components/AddAppSheet';
+import { AddAppContext } from './components/addAppContext';
 import { Today } from './pages/today';
-import { Inspire } from './pages/inspire';
-import { Create } from './pages/create';
-import { Analytics } from './pages/publish';
-import { SettingsCenter } from './pages/settings-center';
+import { useLocalApps } from './format';
 import type { Theme } from './pages/settings';
+
+// 页面级懒加载：今天页随主包，其余 7 页按需加载（主包 < 400 kB）。
+const Inspire = lazy(() => import('./pages/inspire').then((m) => ({ default: m.Inspire })));
+const Create = lazy(() => import('./pages/create').then((m) => ({ default: m.Create })));
+const Analytics = lazy(() => import('./pages/publish').then((m) => ({ default: m.Analytics })));
+const PlatformsPage = lazy(() => import('./pages/platforms').then((m) => ({ default: m.PlatformsPage })));
+const ModelsPage = lazy(() => import('./pages/models').then((m) => ({ default: m.ModelsPage })));
+const AgentPage = lazy(() => import('./pages/agent').then((m) => ({ default: m.AgentPage })));
+const PrefsPage = lazy(() => import('./pages/prefs').then((m) => ({ default: m.PrefsPage })));
 
 export { NAV } from './nav';
 
@@ -65,11 +74,11 @@ function systemDark(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-/** 命令面板：⌘K / Ctrl+K 快速跳转（Radix Dialog）。 */
+/** 命令面板：⌘K / Ctrl+K，搜索 8 个页面与它们的标签；旧名称（设置、密钥、插件…）作为别名也能搜到。 */
 function CommandPalette({ open, onClose, go, t }: { open: boolean; onClose: () => void; go: (p: string) => void; t: (k: string) => string }) {
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(0);
-  const items = NAV.filter((n) => !q || `${n.label}${t(n.label)}${n.id}${n.desc}${n.group}`.toLowerCase().includes(q.toLowerCase()));
+  const items = NAV.filter((n) => !q || `${n.label}${t(n.label)}${n.id}${n.desc}${n.group}${n.keywords ?? ''}`.toLowerCase().includes(q.toLowerCase()));
   useEffect(() => { if (open) { setQ(''); setIdx(0); } }, [open]);
   const pick = (id: string) => { onClose(); go(id); };
   return (
@@ -99,7 +108,7 @@ function CommandPalette({ open, onClose, go, t }: { open: boolean; onClose: () =
               onMouseEnter={() => setIdx(i)} onClick={() => pick(n.id)}
             >
               <span className={cn('text-muted', i === idx && 'text-fg')}><Icon name={n.icon} size={16} /></span>
-              <span className="min-w-0 flex-1 truncate">{t(n.label)}<small className="text-[13px] text-muted"> · {t(n.group === 'space' ? n.desc : n.group)}</small></span>
+              <span className="min-w-0 flex-1 truncate">{t(n.label)}<small className="text-[13px] text-muted"> · {n.id.includes('/') ? t(n.group) : t(n.desc)}</small></span>
               <Icon name="arrowRight" size={14} className={cn('text-muted opacity-0', i === idx && 'opacity-100')} />
             </li>
           ))}
@@ -110,24 +119,7 @@ function CommandPalette({ open, onClose, go, t }: { open: boolean; onClose: () =
   );
 }
 
-/** “＋新建”菜单的内容（桌面下拉 / 手机抽屉共用）。 */
-function NewMenu({ lay, go, t, open, setOpen, trigger }: { lay: Layout; go: (p: string) => void; t: (k: string) => string; open: boolean; setOpen: (o: boolean) => void; trigger?: ReactNode }) {
-  if (lay === 'phone') return (
-    <Drawer open={open} onOpenChange={setOpen}>
-      <DrawerContent title={t('新建')} description={t('从哪里开始？发布始终由你本人完成。')}>
-        {NEW_ACTIONS.map((a) => <DrawerItem key={a.to} icon={<Icon name={a.icon} size={18} />} label={t(a.label)} hint={t(a.hint)} onClick={() => { setOpen(false); go(a.to); }} />)}
-      </DrawerContent>
-    </Drawer>
-  );
-  return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side={lay === 'tablet' ? 'right' : 'bottom'}>
-        {NEW_ACTIONS.map((a) => <DropdownMenuItem key={a.to} icon={<Icon name={a.icon} size={16} />} hint={t(a.hint)} onSelect={() => go(a.to)}>{t(a.label)}</DropdownMenuItem>)}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
+const HINT_KEY = 'ca.v5.hint';
 
 export function App() {
   const width = useWidth();
@@ -138,9 +130,30 @@ export function App() {
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('ca.theme') as Theme) || 'system');
   const [lang, setLang] = useState<Lang>(() => (localStorage.getItem('ca.lang') as Lang) || 'zh');
   const [cmdk, setCmdk] = useState(false);
-  const [newOpen, setNewOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
   const [pending, setPending] = useState(0);
   const [center, setCenter] = useState('douyin');
+  const [hint, setHint] = useState(() => !localStorage.getItem(HINT_KEY));
+  // 侧栏：平板默认折叠为 64px 图标栏，电脑默认展开 232px；用户的选择分别保存在本机。
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem('ca.side.collapsed') ?? '{}'); } catch { return {}; }
+  });
+  const rail = lay === 'tablet' ? collapsed.tablet !== false : lay === 'desktop' ? collapsed.desktop === true : false;
+  const toggleRail = () => {
+    const next = { ...collapsed, [lay]: !rail };
+    setCollapsed(next);
+    localStorage.setItem('ca.side.collapsed', JSON.stringify(next));
+  };
+  // 添加软件（全局 Sheet）
+  const [addOpen, setAddOpen] = useState(false);
+  const [addInitial, setAddInitial] = useState<string | undefined>(undefined);
+  const [appsVersion, setAppsVersion] = useState(0);
+  const apps = useLocalApps(appsVersion);
+  const appCount = apps.data?.apps?.length ?? 0;
+  const openAdd = useCallback((platform?: string) => { setMoreOpen(false); setFabOpen(false); setAddInitial(platform); setAddOpen(true); }, []);
+  const addCtx = useMemo(() => ({ open: openAdd, count: appCount, version: appsVersion }), [openAdd, appCount, appsVersion]);
+
   const t = useMemo(() => (k: string) => translate(lang, k), [lang]);
   const firstTheme = useRef(true);
 
@@ -158,7 +171,7 @@ export function App() {
   }, [theme]);
   useEffect(() => { localStorage.setItem('ca.lang', lang); document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en'; }, [lang]);
 
-  // 旧 hash 兼容：首次进入时把 #review、#status 等替换为新地址（不新增历史记录）。
+  // 旧 hash 兼容：首次进入时把 #settings/*、#review、#status 等替换为新地址（不新增历史记录）。
   useEffect(() => {
     const raw = location.hash.slice(1);
     const norm = toHash(parseHash(raw));
@@ -169,9 +182,10 @@ export function App() {
   }, []);
 
   const go = useCallback((target: string) => {
-    const h = normalize(target);
+    const h = toHash(parseHash(normalize(target)));
     setRoute(parseHash(h));
     if (location.hash.slice(1) !== h) location.hash = h;
+    setMoreOpen(false);
     window.scrollTo?.(0, 0);
   }, []);
 
@@ -193,81 +207,86 @@ export function App() {
   const isPhone = lay === 'phone';
   const dark = theme === 'dark' || (theme === 'system' && systemDark());
   const toggleTheme = () => setTheme(dark ? 'light' : 'dark');
+  const dismissHint = () => { localStorage.setItem(HINT_KEY, '1'); setHint(false); };
 
-  // 手机全屏详情：草稿详情、设置分组。
-  const phoneDetail = isPhone && ((route.space === 'create' && route.sub === 'drafts' && !!route.id) || (route.space === 'settings' && !!route.sub));
-  const spaceItem = SPACE_NAV.find((s) => s.id === route.space);
-  const sectionItem = SETTINGS_NAV.find((s) => s.section === route.sub);
-  const title = route.space === 'settings' ? (isPhone && sectionItem ? sectionItem.label : '设置') : (spaceItem?.label ?? '');
-  const subtitle = route.space === 'settings' ? (sectionItem?.desc ?? '运行状态、系统文件、插件、任务与偏好') : (spaceItem?.desc ?? '');
-  const back = phoneDetail ? () => go(route.space === 'settings' ? 'settings' : 'create/drafts') : null;
-  const backTitle = route.space === 'create' && route.id ? `${t('草稿')} #${route.id}` : t(title);
+  // 手机全屏详情：草稿详情（编辑器全屏时隐藏右下“＋”）。
+  const phoneDetail = isPhone && route.space === 'create' && route.sub === 'drafts' && !!route.id;
+  const item = SIDEBAR_ITEMS.find((s) => s.id === route.space);
+  const title = item?.label ?? '';
+  const subtitle = item?.desc ?? '';
+  const back = phoneDetail ? () => go('create/drafts') : null;
+  const backTitle = route.id ? `${t('草稿')} #${route.id}` : t(title);
 
   const body = (() => {
     switch (route.space) {
       case 'inspire': return <Inspire tab={route.sub} go={go} device={device} lay={lay} />;
       case 'create': return <Create route={route} go={go} lay={lay} openCenter={openCenter} center={route.id && route.sub === 'publish' ? route.id : center} setCenter={(id) => { setCenter(id); go(`create/publish/${id}`); }} />;
       case 'analytics': return <div className="page"><Analytics /></div>;
-      case 'settings': return <SettingsCenter section={route.sub} go={go} lay={lay} device={device} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />;
+      case 'platforms': return <PlatformsPage go={go} lay={lay} device={device} />;
+      case 'models': return <ModelsPage tab={route.sub} go={go} lay={lay} />;
+      case 'agent': return <AgentPage tab={route.sub} go={go} lay={lay} />;
+      case 'prefs': return <PrefsPage tab={route.sub} id={route.id} go={go} lay={lay} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />;
       default: return <Today go={go} lay={lay} />;
     }
   })();
 
   const navActive = (id: string) => route.space === id;
-  const pill = (n: number, cls?: string) => n > 0 ? <span className={cn('ml-auto inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-surface-3 px-1.5 text-[12px] font-medium tabular-nums text-fg', cls)} aria-label={`${n} 篇待审`}>{n}</span> : null;
+  const pendingBadge = (railMode: boolean) => pending > 0 && (railMode
+    ? <span className="absolute right-1 top-1 inline-grid h-4 min-w-4 place-items-center rounded-full bg-ink px-1 text-[11px] font-medium leading-none text-ink-fg" aria-hidden="true">{pending}</span>
+    : <span className="ml-auto inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-surface-3 px-1.5 text-[12px] font-medium tabular-nums text-fg" aria-hidden="true">{pending}</span>);
 
-  const sideLink = (n: { id: string; label: string; icon: string }, rail: boolean) => {
+  /** 侧栏的一项：36px 高、16px 图标；当前项浅灰底 + 墨色文字（不用强调色色块）。 */
+  const sideLink = (n: NavItem, railMode: boolean) => {
+    const label = n.id === 'create' && pending > 0 ? `${t(n.label)}（${pending} ${t('篇待审')}）` : t(n.label);
     const a = (
       <a
-        href={`#${n.id}`} aria-current={navActive(n.id) ? 'page' : undefined} aria-label={rail ? t(n.label) : undefined}
+        href={`#${n.id}`} aria-current={navActive(n.id) ? 'page' : undefined} aria-label={railMode || (n.id === 'create' && pending > 0) ? label : undefined}
         onClick={(e) => { e.preventDefault(); go(n.id); }}
         className={cn(
           'relative flex items-center gap-2 rounded-ctl text-sm text-side-fg no-underline transition-colors duration-150 hover:bg-side-active hover:text-fg hover:no-underline',
-          rail ? 'h-11 w-11 justify-center' : 'h-8 px-2',
+          railMode ? 'h-10 w-10 justify-center' : isPhone ? 'h-11 px-3' : 'h-9 px-2',
           navActive(n.id) && 'bg-side-active font-medium text-fg',
         )}
       >
-        <Icon name={n.icon} size={rail ? 20 : 16} />
-        {!rail && <span className="truncate">{t(n.label)}</span>}
-        {n.id === 'create' && (rail
-          ? (pending > 0 && <span className="absolute right-1 top-1 inline-grid h-4 min-w-4 place-items-center rounded-full bg-ink px-1 text-[11px] font-medium leading-none text-ink-fg" aria-label={`${pending} 篇待审`}>{pending}</span>)
-          : pill(pending))}
+        <Icon name={n.icon} size={16} />
+        {!railMode && <span className="truncate">{t(n.label)}</span>}
+        {n.id === 'create' && pendingBadge(railMode)}
       </a>
     );
-    return <li key={n.id}>{rail ? <Tip label={t(n.label)}>{a}</Tip> : a}</li>;
+    return <li key={n.id}>{railMode ? <Tip label={t(n.label)}>{a}</Tip> : a}</li>;
   };
 
-  const sidebar = lay !== 'phone' && (() => {
-    const rail = lay === 'tablet';
-    const newBtn = (
-      <Button variant="default" size={rail ? 'icon-lg' : 'sm'} className={cn(rail ? '' : 'w-full justify-start')} aria-label={t('新建')}>
-        <Icon name="plus" size={16} />{!rail && t('新建')}
-      </Button>
-    );
-    return (
-      <nav aria-label="主导航" className={cn('app-side sticky top-0 flex h-dvh shrink-0 flex-col gap-1 bg-side', rail ? 'w-16 items-center px-2 py-3' : 'w-[212px] px-3 py-3')}>
-        <div className={cn('flex min-h-11 items-center gap-2', rail ? 'justify-center' : 'px-1 pb-1')}>
-          <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center rounded-ctl bg-ink text-ink-fg"><Icon name="topics" size={14} strokeWidth={1.75} /></span>
-          {!rail && <span className="flex min-w-0 flex-col leading-tight"><span className="truncate text-sm font-semibold tracking-[-0.01em] text-fg">{t('内容运营助手')}</span><small className="text-[12px] text-muted">Content Agent</small></span>}
-        </div>
-        {rail
-          ? <Tip label={`${t('快速跳转')} ⌘K`}><Button variant="ghost" size="icon-lg" aria-label={t('快速跳转')} onClick={() => setCmdk(true)}><Icon name="search" size={20} /></Button></Tip>
-          : (
-            <button onClick={() => setCmdk(true)} aria-label={t('快速跳转')} className="!mb-1 !h-8 !min-h-8 w-full !justify-start gap-2 !border-line !bg-transparent !px-2 text-[13px] !font-normal !text-muted hover:!text-fg-2">
-              <Icon name="search" size={16} /><span className="flex-1 text-left">{t('搜索或跳转')}</span><kbd>⌘K</kbd>
-            </button>
-          )}
-        <div className={cn(rail ? '' : 'mb-2 w-full')}>
-          <NewMenu lay={lay} go={go} t={t} open={newOpen} setOpen={setNewOpen} trigger={rail ? <span><Tip label={t('新建')}>{newBtn}</Tip></span> : newBtn} />
-        </div>
-        <ul className={cn('m-0 flex list-none flex-col gap-0.5 p-0', rail && 'items-center')}>{SPACE_NAV.map((n) => sideLink(n, rail))}</ul>
-        <div className="mt-auto w-full">
-          <ul className={cn('m-0 flex list-none flex-col gap-0.5 p-0', rail && 'items-center')}>{sideLink({ id: 'settings', label: '设置', icon: 'settings' }, rail)}</ul>
-          {!rail && <p className="m-0 truncate px-2 pt-3 text-[12px] text-muted">{t('发布由你本人完成')}</p>}
-        </div>
-      </nav>
-    );
-  })();
+  /** 两组 8 项，无二级菜单。 */
+  const navGroups = (railMode: boolean) => NAV_GROUPS.map((g, gi) => (
+    <div key={g.title} className={cn(gi > 0 && (railMode ? 'mt-3 border-t border-line pt-3' : 'mt-5'))} role="group" aria-label={t(g.title)}>
+      {!railMode && <div className={cn('pb-1 text-[12px] font-medium text-muted', isPhone ? 'px-3' : 'px-2')}>{t(g.title)}</div>}
+      <ul className={cn('m-0 flex list-none flex-col gap-0.5 p-0', railMode && 'items-center')}>{g.items.map((n) => sideLink(n, railMode))}</ul>
+    </div>
+  ));
+
+  const sidebar = !isPhone && (
+    <nav aria-label="主导航" data-rail={rail ? 'true' : 'false'} className={cn('app-side sticky top-0 flex h-dvh shrink-0 flex-col overflow-y-auto bg-side transition-[width] duration-200', rail ? 'w-16 items-center px-2' : 'w-[232px] px-3')}>
+      <div className={cn('flex min-h-14 shrink-0 items-center gap-2 pt-1', rail ? 'flex-col justify-center pt-3' : 'px-1')}>
+        <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center rounded-ctl bg-ink text-ink-fg"><Icon name="topics" size={14} strokeWidth={1.75} /></span>
+        {!rail && <span className="flex min-w-0 flex-1 flex-col leading-tight"><span className="truncate text-sm font-semibold tracking-[-0.01em] text-fg">{t('内容运营助手')}</span><small className="text-[12px] text-muted">Content Agent</small></span>}
+        <Tip label={rail ? t('展开侧栏') : t('收起侧栏')}>
+          <Button variant="ghost" size="icon" aria-label={rail ? t('展开侧栏') : t('收起侧栏')} aria-expanded={!rail} onClick={toggleRail}><Icon name={rail ? 'sidebar' : 'collapse'} size={16} /></Button>
+        </Tip>
+      </div>
+      {rail
+        ? <Tip label={`${t('快速跳转')} ⌘K`}><Button variant="ghost" size="icon" className="mb-2" aria-label={t('快速跳转')} onClick={() => setCmdk(true)}><Icon name="search" size={16} /></Button></Tip>
+        : (
+          <button onClick={() => setCmdk(true)} aria-label={t('快速跳转')} className="!mb-3 !h-8 !min-h-8 w-full shrink-0 !justify-start gap-2 !border-line !bg-transparent !px-2 text-[13px] !font-normal !text-muted hover:!text-fg-2">
+            <Icon name="search" size={16} /><span className="flex-1 text-left">{t('搜索或跳转')}</span><kbd>⌘K</kbd>
+          </button>
+        )}
+      <div className={cn('flex-1', rail && 'flex w-full flex-col items-center')}>{navGroups(rail)}</div>
+      {/* 悬浮“添加软件”：sticky 置底，发丝线 + 12px 与上方导航隔开；上方预留按钮高度的空白，避免遮挡 */}
+      <div className={cn('add-app-dock sticky bottom-0 z-10 mt-4 w-full shrink-0 border-t border-line bg-side pb-3 pt-3', rail && 'flex justify-center')}>
+        <AddAppButton variant={rail ? 'rail' : 'side'} />
+      </div>
+    </nav>
+  );
 
   const topbar = (
     <header className={cn('sticky top-0 z-20 flex shrink-0 items-center gap-2 bg-canvas', isPhone ? 'min-h-14 px-2 pt-[max(0px,env(safe-area-inset-top))]' : 'h-14 px-6')}>
@@ -280,61 +299,105 @@ export function App() {
       </div>
       <div className="topbar-actions flex shrink-0 items-center gap-1">
         {!online && <span className="badge warn" role="status"><Icon name="wifiOff" size={14} /> {t('离线')}</span>}
-        {!isPhone && <Button variant="ghost" size="icon" aria-label={t('快速跳转')} title="⌘K" onClick={() => setCmdk(true)}><Icon name="command" size={16} /></Button>}
+        {isPhone && <Button variant="ghost" size="icon-lg" aria-label={t('快速跳转')} onClick={() => setCmdk(true)}><Icon name="search" size={20} /></Button>}
         <Button variant="ghost" size={isPhone ? 'icon-lg' : 'icon'} aria-label={t(dark ? '切换到浅色' : '切换到深色')} title={t(dark ? '切换到浅色' : '切换到深色')} onClick={toggleTheme}>
           <Icon name={dark ? 'sun' : 'moon'} size={isPhone ? 20 : 16} />
         </Button>
-        {isPhone && route.space !== 'settings' && <Button variant="ghost" size="icon-lg" aria-label={t('设置')} onClick={() => go('settings')}><Icon name="settings" size={20} /></Button>}
       </div>
     </header>
   );
 
-  const bottomTab = (id: string, label: string, icon: string) => (
+  const bottomTab = (n: NavItem) => (
     <a
-      key={id} href={`#${id}`} aria-current={navActive(id) ? 'page' : undefined} onClick={(e) => { e.preventDefault(); go(id); }}
-      className={cn('relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-ctl text-muted no-underline hover:no-underline active:scale-[.98]', navActive(id) && 'font-medium text-accent')}
+      key={n.id} href={`#${n.id}`} aria-current={navActive(n.id) ? 'page' : undefined} onClick={(e) => { e.preventDefault(); go(n.id); }}
+      className={cn('relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-ctl text-muted no-underline hover:no-underline active:scale-[.98]', navActive(n.id) && 'font-medium text-fg')}
     >
-      <Icon name={icon} size={22} />
-      <small className="text-[12px] leading-tight">{t(label)}</small>
-      {id === 'create' && pending > 0 && <span className="absolute left-[calc(50%+6px)] top-1 inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-ink px-1.5 text-[12px] font-medium text-ink-fg" aria-label={`${pending} 篇待审`}>{pending}</span>}
+      <Icon name={n.icon} size={22} />
+      <small className="text-[12px] leading-tight">{t(n.label)}</small>
+      {n.id === 'create' && pending > 0 && <span className="absolute left-[calc(50%+6px)] top-1 inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-ink px-1.5 text-[12px] font-medium text-ink-fg" aria-label={`${pending} 篇待审`}>{pending}</span>}
     </a>
+  );
+  const deskActive = ['platforms', 'models', 'agent', 'prefs'].includes(route.space);
+
+  /** 手机“更多”：从左侧滑出的抽屉 = 手机版侧栏，列全 8 项，底部固定“添加软件”。 */
+  const moreDrawer = isPhone && (
+    <D.Root open={moreOpen} onOpenChange={setMoreOpen}>
+      <D.Portal>
+        <D.Overlay className="fixed inset-0 z-[70] bg-black/32" />
+        <D.Content aria-describedby={undefined} className="sheet-left fixed inset-y-0 left-0 z-[71] flex w-[min(300px,86vw)] flex-col bg-side text-fg shadow-pop outline-none">
+          <div className="flex min-h-14 items-center gap-2 px-4 pt-[max(0px,env(safe-area-inset-top))]">
+            <span aria-hidden="true" className="grid h-6 w-6 place-items-center rounded-ctl bg-ink text-ink-fg"><Icon name="topics" size={14} strokeWidth={1.75} /></span>
+            <D.Title className="m-0 flex-1 text-sm font-semibold">{t('内容运营助手')}</D.Title>
+            <D.Close asChild><Button variant="ghost" size="icon-lg" aria-label={t('关闭')}><Icon name="close" size={18} /></Button></D.Close>
+          </div>
+          <nav aria-label={t('全部页面')} className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">{navGroups(false)}</nav>
+          <div className="add-app-dock sticky bottom-0 border-t border-line bg-side px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3">
+            <AddAppButton variant="drawer" />
+          </div>
+        </D.Content>
+      </D.Portal>
+    </D.Root>
   );
 
   return (
     <LangContext.Provider value={{ lang, t }}>
-      <TooltipProvider delayDuration={200}>
-        <a className="skip" href="#main">跳到主要内容</a>
-        <div className={cn('shell', lay, 'flex min-h-dvh bg-canvas', !isPhone && 'h-dvh overflow-hidden')}>
-          {sidebar}
-          <div className="flex min-w-0 flex-1 flex-col">
-            {topbar}
-            <main
-              id="main" tabIndex={-1}
-              className={cn('flex min-h-0 flex-1 flex-col outline-none', !isPhone && 'overflow-y-auto', isPhone && (phoneDetail ? 'pb-[calc(84px+env(safe-area-inset-bottom))]' : 'pb-[calc(92px+env(safe-area-inset-bottom))]'))}
-            >
-              <ErrorBoundary key={route.space}>{body}</ErrorBoundary>
-            </main>
-          </div>
-          {isPhone && !phoneDetail && (
-            <nav aria-label="快捷导航" className="app-bottom fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-center bg-surface/90 px-2 pb-[calc(4px+env(safe-area-inset-bottom))] pt-1 shadow-bar backdrop-blur-md">
-              {bottomTab('today', '今天', 'today')}
-              {bottomTab('inspire', '灵感', 'inspire')}
-              <div className="flex justify-center">
+      <AddAppContext.Provider value={addCtx}>
+        <TooltipProvider delayDuration={200}>
+          <a className="skip" href="#main">跳到主要内容</a>
+          <div className={cn('shell', lay, 'flex min-h-dvh bg-canvas', !isPhone && 'h-dvh overflow-hidden')}>
+            {sidebar}
+            <div className="flex min-w-0 flex-1 flex-col">
+              {topbar}
+              <main
+                id="main" tabIndex={-1}
+                className={cn('flex min-h-0 flex-1 flex-col outline-none', !isPhone && 'overflow-y-auto', isPhone && (phoneDetail ? 'pb-[calc(84px+env(safe-area-inset-bottom))]' : 'pb-[calc(56px+88px+env(safe-area-inset-bottom))]'))}
+              >
+                {hint && (
+                  <div role="status" className={cn('mb-3 flex items-center gap-3 rounded-card border border-line bg-surface px-4 py-2.5 text-[13px] text-fg-2', isPhone ? 'mx-4' : 'mx-6')}>
+                    <Icon name="info" size={16} className="shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1">{t('设置已经并入侧栏的平台、模型、Agent、偏好四页')}</span>
+                    <Button size="sm" variant="ghost" onClick={dismissHint} aria-label={t('知道了，不再提示')}>{t('知道了')}</Button>
+                  </div>
+                )}
+                <ErrorBoundary key={route.space}>
+                  <Suspense fallback={<div className="page"><Loading show lines={5} /></div>}>{body}</Suspense>
+                </ErrorBoundary>
+              </main>
+            </div>
+            {isPhone && !phoneDetail && (
+              <>
                 <button
-                  type="button" aria-label={t('新建')} aria-haspopup="dialog" onClick={() => setNewOpen(true)}
-                  className="!h-12 !min-h-12 !w-12 !rounded-full !border-ink !bg-ink !p-0 !text-ink-fg shadow-pop"
+                  type="button" aria-label={t('新建或添加软件')} aria-haspopup="dialog" onClick={() => setFabOpen(true)} data-testid="fab"
+                  className="add-app-fab !fixed right-4 z-30 !h-14 !min-h-14 !w-14 !rounded-full !p-0 bottom-[calc(56px+16px+env(safe-area-inset-bottom))]"
                 >
-                  <Icon name="plus" size={22} strokeWidth={1.75} />
+                  <Icon name="plus" size={24} strokeWidth={1.75} />
                 </button>
-              </div>
-              {bottomTab('create', '创作', 'create')}
-              {bottomTab('analytics', '复盘', 'analytics')}
-            </nav>
-          )}
-          {isPhone && <NewMenu lay={lay} go={go} t={t} open={newOpen} setOpen={setNewOpen} />}
-        </div>
-        <CommandPalette open={cmdk} onClose={() => setCmdk(false)} go={go} t={t} />
-      </TooltipProvider>
+                <nav aria-label="快捷导航" className="app-bottom fixed inset-x-0 bottom-0 z-30 grid h-[calc(56px+env(safe-area-inset-bottom))] grid-cols-5 items-start bg-surface/90 px-2 pb-[env(safe-area-inset-bottom)] pt-0.5 shadow-bar backdrop-blur-md">
+                  {WORK_NAV.map(bottomTab)}
+                  <button
+                    type="button" aria-label={t('更多')} aria-haspopup="dialog" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}
+                    className={cn('!flex !h-[52px] !min-h-[52px] !flex-col !items-center !justify-center !gap-0.5 !border-0 !bg-transparent !p-0 !font-normal text-muted', deskActive && '!font-medium !text-fg')}
+                  >
+                    <Icon name="menu" size={22} />
+                    <small className="text-[12px] leading-tight">{t('更多')}</small>
+                  </button>
+                </nav>
+              </>
+            )}
+            {moreDrawer}
+            {isPhone && (
+              <Drawer open={fabOpen} onOpenChange={setFabOpen}>
+                <DrawerContent title={t('新建')} description={t('从哪里开始？发布始终由你本人完成。')}>
+                  <DrawerItem icon={<Icon name="plus" size={18} />} label={t('添加软件')} hint={t('登记手机或电脑上的官方 App，之后一键打开或分享草稿')} tone="primary" onClick={() => openAdd()} />
+                  {NEW_ACTIONS.map((a) => <DrawerItem key={a.to} icon={<Icon name={a.icon} size={18} />} label={t(a.label)} hint={t(a.hint)} onClick={() => { setFabOpen(false); go(a.to); }} />)}
+                </DrawerContent>
+              </Drawer>
+            )}
+          </div>
+          <AddAppSheet open={addOpen} onOpenChange={setAddOpen} lay={lay} data={apps.data} initial={addInitial} onSaved={() => setAppsVersion((v) => v + 1)} />
+          <CommandPalette open={cmdk} onClose={() => setCmdk(false)} go={go} t={t} />
+        </TooltipProvider>
+      </AddAppContext.Provider>
     </LangContext.Provider>
   );
 }

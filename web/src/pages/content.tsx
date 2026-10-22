@@ -4,7 +4,9 @@ import { useT } from '../i18n';
 import { Icon } from '../icons';
 import type { Device } from '../runtime';
 import { EfficiencyPanel } from './efficiency';
-import { Badge, Card, CountUp, Empty, ErrorBox, Field, Loading, SkeletonLines, Sparkline, StatusBadge, useLoad, useToast } from '../ui';
+import { MoreMenu } from '../components/MoreMenu';
+import { ModelSwitch } from './modelswitch';
+import { Card, CountUp, Empty, ErrorBox, Field, Loading, SkeletonLines, Sparkline, StatusBadge, useLoad, useToast } from '../ui';
 
 /* ---------- 总览 Dashboard ---------- */
 
@@ -30,17 +32,8 @@ function weekDelta(series: number[]): number | null {
   if (!b) return 100;
   return Math.round(((a - b) / b) * 100);
 }
-export function ago(ts: string | undefined, lang: string): string {
-  if (!ts) return '';
-  const t = Date.parse(ts.includes('T') ? ts : ts.replace(' ', 'T') + 'Z');
-  if (!Number.isFinite(t)) return ts;
-  const s = Math.max(0, (Date.now() - t) / 1000);
-  const zh = lang === 'zh';
-  if (s < 60) return zh ? '刚刚' : 'just now';
-  if (s < 3600) return zh ? `${Math.floor(s / 60)} 分钟前` : `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return zh ? `${Math.floor(s / 3600)} 小时前` : `${Math.floor(s / 3600)}h ago`;
-  return zh ? `${Math.floor(s / 86400)} 天前` : `${Math.floor(s / 86400)}d ago`;
-}
+export { ago } from '../format';
+import { ago } from '../format';
 
 /** 运行状态（二级页）：成本、各能力成本、模型能力、流水线、最近任务、硬边界。从总览下沉，功能不变。 */
 export function Status({ go }: { go: (p: string) => void }) {
@@ -75,7 +68,7 @@ export function Status({ go }: { go: (p: string) => void }) {
   return (
     <div className="dash-grid">
       <EfficiencyPanel />
-      <Card className="span-7" title={t('近 30 天成本')} actions={<button className="ghost" onClick={() => go('settings/models')}>{t('模型设置')}<Icon name="chevronRight" size={14} /></button>}>
+      <Card className="span-7" title={t('近 30 天成本')} actions={<button className="ghost" onClick={() => go('models/routes')}>{t('模型设置')}<Icon name="chevronRight" size={14} /></button>}>
         {costs.loading ? <SkeletonLines lines={2} /> : (
           <div className="status-cost">
             <div>
@@ -91,16 +84,19 @@ export function Status({ go }: { go: (p: string) => void }) {
 
       <Card className="span-5" title={t('模型能力')}>
         <ErrorBox error={models.error} />
-        {models.loading ? <SkeletonLines lines={4} /> : (
-          <ul className="caps">
-            {(models.data?.status ?? []).map((s: any) => (
-              <li key={s.capability}>
-                <span className="cap-name"><span className={`led ${s.configured ? (s.provider === 'mock' ? 'info' : 'ok') : 'warn'}`} aria-hidden="true" />{s.label}</span>
-                {s.configured ? <Badge tone={s.provider === 'mock' ? 'info' : 'ok'}>{s.provider === 'mock' ? t('模拟输出') : `${s.provider}/${s.model}`}</Badge> : <Badge tone="warn">{t('未配置')}</Badge>}
-              </li>
-            ))}
-          </ul>
-        )}
+        {models.loading ? <SkeletonLines lines={2} /> : (() => {
+          const st: any[] = models.data?.status ?? [];
+          const ok = st.filter((x) => x.configured).length;
+          const mock = st.filter((x) => x.configured && x.provider === 'mock').length;
+          const missing = st.filter((x) => !x.configured).map((x) => x.label);
+          return (
+            <div className="small">
+              <p className="m-0">{st.length} {t('项能力中')} {ok} {t('项已配置')}{mock ? `（${mock} ${t('项为模拟输出')}）` : ''}。</p>
+              {missing.length > 0 && <p className="m-0 mt-1 text-warn">{t('未配置')}：{missing.join('、')}</p>}
+              <button className="ghost mt-2" onClick={() => go('models/routes')}>{t('去路由页调整')}<Icon name="chevronRight" size={14} /></button>
+            </div>
+          );
+        })()}
       </Card>
 
       <Card className="span-7" title={t('流水线状态')} subtitle={t('从选题到交接的内容流转')}>
@@ -143,14 +139,14 @@ export function Status({ go }: { go: (p: string) => void }) {
         ) : <Empty icon="coin">{t('暂无调用记录')}</Empty>}
       </Card>
 
-      <Card className="span-7" title={t('最近任务')} actions={<button className="ghost" onClick={() => go('tasks')}>{t('任务与日志')}<Icon name="chevronRight" size={14} /></button>}>
+      <Card className="span-7" title={t('最近任务')} actions={<button className="ghost" onClick={() => go('prefs/logs')}>{t('任务与日志')}<Icon name="chevronRight" size={14} /></button>}>
         {tasks.loading ? <SkeletonLines lines={5} /> : taskRows.length ? (
           <ul className="list rows">
             {taskRows.slice(0, 6).map((x) => (
               <li key={x.id} className="task-row">
                 <span className={`led ${x.status === 'succeeded' ? 'ok' : x.status === 'failed' ? 'bad' : x.status === 'running' ? 'info' : 'neutral'}`} aria-hidden="true" />
                 <span className="grow ellipsis">{x.label}{x.error && <span className="muted small"> · {x.error}</span>}</span>
-                <StatusBadge status={x.status} />
+                <span className="muted small nowrap">{({ succeeded: '成功', failed: '失败', running: '运行中', queued: '排队' } as Record<string, string>)[x.status] ?? x.status}</span>
                 <span className="muted small nowrap num">{x.ms != null ? `${x.ms}ms` : '–'}</span>
                 <span className="muted small nowrap hide-sm">{ago(x.created_at, lang)}</span>
               </li>
@@ -183,10 +179,10 @@ export function Hot({ device, go }: { device: Device; go: (p: string) => void })
   return (
     <div className="grid">
       {toast}
-      <Card icon="hot" title={t('热点')} actions={<>
-        <button disabled={!!busy} onClick={() => run('f', async () => { setResults((await post('/api/hot/fetch', { device })).results); hot.reload(); })}>{t('采集热榜')}</button>
-        <button disabled={!!busy} onClick={() => run('f2', async () => { setResults((await post('/api/hot/fetch', { device, force: true })).results); hot.reload(); })}>{t('强制刷新')}</button>
-        <button className="primary" disabled={!!busy} onClick={() => run('c', async () => setClusters((await post('/api/hot/cluster')).clusters))}>{t('聚类')}</button>
+      <Card icon="hot" title={t('热榜采集')} actions={<>
+        <button className="primary" disabled={!!busy} onClick={() => run('f', async () => { setResults((await post('/api/hot/fetch', { device })).results); hot.reload(); })}>{t('采集热榜')}</button>
+        <button disabled={!!busy} onClick={() => run('c', async () => setClusters((await post('/api/hot/cluster')).clusters))}>{t('聚类')}</button>
+        <MoreMenu items={[{ label: t('强制刷新'), hint: t('忽略 30 分钟缓存重新采集'), onSelect: () => run('f2', async () => { setResults((await post('/api/hot/fetch', { device, force: true })).results); hot.reload(); }) }]} />
       </>}>
         <p className="muted small">只读取公开热榜标题与官方接口；访问前检查 robots.txt，被禁止的如实标注，不绕过。结果缓存 30 分钟。</p>
         <ErrorBox error={err ?? hot.error} />
@@ -195,7 +191,7 @@ export function Hot({ device, go }: { device: Device; go: (p: string) => void })
           <thead><tr><th>热榜</th><th>{t('状态')}</th><th>说明</th></tr></thead>
           <tbody>
             {(results ?? hot.data?.runs ?? []).map((r: any) => (
-              <tr key={r.board}><td>{r.label ?? r.board}</td><td><StatusBadge status={r.status} />{r.fromCache && <Badge>缓存</Badge>}</td><td className="small">{r.message ?? `${r.count ?? r.items?.length ?? 0} 条`}</td></tr>
+              <tr key={r.board}><td>{r.label ?? r.board}</td><td><StatusBadge status={r.status} />{r.fromCache && <span className="muted small"> · 缓存</span>}</td><td className="small">{r.message ?? `${r.count ?? r.items?.length ?? 0} 条`}</td></tr>
             ))}
           </tbody>
         </table></div>
@@ -206,7 +202,7 @@ export function Hot({ device, go }: { device: Device; go: (p: string) => void })
             {clusters.map((c) => (
               <li key={c.name} className="row between">
                 <div><b>{c.name}</b><div className="muted small">{c.titles.join(' / ')}</div></div>
-                <button disabled={!!busy} onClick={() => run('r' + c.name, async () => { const r = await post('/api/hot/research', { name: c.name, titles: c.titles }); say(`已生成选题卡 #${r.topicId}`); go('topics'); })}>{t('深度调研')}</button>
+                <button disabled={!!busy} onClick={() => run('r' + c.name, async () => { const r = await post('/api/hot/research', { name: c.name, titles: c.titles }); say(`已生成选题卡 #${r.topicId}`); go('inspire/topics'); })}>{t('深度调研')}</button>
               </li>
             ))}
           </ul>
@@ -217,7 +213,7 @@ export function Hot({ device, go }: { device: Device; go: (p: string) => void })
         <ol className="list compact hot-merged">
           {hot.data?.merged?.slice(0, 40).map((m: any) => (
             <li key={m.id}>
-              <span className="hot-title">{m.title}</span> {(m.boards ?? []).map((b: any) => <Badge key={b.board}>{b.board}#{b.rank}</Badge>)}
+              <span className="hot-title">{m.title}<span className="muted small"> · {(m.boards ?? []).map((b: any) => `${b.board}#${b.rank}`).join(' · ')}</span></span>
               <button className="ghost hot-to-topic" disabled={!!busy || made.includes(m.title)} aria-label={`${t('转选题')}：${m.title}`} onClick={() => run('t' + m.id, async () => {
                 const r = await post('/api/hot/research', { name: m.title, titles: [m.title] });
                 setMade((x) => [...x, m.title]);
@@ -265,6 +261,8 @@ export function Library({ go }: { go: (p: string) => void }) {
             ))}
           </tbody>
         </table></div>
+        <details className="adv">
+          <summary>{t('添加信息源')}</summary>
         <form className="form-row" onSubmit={(e) => { e.preventDefault(); act(async () => {
           const config = form.kind === 'rss' || form.kind === 'web' ? { url: form.url, selector: form.selector || undefined } : form.kind === 'x_api' ? { query: form.query } : {};
           await post('/api/sources', { kind: form.kind, name: form.name || form.kind, config });
@@ -279,10 +277,11 @@ export function Library({ go }: { go: (p: string) => void }) {
           {(form.kind === 'rss' || form.kind === 'web') && <Field label="地址"><input required type="url" value={form.url} placeholder="https://www.solidot.org/index.rss" onChange={(e) => setForm({ ...form, url: e.target.value })} /></Field>}
           {form.kind === 'web' && <Field label="列表选择器（可选）"><input value={form.selector} onChange={(e) => setForm({ ...form, selector: e.target.value })} /></Field>}
           {form.kind === 'x_api' && <Field label="搜索词"><input value={form.query} onChange={(e) => setForm({ ...form, query: e.target.value })} /></Field>}
-          <button className="primary" type="submit">{t('添加')}</button>
+          <button type="submit">{t('添加信息源')}</button>
         </form>
+        </details>
       </Card>
-      <Card icon="inbox" title={t('内容库')} actions={<button className="primary" disabled={!sel.length} onClick={() => act(async () => { const r = await post('/api/topics/generate', { itemIds: sel }); say(`生成选题 ${r.topicIds.length} 个`); setSel([]); go('topics'); })}>{t('生成选题')}（{sel.length}）</button>}>
+      <Card icon="inbox" title={t('内容库')} actions={<button className="primary" disabled={!sel.length} onClick={() => act(async () => { const r = await post('/api/topics/generate', { itemIds: sel }); say(`生成选题 ${r.topicIds.length} 个`); setSel([]); go('inspire/topics'); })}>{t('生成选题')}（{sel.length}）</button>}>
         <div className="form-row">
           <Field label={t('搜索')}><input type="search" value={q} onChange={(e) => { setSem(null); setQ(e.target.value); }} /></Field>
           <Field label="标签"><select value={tag} onChange={(e) => setTag(e.target.value)}><option value="">全部</option>{['AI', '科技', '财经', '教育', '生活', '电商'].map((x) => <option key={x}>{x}</option>)}</select></Field>
@@ -297,7 +296,7 @@ export function Library({ go }: { go: (p: string) => void }) {
               <div className="grow">
                 <a href={i.url ?? '#'} target="_blank" rel="noreferrer noopener">{i.title}</a>
                 <div className="muted small">{i.summary?.slice(0, 120)}</div>
-                <div>{i.tags?.map((g: string) => <Badge key={g}>{g}</Badge>)}{i.score !== undefined && <Badge tone="info">相关度 {i.score.toFixed(2)}</Badge>}</div>
+                <div className="muted small">{[...(i.tags ?? []), ...(i.score !== undefined ? [`相关度 ${i.score.toFixed(2)}`] : [])].join(' · ')}</div>
               </div>
             </li>
           ))}
@@ -320,11 +319,12 @@ export function Topics({ device, go }: { device: Device; go: (p: string) => void
     <div className="grid">
       {toast}
       <ErrorBox error={err ?? topics.error} />
+      <div className="rounded-card border border-line bg-surface px-4 py-2"><ModelSwitch go={go} /></div>
       <Loading show={topics.loading} />
       {topics.data?.topics?.filter((x: any) => x.status !== 'dismissed').map((tp: any) => {
         const chosen = pick[tp.id] ?? tp.platforms;
         return (
-          <Card key={tp.id} title={<>{tp.title} {tp.origin === 'hot' && <Badge tone="warn">热点</Badge>} <StatusBadge status={tp.status} /></>}>
+          <Card key={tp.id} title={tp.title} subtitle={<>{tp.origin === 'hot' ? `${t('来自热点')} · ` : ''}<StatusBadge status={tp.status} /></>}>
             {tp.angle && <p><b>角度：</b>{tp.angle}</p>}
             {tp.research && (
               <details>
@@ -337,30 +337,33 @@ export function Topics({ device, go }: { device: Device; go: (p: string) => void
             )}
             {tp.reason && <p className="muted small">理由：{tp.reason}</p>}
             {tp.risk && <p className="small">⚠️ {tp.risk}</p>}
-            <fieldset className="chips">
-              <legend className="small">改写到</legend>
-              {plats.data?.platforms?.map((p: any) => (
-                <label key={p.id} className="chip">
-                  <input type="checkbox" checked={chosen.includes(p.id)} onChange={(e) => setPick({ ...pick, [tp.id]: e.target.checked ? [...chosen, p.id] : chosen.filter((x: string) => x !== p.id) })} />
-                  {p.label}{p.missing?.length > 0 && <span className="muted small">（{p.missing.join('/')} 未配置）</span>}
-                </label>
-              ))}
-            </fieldset>
+            <details className="adv">
+              <summary>{t('改写到')}：{(plats.data?.platforms ?? []).filter((p: any) => chosen.includes(p.id)).map((p: any) => p.label).join('、') || t('未选平台')}（{t('点开修改')}）</summary>
+              <fieldset className="chips">
+                <legend className="sr-only">改写到</legend>
+                {plats.data?.platforms?.map((p: any) => (
+                  <label key={p.id} className="chip">
+                    <input type="checkbox" checked={chosen.includes(p.id)} onChange={(e) => setPick({ ...pick, [tp.id]: e.target.checked ? [...chosen, p.id] : chosen.filter((x: string) => x !== p.id) })} />
+                    {p.label}{p.missing?.length > 0 && <span className="muted small">（{p.missing.join('/')} 未配置）</span>}
+                  </label>
+                ))}
+              </fieldset>
+            </details>
             <div className="row">
-              <button className="primary" disabled={busy !== null || !chosen.length} onClick={async () => {
+              <button disabled={busy !== null || !chosen.length} onClick={async () => {
                 setBusy(tp.id); setErr(null);
                 try {
                   const r = await post('/api/rewrite', { topicId: tp.id, platforms: chosen });
                   say(r.results.map((x: any) => `${x.platform}${x.ok ? '✓' : '✗ ' + x.error}`).join('，'));
-                  go('review');
+                  go('create/drafts');
                 } catch (e) { setErr(e); } finally { setBusy(null); }
               }}>{busy === tp.id ? '生成中…' : t('改写')}</button>
-              <button onClick={async () => { await post(`/api/topics/${tp.id}/dismiss`); topics.reload(); }}>{t('跳过')}</button>
+              <button className="ghost" onClick={async () => { await post(`/api/topics/${tp.id}/dismiss`); topics.reload(); }}>{t('跳过')}</button>
             </div>
           </Card>
         );
       })}
-      {!topics.loading && !topics.data?.topics?.length && <Empty icon="topics">{t('暂无数据')}：先在内容库或热点页生成选题。</Empty>}
+      {!topics.loading && !topics.data?.topics?.length && <Empty icon="topics"><span className="flex flex-col items-center gap-2">{t('还没有选题，先从热点挑一条。')}<button onClick={() => go('inspire/hot')}>{t('去看热点')}</button></span></Empty>}
     </div>
   );
 }

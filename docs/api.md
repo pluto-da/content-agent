@@ -1,6 +1,6 @@
 # 接口文档（REST）
 
-- 基础地址：网页版同源；App 版为“设置 → 服务地址”。
+- 基础地址：网页版同源；App 版为“偏好 → 通用 → 服务地址”。
 - 认证：若设置了 `CA_ACCESS_TOKEN`，所有 `/api/*`（除 `/api/health`）需带请求头 `x-access-token`。
 - 错误格式：`{"error": {"code", "message", "advice"}}`；未配置类错误返回 409、`code=not_configured`。
 - 所有响应带 CSP、X-Frame-Options、nosniff、no-referrer 头。
