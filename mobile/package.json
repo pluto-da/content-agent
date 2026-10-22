@@ -1,6 +1,6 @@
 {
   "name": "content-agent-mobile",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "description": "内容运营助手 Android / iOS（Capacitor 外壳，前端与网页版同一份代码）",
   "scripts": {

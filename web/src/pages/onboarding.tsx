@@ -56,7 +56,7 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
         <div className="steps" aria-label={`${t('第')} ${step} / 3 ${t('步')}`}>{[1, 2, 3].map((i) => <span key={i} data-on={i <= step} />)}</div>
 
         {step === 1 && (
-          <section className="flex flex-col gap-4" aria-label={t('连接一个模型')}>
+          <section className="flex grow flex-col gap-4" aria-label={t('连接一个模型')}>
             <div>
               <h1>{t('这个助手帮你找选题、写内容、准备发布，发布由你自己点。')}</h1>
               <p className="sub !text-[15px]">{t('第 1 步：连接一个写作模型。选一家，粘贴 Key，点“测试连接”。')}</p>
@@ -66,7 +66,7 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
             </div>
             {cfg && <div className="card"><ProviderForm key={cfg.id} initial={cfg} compact onConnected={() => setConnected(true)} /></div>}
             <p className="m-0 text-[13px] text-muted">{t('Key 只保存在这台设备上，界面只显示末四位。其他服务商与自定义服务可在“我的 → 模型”里添加。')}</p>
-            <div className="flex gap-2">
+            <div className="onb-actions flex gap-2">
               <button type="button" className="primary !min-h-12 flex-1" disabled={!connected} onClick={() => setStep(2)} data-testid="onb-next-1">{t('下一步')}</button>
               <button type="button" className="!min-h-12" onClick={() => setStep(2)}>{t('先跳过')}</button>
             </div>
@@ -74,7 +74,7 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
         )}
 
         {step === 2 && (
-          <section className="flex flex-col gap-4" aria-label={t('选你要发的平台')}>
+          <section className="flex grow flex-col gap-4" aria-label={t('选你要发的平台')}>
             <div><h1>{t('选你要发的平台')}</h1><p className="sub !text-[15px]">{t('勾选后，可以顺手把手机上的官方 App 加进来，发布时一键打开。')}</p></div>
             <ul className="group-list">
               {CENTERS.map((c) => (
@@ -89,7 +89,7 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
                 <button type="button" className="ghost" onClick={() => setAskFor(null)}>{t('不用')}</button>
               </div>
             )}
-            <div className="flex gap-2">
+            <div className="onb-actions flex gap-2">
               <button type="button" className="!min-h-12" onClick={() => setStep(1)}>{t('上一步')}</button>
               <button type="button" className="primary !min-h-12 flex-1" onClick={() => { void setPrefs({ platforms: plats }); setStep(3); }} data-testid="onb-next-2">{t('下一步')}</button>
             </div>
@@ -97,10 +97,10 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
         )}
 
         {step === 3 && (
-          <section className="flex flex-col gap-4" aria-label={t('写第一篇')}>
+          <section className="flex grow flex-col gap-4" aria-label={t('写第一篇')}>
             <div><h1>{t('写第一篇')}</h1><p className="sub !text-[15px]">{t('输入一个想法，或点一个示例，然后点发送。')}</p></div>
             <Composer go={go} autoFocus initialPlatform={plats.includes('douyin') && !plats.includes('xiaohongshu') ? 'douyin_script' : 'xiaohongshu'} suggestions={SAMPLE_IDEAS.map((s) => ({ label: `${t('示例')}：${s}`, text: s }))} />
-            <div className="flex gap-2">
+            <div className="onb-actions flex gap-2">
               <button type="button" className="!min-h-12" onClick={() => setStep(2)}>{t('上一步')}</button>
               <button type="button" className="primary !min-h-12 flex-1" onClick={() => void finish()} data-testid="onb-finish">{t('完成，进入首页')}</button>
             </div>

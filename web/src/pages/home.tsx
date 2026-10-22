@@ -2,13 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '../api';
 import { useT } from '../i18n';
 import { Icon } from '../icons';
-import { writePlatform } from '../data/platforms';
+import { center, writePlatform } from '../data/platforms';
+import { builtinMode, builtinOpenLabel, canSplitScreen, currentEnv, openBuiltin, openSplit, splitLabel } from '../builtin';
+import { useLocalApps } from '../format';
+import { appOs } from '../runtime';
 import { getModels } from '../local/store';
 import { apiMode } from '../api';
 import { listDrafts, loadHot, STATUS_LABEL, type Draft } from '../services';
 import { nextStep, type Snapshot } from '../state';
 import { ago } from '../format';
-import { ErrorNext, Skeleton, StatusDot } from '../ui';
+import { ErrorNext, Skeleton, StatusDot, useToast } from '../ui';
 import { Composer } from '../components/Composer';
 import { useAddApp } from '../components/addAppContext';
 
@@ -17,7 +20,17 @@ import { useAddApp } from '../components/addAppContext';
  */
 export function Home({ go }: { go: (to: string) => void }) {
   const { t, lang } = useT();
-  const { open: openAdd } = useAddApp();
+  const { open: openAdd, version } = useAddApp();
+  const apps = useLocalApps(version);
+  const [toast, show] = useToast();
+  const env = currentEnv();
+  const mode = builtinMode(env.rt, env.os);
+  const os = appOs() ?? 'android';
+  // 已登记的平台（每个平台一张入口卡片；优先本机系统的条目，用于分屏）
+  const entries = Object.values((apps.data?.apps ?? []).reduce<Record<string, NonNullable<typeof apps.data>['apps'][number]>>((m, a) => {
+    if (center(a.platform) && (!m[a.platform] || a.os === os)) m[a.platform] = a;
+    return m;
+  }, {}));
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [recent, setRecent] = useState<Draft[]>([]);
   const [err, setErr] = useState<ApiError | null>(null);
@@ -38,6 +51,7 @@ export function Home({ go }: { go: (to: string) => void }) {
 
   return (
     <div className="page page-narrow flex flex-col gap-6">
+      {toast}
       <section className="flex flex-col gap-2 pt-2">
         <h2 className="!text-[22px] !leading-snug" data-testid="intro">{t('这个助手帮你找选题、写内容、准备发布，发布由你自己点。')}</h2>
         <p className="sub">{t('全部在这台设备上完成，不需要服务器。')}</p>
@@ -64,6 +78,24 @@ export function Home({ go }: { go: (to: string) => void }) {
           ]}
         />
       </section>
+
+      {entries.length > 0 && (
+        <section aria-label={t('打开平台')} data-testid="builtin-entries">
+          <div className="mb-2 flex items-center justify-between px-1"><h2 className="section-t !m-0">{t('打开平台')}</h2><button type="button" className="ghost" onClick={() => go('publish')}>{t('去发布')} ›</button></div>
+          <ul className="entry-grid">
+            {entries.map((a) => {
+              const c = center(a.platform)!;
+              return (
+                <li key={a.platform} className="entry-card">
+                  <span aria-hidden="true" className="grid h-9 w-9 place-items-center rounded-full bg-surface-2 text-[15px] font-semibold text-fg">{c.label.slice(0, 1)}</span>
+                  <button type="button" className="primary" onClick={async () => show((await openBuiltin(c, { packageName: a.package_name ?? undefined })).message)} data-testid="home-builtin">{t(builtinOpenLabel(c, mode))}</button>
+                  {canSplitScreen(env, a) && <button type="button" onClick={async () => show((await openSplit(a, c.app)).message)} data-testid="home-split">{t(splitLabel(c))}</button>}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {recent.length > 0 && (
         <section aria-label={t('最近内容')}>

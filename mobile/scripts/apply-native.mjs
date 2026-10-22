@@ -3,7 +3,9 @@
  * 把本地应用插件（LocalApps）与所需声明写入 `npx cap add` 生成的原生工程。可重复执行（幂等）。
  *
  * Android：
- *  - 复制 LocalAppsPlugin.java、MainActivity.java（注册插件）、res/xml/file_paths.xml；
+ *  - 复制 LocalAppsPlugin.java、BuiltinWebPlugin.java + InAppWebActivity.java（0.7.0 内置网页）、SplitScreenPlugin.java（0.7.0 平板分屏）、
+ *    MainActivity.java（注册插件）、res/xml/file_paths.xml；
+ *  - AndroidManifest.xml 声明 InAppWebActivity（不导出，configChanges 避免旋转 / 分屏调整大小时重载网页）；
  *  - AndroidManifest.xml 增加 <queries>：只声明各平台官方 App 的包名与 URL Scheme（不申请 QUERY_ALL_PACKAGES，
  *    以符合 Google Play 包可见性政策）；增加 FileProvider（分享草稿素材用）。
  *  - 额外包名：环境变量 CA_EXTRA_PACKAGES="com.a.b,com.c.d"。
@@ -19,8 +21,8 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const native = join(root, 'native');
 
-export const KNOWN_PACKAGES = ['com.ss.android.ugc.aweme', 'com.xingin.xhs', 'com.tencent.mm', 'com.zhihu.android', 'com.taobao.idlefish', 'com.twitter.android'];
-export const KNOWN_SCHEMES = ['snssdk1128', 'xhsdiscover', 'weixin', 'zhihu', 'fleamarket', 'twitter'];
+export const KNOWN_PACKAGES = ['com.ss.android.ugc.aweme', 'com.xingin.xhs', 'com.tencent.mm', 'com.zhihu.android', 'com.taobao.idlefish', 'com.twitter.android', 'tv.danmaku.bili', 'com.smile.gifmaker'];
+export const KNOWN_SCHEMES = ['snssdk1128', 'xhsdiscover', 'weixin', 'zhihu', 'fleamarket', 'twitter', 'bilibili', 'kwai'];
 const PKG_RE = /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/;
 
 function android() {
@@ -38,6 +40,15 @@ function android() {
   let m = readFileSync(manifestPath, 'utf8');
   m = m.replace(/\s*<!-- ca:queries -->[\s\S]*?<!-- \/ca:queries -->/, '');
   m = m.replace(/\s*<!-- ca:provider -->[\s\S]*?<!-- \/ca:provider -->/, '');
+  m = m.replace(/\s*<!-- ca:inappweb -->[\s\S]*?<!-- \/ca:inappweb -->/, '');
+  const inAppWeb = [
+    '        <!-- ca:inappweb -->',
+    '        <activity android:name=".InAppWebActivity" android:exported="false" android:theme="@style/AppTheme.NoActionBar"',
+    '            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|uiMode|density"',
+    '            android:windowSoftInputMode="adjustResize" android:resizeableActivity="true" />',
+    '        <!-- /ca:inappweb -->',
+  ].join('\n');
+  m = m.replace(/<\/application>/, `${inAppWeb}\n    </application>`);
   const queries = [
     '    <!-- ca:queries -->',
     '    <queries>',
@@ -59,7 +70,7 @@ function android() {
   m = m.replace(/<\/manifest>/, `${queries}\n</manifest>`);
   if (/QUERY_ALL_PACKAGES/.test(m)) console.warn('警告：清单中存在 QUERY_ALL_PACKAGES，上架 Google Play 需要特别审批，建议移除');
   writeFileSync(manifestPath, m);
-  console.log(`Android：已写入 LocalApps 插件与 <queries>（${pkgs.length} 个包名）`);
+  console.log(`Android：已写入 LocalApps / BuiltinWeb / SplitScreen 插件、InAppWebActivity 与 <queries>（${pkgs.length} 个包名）`);
 
   // 版本号与 mobile/package.json 保持一致：versionName = x.y.z，versionCode = x*10000 + y*100 + z
   const gradlePath = join(root, 'android', 'app', 'build.gradle');

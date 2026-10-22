@@ -1,6 +1,6 @@
 {
   "name": "content-agent-desktop",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "description": "内容运营助手桌面端（Electron 外壳 + 本机后端）",
   "main": "main.cjs",

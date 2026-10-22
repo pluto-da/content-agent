@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '../api';
 import { useT } from '../i18n';
 import { Icon } from '../icons';
-import { centerOfWrite, writePlatform } from '../data/platforms';
+import { center, centerOfWrite, publishUrlOfWrite, writePlatform } from '../data/platforms';
+import { builtinMode, builtinOpenLabel, builtinPublishLabel, canSplitScreen, copyAndOpenBuiltin, currentEnv, openBuiltin, openSplit, splitLabel } from '../builtin';
 import { launchLocalApp, type LocalAppEntry } from '../native';
 import { appOs, copyText, openExternal } from '../runtime';
 import { listDrafts, markPublished, type Draft } from '../services';
@@ -11,6 +12,11 @@ import { KNOWN_APPS } from '../data/platforms';
 import { EmptyState, ErrorNext, HelpTip, Problem, useToast } from '../ui';
 import { useAddApp } from '../components/addAppContext';
 
+/** 发布用的完整文案：标题 + 正文 + 话题标签。 */
+export function draftText(d: Pick<Draft, 'title' | 'body' | 'tags'>): string {
+  return [d.title, d.body, (d.tags ?? []).map((x) => `#${x.replace(/^#/, '')}`).join(' ')].filter(Boolean).join('\n\n');
+}
+
 /** 去发布：待发布内容逐条显示，按钮是具体动作“复制文案并打开小红书”。发布永远由用户在平台 App 里点击。 */
 export function Publish({ go }: { go: (to: string) => void }) {
   const { t } = useT();
@@ -18,7 +24,9 @@ export function Publish({ go }: { go: (to: string) => void }) {
   const apps = useLocalApps(version);
   const [drafts, setDrafts] = useState<Draft[] | null>(null);
   const [err, setErr] = useState<ApiError | null>(null);
-  const [copied, setCopied] = useState<Record<number, string>>({});
+  const [copied, setCopied] = useState<Record<number, { text: string; fallback?: string }>>({});
+  const env = currentEnv();
+  const mode = builtinMode(env.rt, env.os);
   const [toast, show] = useToast();
   const load = useCallback(() => { listDrafts('approved').then((d) => { setDrafts(d); setErr(null); }).catch((e) => setErr(e instanceof ApiError ? e : new ApiError('error', String(e)))); }, []);
   useEffect(load, [load]);
@@ -29,17 +37,28 @@ export function Publish({ go }: { go: (to: string) => void }) {
 
   const handoff = async (d: Draft) => {
     const c = centerOfWrite(d.platform);
-    const text = [d.title, d.body, (d.tags ?? []).map((x) => `#${x.replace(/^#/, '')}`).join(' ')].filter(Boolean).join('\n\n');
-    const ok = await copyText(text);
+    const ok = await copyText(draftText(d));
     const r = await launchLocalApp(entryFor(c.id));
     if (!r.ok) await openExternal(c.url);
-    setCopied((m) => ({ ...m, [d.id]: ok ? `${t('文案已复制')}。${r.ok ? t('已打开') + c.app : t('已打开') + c.label + t('网页版')}，${t('请粘贴后由你本人点击发布。')}` : t('复制失败，请长按正文手动复制') }));
+    setCopied((m) => ({ ...m, [d.id]: { text: ok ? `${t('文案已复制')}。${r.ok ? t('已打开') + c.app : t('已打开') + c.label + t('网页版')}，${t('请粘贴后由你本人点击发布。')}` : t('复制失败，请长按正文手动复制') } }));
+  };
+
+  /** 0.7.0：在软件内打开该平台网页版发布页（先复制文案）。打不开时显示原因 + “打开官方 App”。 */
+  const builtin = async (d: Draft) => {
+    const c = centerOfWrite(d.platform);
+    const entry = entryFor(c.id);
+    const r = await copyAndOpenBuiltin(c, draftText(d), { url: publishUrlOfWrite(d.platform), packageName: entry.package_name ?? undefined });
+    setCopied((m) => ({ ...m, [d.id]: { text: r.message, fallback: r.fallbackApp ? c.id : undefined } }));
+  };
+  const fallbackApp = async (d: Draft, centerId: string) => {
+    const r = await launchLocalApp(entryFor(centerId));
+    setCopied((m) => ({ ...m, [d.id]: { text: r.ok ? `${t('已打开')}${center(centerId)?.app ?? ''}，${t('请粘贴后由你本人点击发布。')}` : r.message } }));
   };
 
   return (
     <div className="page page-narrow flex flex-col gap-5">
       {toast}
-      <p className="m-0 flex items-center gap-2 text-[15px] text-fg-2">{t('每篇内容都由你本人在平台 App 里点击发布。')}<HelpTip label={t('为什么不自动发布')}>{t('为了账号安全与平台规则，本应用只复制文案、打开官方 App 或系统分享，不会替你点击发布、点赞、评论或私信。')}</HelpTip></p>
+      <p className="m-0 flex items-center gap-2 text-[15px] text-fg-2">{t('每篇内容都由你本人在平台里点击发布。')}<HelpTip label={t('为什么不自动发布')}>{t('为了账号安全与平台规则，本应用只复制文案、打开官方网页版或官方 App，不会读取网页内容，也不会替你点击发布、点赞、评论或私信。')}</HelpTip></p>
       <ErrorNext error={err} action={t('重新加载')} onAction={load} />
       {drafts && !drafts.length && (
         <div className="card !p-0"><EmptyState icon="send" title={t('没有待发布的内容')} why={t('在“写内容”里把草稿点“通过”，它就会出现在这里。')} action={t('去审核')} onAction={() => go('write/pending')} /></div>
@@ -52,12 +71,14 @@ export function Publish({ go }: { go: (to: string) => void }) {
             <h3>{d.title || d.body.slice(0, 24)}</h3>
             <div className="body !max-h-24">{d.body}</div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <button type="button" className="primary" onClick={() => void handoff(d)} data-testid="handoff">{t('复制文案并打开')}{c.label}</button>
+              <button type="button" className="primary" onClick={() => void builtin(d)} data-testid="builtin-publish">{t(builtinPublishLabel(c, mode))}</button>
+              <button type="button" onClick={() => void handoff(d)} data-testid="handoff">{t('复制文案并打开')}{c.label}</button>
               <button type="button" onClick={() => go(`write/${d.id}`)}>{t('再改改')}</button>
             </div>
             {copied[d.id] && (
               <div className="mt-3 flex flex-wrap items-center gap-3 rounded-[12px] bg-surface-2 px-4 py-3" role="status">
-                <span className="grow text-[14px] text-fg-2">{copied[d.id]}</span>
+                <span className="min-w-0 grow basis-[16rem] text-[14px] text-fg-2" data-testid="publish-status">{copied[d.id]!.text}</span>
+                {copied[d.id]!.fallback && <button type="button" onClick={() => void fallbackApp(d, copied[d.id]!.fallback!)} data-testid="fallback-app">{t('打开官方 App')}</button>}
                 <button type="button" className="primary" onClick={() => void markPublished(d.id).then(() => { show(t('已记为已发布，可在“看效果”录入数据')); load(); }).catch((e) => setErr(e))}>{t('我已发布')}</button>
               </div>
             )}
@@ -74,10 +95,14 @@ export function Publish({ go }: { go: (to: string) => void }) {
           : registered.length ? (
             <ul className="item-list">
               {registered.map((a) => (
-                <li key={a.id}>
+                <li key={a.id} className="flex-wrap">
                   <span className="grid h-9 w-9 place-items-center rounded-full bg-surface-2 text-[15px] font-semibold text-fg" aria-hidden="true">{a.label.slice(0, 1)}</span>
                   <span className="flex min-w-0 flex-1 flex-col"><span className="item-title">{a.label}</span><span className="item-meta">{a.os}</span></span>
-                  <button type="button" onClick={async () => show((await launchLocalApp(a)).message)}><Icon name="external" size={16} />{t('打开')}</button>
+                  <span className="flex basis-full flex-wrap justify-start gap-2 sm:basis-auto sm:justify-end">
+                    {center(a.platform) && <button type="button" onClick={async () => { const r = await openBuiltin(center(a.platform)!, { packageName: a.package_name ?? undefined }); show(r.message); }} data-testid="builtin-open">{t(builtinOpenLabel(center(a.platform)!, mode))}</button>}
+                    {center(a.platform) && canSplitScreen(env, a) && <button type="button" onClick={async () => show((await openSplit(a, center(a.platform)!.app)).message)} data-testid="split-open">{t(splitLabel(center(a.platform)!))}</button>}
+                    <button type="button" onClick={async () => show((await launchLocalApp(a)).message)}><Icon name="external" size={16} />{t('打开 App')}</button>
+                  </span>
                 </li>
               ))}
             </ul>

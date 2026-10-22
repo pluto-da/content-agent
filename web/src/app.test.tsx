@@ -93,16 +93,16 @@ describe('一句话意图', () => {
 
 /* ---------------- A6 添加软件：无服务端时显示全部平台，三步内完成，刷新后仍在 ---------------- */
 describe('A6 添加软件', () => {
-  it('静态平台数据：7 个平台，带官方包名与 Scheme', () => {
-    expect(CENTERS).toHaveLength(7);
+  it('静态平台数据：9 个平台（0.7.0 加 B站、快手），带官方包名与 Scheme', () => {
+    expect(CENTERS).toHaveLength(9);
     expect(KNOWN_APPS.find((k) => k.platform === 'xiaohongshu')).toMatchObject({ android: 'com.xingin.xhs', ios: 'xhsdiscover://' });
   });
-  it('接口全部失败（data=null）时第一步仍有 7 个平台；点平台 → 点添加 → 完成，并写入本机库', async () => {
+  it('接口全部失败（data=null）时第一步仍有 9 个平台；点平台 → 点添加 → 完成，并写入本机库', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('blocked')));
     const saved = vi.fn();
     render(<AddAppFlow data={null} onSaved={saved} onClose={() => {}} />);
     const grid = screen.getByRole('list', { name: '平台' });
-    expect(within(grid).getAllByRole('button')).toHaveLength(7);
+    expect(within(grid).getAllByRole('button')).toHaveLength(9);
     fireEvent.click(within(grid).getByRole('button', { name: '小红书' }));
     fireEvent.click(screen.getByRole('button', { name: '添加' }));
     await screen.findByTestId('addapp-done');
@@ -115,7 +115,7 @@ describe('A6 添加软件', () => {
     await localApi('/api/local-apps', 'PUT', { platform: 'douyin', os: 'android', label: '抖音', package_name: 'com.ss.android.ugc.aweme' });
     const r = (await localApi('/api/local-apps', 'GET', undefined)) as { apps: unknown[]; known: unknown[] };
     expect(r.apps).toHaveLength(1);
-    expect(r.known).toHaveLength(7);
+    expect(r.known).toHaveLength(9);
   });
 });
 

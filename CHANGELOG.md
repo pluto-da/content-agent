@@ -1,5 +1,17 @@
 # 变更日志
 
+## 0.7.0（2026-10-22）「内置平台」
+不用回桌面找别的 App：在本软件里打开各平台官方网页版，平板上可把官方 App 分屏放在旁边。安卓不能把另一个原生 App 嵌进本 App，所以做的是这两件事。偏离与说明见 design/deviations-v7.md。
+- **内置官方网页版（A）**：安卓 App 新增原生页面 InAppWebActivity（自写 WebView，不用 iframe——平台页面有 X-Frame-Options）。工具栏：返回（网页后退，退到头关闭）、标题 + 网址、刷新、⋯（打开官方 App / 用浏览器打开 / 复制网址 / 退出该平台登录）、关闭；顶部提示条“粘贴后由你本人点击发布”。登录 Cookie 由系统 CookieManager 持久化（离开页面即写盘），直到你点“退出该平台登录”或“清除全部内置网页数据”。iOS 用系统内置浏览器（SFSafariViewController）；电脑 / 网页在新标签页（Electron 为系统浏览器）打开。
+- **平台网址**：9 个平台（新增 B站、快手），首页与发布页网址已用搜索核实：小红书 creator.xiaohongshu.com/publish/publish、抖音 creator.douyin.com/creator-micro/content/upload、视频号 channels.weixin.qq.com/platform/post/create、公众号 mp.weixin.qq.com、知乎 zhuanlan.zhihu.com/write（回答进 www.zhihu.com/creator）、B站 member.bilibili.com/platform/upload/video/frame、快手 cp.kuaishou.com/article/publish/video、闲鱼 www.goofish.com、X x.com/compose/post。
+- **去发布**：每条内容新增主按钮“在软件内打开 X 发布”（网页版文案为“在新标签页打开 X 发布”）：先复制标题 + 正文 + 话题，再打开该平台网页版发布页，提示“粘贴后由你本人点击发布”。内置网页不可用（系统 WebView 停用、插件报错、旧版 App）时显示白话原因 + “打开官方 App”。原“复制文案并打开 X（官方 App）”保留为次按钮。
+- **入口卡片**：“添加软件”登记过的平台在首页“打开平台”和去发布“已登记的软件”里都有“打开小红书（内置）”。我的 → 平台与软件：每个已登记平台“退出该平台登录”，以及“清除全部内置网页数据”（仅安卓 App）。
+- **平板分屏（B）**：本地插件 SplitScreen，用 FLAG_ACTIVITY_LAUNCH_ADJACENT | NEW_TASK | MULTIPLE_TASK 打开已登记的官方 App；“分屏打开小红书”只在安卓 App + 屏幕短边 ≥ 600 时显示；设备不支持时正常打开并提示。AndroidManifest `<queries>` 增加 B站 `tv.danmaku.bili`、快手 `com.smile.gifmaker` 及其 Scheme（其余平台 0.6.0 已声明）。
+- **硬边界**：内置页不注入任何脚本（无 addJavascriptInterface / evaluateJavascript）、不自动填表或点击、不读取页面内容；Cookie 不交给网页层（退出登录只在原生层把该平台站点的 Cookie 置为过期，返回一个数量）；页面唤起其他 App 的跳转一律拦截并提示；相机 / 麦克风 / 定位请求一律拒绝；证书错误停止加载；不做多账号。发布永远由你本人点击。
+- **0.6.0 遗留修复**：引导页底部“上一步 / 下一步”固定在屏幕底部、手势条（安全区）之上，内容再长也不用滚动。
+- 测试：前端 94 项（新增 src/builtin.test.tsx 19 项：按钮出现条件、复制 + 打开流程、不支持时降级、首页入口；平台数 7 → 9 的 3 处断言随之更新），server 75/75；typecheck、eslint、build 通过。原生 Java 在沙盒内用 javac 21 + android-35 android.jar + Capacitor 8.5.3 / AndroidX 类库做过编译检查。截图：shots-v7/（report.json）。
+- 版本 0.7.0；Android versionName 0.7.0 / versionCode 700。
+
 ## 0.6.0（2026-10-22）「装上就能用」
 按 design/PROMPT-v6-rebuild.md 整体重构：APK 不再依赖服务端，装上就能用。偏离与更正见 design/deviations-v6.md。
 - **本机模式（默认）**：新增 web/src/local/（IndexedDB 数据层 db/store、按路径分派的 router，与 api.ts 同签名）；`serverBase()` 为空即本机模式。模型直连 OpenAI / Anthropic 兼容接口（local/llm.ts），安卓 / iOS 经 CapacitorHttp 绕开跨域；网页版遇跨域给出白话提示。Key 只存本机，界面只显示末四位，不写日志，备份默认不含 Key。

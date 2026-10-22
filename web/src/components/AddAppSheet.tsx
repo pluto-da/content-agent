@@ -27,7 +27,7 @@ export function prefill(known: KnownApp[], platform: string, os: AppOs): LocalAp
 /** 三步流程：选平台 → 确认软件 → 完成。常见平台：点“添加软件”→ 点平台 → 点“添加”，共 3 次点击。只保存启动信息；只能打开 App 或调用系统分享。 */
 export function AddAppFlow({ data, initial, onSaved, onClose }: { data: LocalAppsData | null; initial?: string; onSaved: () => void; onClose: () => void }) {
   const { t } = useT();
-  // 0.6.0：平台清单来自打包进前端的静态数据，接口没连上也永远有 7 个平台可选
+  // 0.6.0：平台清单来自打包进前端的静态数据，接口没连上也永远有 9 个平台可选（0.7.0 加 B站、快手）
   const known = useMemo(() => (data?.known?.length ? data.known : KNOWN_APPS), [data]);
   const [os, setOs] = useState<AppOs>(defaultOs());
   const [step, setStep] = useState<1 | 2 | 3>(initial ? 2 : 1);

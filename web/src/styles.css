@@ -613,7 +613,13 @@ button, .button-like { border-radius: 10px; }
 .field > span { font-size: 14px; }
 .kbd-hint { font-size: 13px; color: var(--muted); }
 .onb { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; padding: calc(24px + var(--sa-top)) 20px calc(24px + var(--sa-bottom)); background: var(--bg); }
-.onb-inner { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 20px; }
+.onb-inner { width: 100%; max-width: 560px; flex: 1; display: flex; flex-direction: column; gap: 20px; }
+/* 0.7.0：引导页底部按钮固定在屏幕底部、手势条 / 安全区之上，内容再长也不用滚动去找“下一步” */
+.onb-actions { position: sticky; bottom: 0; z-index: 5; margin: auto -20px calc(-24px - var(--sa-bottom)); padding: 12px 20px calc(12px + var(--sa-bottom)); background: var(--bg); border-top: 1px solid var(--border); }
+/* 0.7.0 首页“打开平台”入口卡片 */
+.entry-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.entry-card { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 14px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); }
+.entry-card > button { width: 100%; justify-content: center; }
 .onb h1 { font-size: 24px; }
 .steps { display: flex; gap: 8px; }
 .steps span { flex: 1; height: 4px; border-radius: 999px; background: var(--surface-3); }

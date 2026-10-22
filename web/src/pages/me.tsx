@@ -3,7 +3,8 @@ import { ApiError, apiMode, del, get, post } from '../api';
 import { useT, type Lang } from '../i18n';
 import { Icon } from '../icons';
 import { ME_GROUPS, type Layout } from '../nav';
-import { CENTERS } from '../data/platforms';
+import { CENTERS, center } from '../data/platforms';
+import { canClearBuiltin, clearAllBuiltin, clearBuiltin } from '../builtin';
 import { ASSISTANTS } from '../data/assistants';
 import { HOT_SOURCES } from '../local/hot';
 import { getAssistantOverrides, getPrefs, setAssistantOverride, setPrefs, usageToday, type AssistantOverride, type Prefs, type UsageDay } from '../local/store';
@@ -90,13 +91,19 @@ function PlatformsSub({ go }: { go: (to: string) => void }) {
             <div className="list-row static">
               <span className="row-ico"><Icon name="phone" size={18} /></span>
               <span className="row-text"><span className="row-label">{a.label}</span><span className="row-hint">{OS_LABEL[a.os]} · {a.package_name || a.url_scheme || a.protocol || a.exec_path}</span></span>
+              {canClearBuiltin() && center(a.platform) && <button type="button" className="ghost" onClick={async () => show((await clearBuiltin(center(a.platform)!)).message)} data-testid="clear-builtin">{t('退出该平台登录')}</button>}
               <button type="button" className="ghost danger" onClick={() => void del(`/api/local-apps/${a.id}`).then(() => { show(t('已移除')); apps.reload(); })}>{t('移除')}</button>
             </div>
           </li>
         ))}
         <ListRow icon="plus" label={t('添加软件')} hint={t('只保存打开 App 用的信息，不保存任何账号')} onClick={() => openAdd()} />
       </GroupList>
-      <p className="px-1 text-[13px] text-muted">{t('“添加软件”只能打开 App 或调用系统分享，不会自动操作其他 App。')} <button type="button" className="ghost" onClick={() => go('publish')}>{t('去发布')} ›</button></p>
+      {canClearBuiltin() && (
+        <GroupList title={t('内置网页')}>
+          <ListRow icon="shield" label={t('清除全部内置网页数据')} hint={t('退出所有平台在本软件内的网页登录（Cookie 与网页存储）')} onClick={async () => { if (window.confirm(t('确定退出所有平台的内置网页登录？'))) show((await clearAllBuiltin()).message); }} />
+        </GroupList>
+      )}
+      <p className="px-1 text-[13px] text-muted">{t('“添加软件”只能打开 App、官方网页版或调用系统分享，不会自动操作其他 App 或网页。')} <button type="button" className="ghost" onClick={() => go('publish')}>{t('去发布')} ›</button></p>
     </div>
   );
 }
