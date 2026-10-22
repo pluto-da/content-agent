@@ -17,7 +17,7 @@
     "appId": "local.contentagent.desktop",
     "productName": "超级工作台",
     "directories": { "output": "release" },
-    "files": ["main.cjs", "preload.cjs", "package.json"],
+    "files": ["main.cjs", "preload.cjs", "browser-views.cjs", "package.json"],
     "extraResources": [
       { "from": "../server/dist", "to": "server/dist" },
       { "from": "../server/node_modules", "to": "server/node_modules", "filter": ["**/*"] },

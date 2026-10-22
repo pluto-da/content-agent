@@ -9,6 +9,20 @@ contextBridge.exposeInMainWorld('contentAgent', {
     status: (ids) => ipcRenderer.invoke('creator:status', ids),
     logout: (id) => ipcRenderer.invoke('creator:logout', id),
   },
+  // 0.8.0 内嵌浏览器（WebContentsView 由主进程管理；这里只转发矩形与导航指令，收状态事件）
+  browser: {
+    open: (o) => ipcRenderer.invoke('browser:open', o),
+    show: (o) => ipcRenderer.invoke('browser:show', o),
+    destroy: (o) => ipcRenderer.invoke('browser:destroy', o),
+    hideAll: () => ipcRenderer.invoke('browser:hideAll'),
+    setBounds: (r) => ipcRenderer.invoke('browser:setBounds', r),
+    setVisible: (v) => ipcRenderer.invoke('browser:setVisible', !!v),
+    nav: (o) => ipcRenderer.invoke('browser:nav', o),
+    clear: (o) => ipcRenderer.invoke('browser:clear', o),
+    onState: (fn) => ipcRenderer.on('browser:state', (_e, s) => fn(s)),
+    onError: (fn) => ipcRenderer.on('browser:error', (_e, s) => fn(s)),
+    onSendToAgent: (fn) => ipcRenderer.on('browser:send-to-agent', (_e, s) => fn(s)),
+  },
   localApp: {
     pick: () => ipcRenderer.invoke('localapp:pick'),
     launch: (opts) => ipcRenderer.invoke('localapp:launch', opts),

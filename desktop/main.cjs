@@ -2,7 +2,8 @@
  * 桌面端主进程：
  * 1. 在本机启动后端（只监听 127.0.0.1，数据存放在系统应用数据目录）；
  * 2. 打开主窗口加载界面；
- * 3. 创作中心使用 <webview>，每个平台独立的持久分区 persist:creator-<平台>，登录态只保存在本机。
+ * 3. 0.8.0：平台网页用 WebContentsView 嵌在主界面（browser-views.cjs），每个平台独立的持久分区 persist:creator-<平台>（沿用旧命名，登录不丢），
+ *    不再使用 <webview> 标签（Electron 官方不建议）；登录态只保存在本机。
  *
  * 登录保持（直到用户手动退出）：
  * - 每个平台一个持久分区，Cookie / localStorage 由 Chromium 写在 userData/Partitions/creator-<平台>；
@@ -11,10 +12,11 @@
  * - 记住每个标签页最后访问的官方地址（creator-state.json），下次打开时恢复。
  * 登录状态只根据“该分区中是否存在该平台域名的 Cookie（只数数量，不读取值）”判断。
  *
- * 安全：禁用 Node 集成、开启上下文隔离与沙箱；webview 只允许官方域名、禁止预加载脚本与弹窗；
+ * 安全：禁用 Node 集成、开启上下文隔离与沙箱；平台视图（WebContentsView）无预加载脚本、只允许 https、新窗口在当前视图打开；
  * 主进程不对创作中心执行任何脚本（无 executeJavaScript / debugger），不读取、不修改、不伪造 Cookie 值或有效期。
  */
-const { app, BrowserWindow, shell, session, ipcMain, dialog, clipboard } = require('electron');
+const { app, BrowserWindow, WebContentsView, Menu, shell, session, ipcMain, dialog, clipboard } = require('electron');
+const { createBrowserViews } = require('./browser-views.cjs');
 const { fork } = require('node:child_process');
 const path = require('node:path');
 const net = require('node:net');
@@ -29,6 +31,8 @@ const CENTERS = {
   x: ['x.com', 'twitter.com'],
   xianyu: ['goofish.com', 'taobao.com'],
   zhihu: ['zhihu.com'],
+  bilibili: ['bilibili.com'],
+  kuaishou: ['kuaishou.com'],
 };
 const ALLOWED = [...new Set(Object.values(CENTERS).flat())];
 const hostOk = (h, domains) => domains.some((d) => h === d || h.endsWith('.' + d));
@@ -120,7 +124,7 @@ async function createWindow() {
   const origin = `http://127.0.0.1:${port}`;
   const win = new BrowserWindow({
     width: 1360, height: 880, title: '超级工作台',
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: true },
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: false },
   });
   // 只接受来自主界面的 IPC 请求
   const fromUi = (e) => { try { return new URL(e.senderFrame.url).origin === origin; } catch { return false; } };
@@ -167,33 +171,22 @@ async function createWindow() {
     return { ...r, copied: Boolean(text), mediaDir };
   }));
 
-  win.webContents.on('will-attach-webview', (event, webPreferences, params) => {
-    delete webPreferences.preload;
-    webPreferences.nodeIntegration = false;
-    webPreferences.contextIsolation = true;
-    webPreferences.sandbox = true;
-    const part = String(params.partition || '');
-    const id = part.replace(/^persist:creator-/, '');
-    if (!allowed(params.src) || !part.startsWith('persist:creator-') || !validId(id)) event.preventDefault();
+  // 0.8.0 内嵌浏览器：WebContentsView（无 preload），渲染层只同步矩形与状态
+  const send = (ch, payload) => { if (!win.isDestroyed()) win.webContents.send(ch, payload); };
+  const bv = createBrowserViews({ WebContentsView, Menu, shell }, win, send, {
+    onRemember: (id, url) => { if (validId(id) && allowed(url)) { state[id] = { ...(state[id] || {}), lastUrl: url, loggedOut: false }; saveState(); } session.fromPartition(partitionOf(id)).cookies.flushStore().catch(() => {}); },
   });
+  ipcMain.handle('browser:open', guard(async (o) => bv.open(o || {})));
+  ipcMain.handle('browser:show', guard(async (o) => bv.show(o || {})));
+  ipcMain.handle('browser:destroy', guard(async (o) => bv.destroy(o || {})));
+  ipcMain.handle('browser:hideAll', guard(async () => bv.hideAll()));
+  ipcMain.handle('browser:setBounds', guard(async (r) => bv.setBounds(r || {})));
+  ipcMain.handle('browser:setVisible', guard(async (v) => bv.setVisible(v)));
+  ipcMain.handle('browser:nav', guard(async (o) => bv.nav(o || {})));
+  ipcMain.handle('browser:clear', guard(async (o) => { const id = o && o.platform; await bv.clear({ platform: id }, session); if (validId(id)) { state[id] = { loggedOut: true, hadSession: false }; saveStateNow(); } return true; }));
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   await win.loadURL(`${origin}/`);
 }
-
-app.on('web-contents-created', (_e, contents) => {
-  if (contents.getType() !== 'webview') return;
-  contents.setWindowOpenHandler(({ url }) => { if (allowed(url)) contents.loadURL(url); else if (/^https?:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
-  contents.on('will-navigate', (e, url) => { if (!allowed(url)) { e.preventDefault(); if (/^https?:\/\//.test(url)) shell.openExternal(url); } });
-  // 每次跳转：记住最后地址 + 把 Cookie 落盘
-  const remember = (_ev, url) => {
-    const id = idForSession(contents.session);
-    if (!id) return;
-    if (allowed(url)) { state[id] = { ...(state[id] || {}), lastUrl: url, loggedOut: false }; saveState(); }
-    contents.session.cookies.flushStore().catch(() => {});
-  };
-  contents.on('did-navigate', remember);
-  contents.on('did-navigate-in-page', remember);
-});
 
 let quitting = false;
 app.on('before-quit', (e) => {
