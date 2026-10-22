@@ -1,8 +1,9 @@
 import type { HttpClient, HttpResponse } from '../http.js';
 import type {
-  AsrResult, AudioResult, ChatMessage, ChatResult, EmbedResult, ImageInput, ImageResult, ProviderAdapter, ProviderDef, RerankResult, Segment, VideoResult,
+  AsrResult, AudioResult, ChatMessage, ChatOptions, ChatResult, EmbedResult, ImageInput, ImageResult, ProviderAdapter, ProviderDef, RerankResult, Segment, VideoResult,
 } from './types.js';
-import { estimateSegments, sleep } from './util.js';
+import { estimateSegments, sleep, splitReasoning } from './util.js';
+import { stripExtensions } from './schema.js';
 import { cosyvoiceTts, cosyvoiceWsUrl, type WsFactory } from './cosyvoice.js';
 
 export interface AdapterCtx {
@@ -77,16 +78,33 @@ function imgContent(images: ImageInput[]) {
 export function openaiAdapter(ctx: AdapterCtx): ProviderAdapter {
   const { json, proxy } = base(ctx);
   const root = trim(ctx.def.baseURL);
-  const chatCall = async (messages: unknown[], model: string): Promise<ChatResult> => {
+  const chatCall = async (messages: unknown[], model: string, opts: ChatOptions = {}): Promise<ChatResult> => {
     const t = Date.now();
-    const res = await json(`${root}/chat/completions`, { model, messages }, {}, '对话接口');
-    const j = JSON.parse(res.text) as { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } };
-    const content = j.choices?.[0]?.message?.content;
-    if (typeof content !== 'string') throw new Error('对话接口返回格式不符合 OpenAI 协议');
-    return { ...meta(ctx, model, t), content, usage: { unit: 'token', input: j.usage?.prompt_tokens ?? 0, output: j.usage?.completion_tokens ?? 0 } };
+    const body: Record<string, unknown> = { model, messages };
+    if (opts.maxTokens) body.max_tokens = opts.maxTokens;
+    if (opts.temperature !== undefined) body.temperature = opts.temperature;
+    if (opts.seed !== undefined && ctx.def.supportsSeed) body.seed = opts.seed;
+    const rf = opts.responseFormat;
+    if (rf?.type === 'json_schema' && ctx.def.jsonMode === 'json_schema') body.response_format = { type: 'json_schema', json_schema: { name: rf.name, schema: stripExtensions(rf.schema), strict: false } };
+    else if (rf && ctx.def.jsonMode) body.response_format = { type: 'json_object' };
+    const res = await json(`${root}/chat/completions`, body, {}, '对话接口');
+    const j = JSON.parse(res.text) as {
+      choices?: { message?: { content?: string | null; reasoning_content?: string; reasoning?: string } }[];
+      usage?: { prompt_tokens?: number; completion_tokens?: number; prompt_cache_hit_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } };
+    };
+    const msg = j.choices?.[0]?.message;
+    const raw = msg?.content;
+    if (typeof raw !== 'string') throw new Error('对话接口返回格式不符合 OpenAI 协议');
+    const { content, reasoning } = splitReasoning(raw, msg?.reasoning_content ?? msg?.reasoning);
+    // 缓存命中：DeepSeek 为 prompt_cache_hit_tokens；OpenAI / 百炼兼容 / Kimi 等为 prompt_tokens_details.cached_tokens
+    const cached = j.usage?.prompt_cache_hit_tokens ?? j.usage?.prompt_tokens_details?.cached_tokens;
+    return {
+      ...meta(ctx, model, t), content, ...(reasoning ? { reasoning } : {}),
+      usage: { unit: 'token', input: j.usage?.prompt_tokens ?? 0, output: j.usage?.completion_tokens ?? 0, ...(typeof cached === 'number' ? { cachedInput: cached } : {}) },
+    };
   };
   return {
-    chat: (messages: ChatMessage[], model) => chatCall(messages, model),
+    chat: (messages: ChatMessage[], model, opts) => chatCall(messages, model, opts),
     vision: (images, prompt, model) => chatCall([{ role: 'user', content: [{ type: 'text', text: prompt }, ...imgContent(images)] }], model),
     async image(prompt, model, opts) {
       const t = Date.now();
@@ -268,22 +286,33 @@ export function dashscopeAdapter(ctx: AdapterCtx): ProviderAdapter {
 export function anthropicAdapter(ctx: AdapterCtx): ProviderAdapter {
   const { proxy } = base(ctx);
   const root = trim(ctx.def.baseURL);
-  const call = async (system: string | undefined, messages: unknown[], model: string): Promise<ChatResult> => {
+  const call = async (system: string | undefined, messages: unknown[], model: string, opts: ChatOptions = {}): Promise<ChatResult> => {
     const t = Date.now();
     const res = await ctx.http(`${root}/messages`, {
       method: 'POST', proxy, timeoutMs: 120000,
       headers: { 'content-type': 'application/json', 'x-api-key': ctx.apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens: 4096, ...(system ? { system } : {}), messages }),
+      body: JSON.stringify({
+        model, max_tokens: opts.maxTokens ?? 4096,
+        // 稳定前缀：system 整段标记为可缓存（命中时按缓存价计费）
+        ...(system ? { system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }] } : {}),
+        ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+        messages,
+      }),
     });
     check(res, 'Anthropic 接口');
-    const j = JSON.parse(res.text) as { content?: { type: string; text?: string }[]; usage?: { input_tokens?: number; output_tokens?: number } };
+    const j = JSON.parse(res.text) as { content?: { type: string; text?: string; thinking?: string }[]; usage?: { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number } };
     const content = (j.content ?? []).filter((c) => c.type === 'text').map((c) => c.text ?? '').join('');
-    return { ...meta(ctx, model, t), content, usage: { unit: 'token', input: j.usage?.input_tokens ?? 0, output: j.usage?.output_tokens ?? 0 } };
+    const reasoning = (j.content ?? []).filter((c) => c.type === 'thinking').map((c) => c.thinking ?? '').join('\n') || undefined;
+    const u = j.usage ?? {};
+    const cached = u.cache_read_input_tokens ?? 0;
+    // Anthropic 的 input_tokens 不含缓存读写部分，这里换算为输入总量
+    const input = (u.input_tokens ?? 0) + cached + (u.cache_creation_input_tokens ?? 0);
+    return { ...meta(ctx, model, t), content, ...(reasoning ? { reasoning } : {}), usage: { unit: 'token', input, output: u.output_tokens ?? 0, cachedInput: cached } };
   };
   return {
-    chat(messages, model) {
+    chat(messages, model, opts) {
       const system = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n') || undefined;
-      return call(system, messages.filter((m) => m.role !== 'system').map((m) => ({ role: m.role, content: m.content })), model);
+      return call(system, messages.filter((m) => m.role !== 'system').map((m) => ({ role: m.role, content: m.content })), model, opts);
     },
     vision(images, prompt, model) {
       const blocks = images.map((i) => (i.url ? { type: 'image', source: { type: 'url', url: i.url } } : { type: 'image', source: { type: 'base64', media_type: i.mime ?? 'image/png', data: i.b64 } }));

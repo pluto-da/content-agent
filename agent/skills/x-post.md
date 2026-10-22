@@ -13,3 +13,8 @@ version: 1
 
 ## 输出格式
 {"title":"","body":"","tags":[""]}
+
+## 输出 Schema（每段按 X 规则计长：中文按 2、其余按 1，单段 ≤ 280）
+```json schema
+{"type":"object","required":["body"],"properties":{"title":{"type":"string","maxLength":60},"body":{"type":"string","minLength":1,"x-weightedMax":280,"x-segmentSep":"---"},"tags":{"type":"array","items":{"type":"string"},"maxItems":4}}}
+```

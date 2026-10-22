@@ -12,6 +12,20 @@ export interface Skill {
   version: number;
   body: string;
   file: string;
+  /** 输出 JSON Schema（在正文中用 ```json schema 代码块声明；声明后从 body 中移出，渲染进“平台规范”段） */
+  schema?: Record<string, unknown>;
+}
+
+const SCHEMA_BLOCK = /```json\s+schema[^\n]*\n([\s\S]*?)```/;
+
+/** 取出 skill 正文中的 ```json schema 代码块。 */
+export function extractSchema(body: string): { schema?: Record<string, unknown>; body: string } {
+  const m = SCHEMA_BLOCK.exec(body);
+  if (!m) return { body };
+  let schema: unknown;
+  try { schema = JSON.parse(m[1]!); } catch (e) { throw new Error(`输出 Schema 不是合法 JSON：${e instanceof Error ? e.message : String(e)}`, { cause: e }); }
+  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) throw new Error('输出 Schema 必须是 JSON 对象');
+  return { schema: schema as Record<string, unknown>, body: body.replace(m[0], '').replace(/\n{3,}/g, '\n\n').trim() };
 }
 
 export interface SkillLoadError { file: string; error: string }
@@ -47,13 +61,15 @@ export function parseSkill(src: string, file: string): Skill {
   const modelsRaw = Array.isArray(meta.models) ? meta.models : [];
   const badModels = modelsRaw.filter((m) => !isCapability(m));
   if (badModels.length) throw new Error(`声明了未知的模型能力：${badModels.join('、')}`);
+  const ex = extractSchema(body);
   return {
     name, description,
     platform: typeof meta.platform === 'string' ? meta.platform : undefined,
     tools: allowed,
     models: modelsRaw as Capability[],
     version: Number(meta.version ?? 1) || 1,
-    body, file,
+    body: ex.body, file,
+    ...(ex.schema ? { schema: ex.schema } : {}),
   };
 }
 

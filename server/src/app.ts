@@ -16,7 +16,7 @@ import { AgentFiles } from './modules/agentfiles.js';
 import { ADAPTERS, addSource, listSources, recentRuns, runSource, sourceStatus, Scheduler } from './sources/index.js';
 import type { SourceContext } from './sources/types.js';
 import { listItems } from './modules/library.js';
-import { PLATFORMS, isPlatform, generateTopics, listTopics, rewrite, listDrafts, getDraft, editDraft, setDraftStatus, draftEdits, replyDraft, draftVideo, type Deps, type DraftStatus } from './modules/content.js';
+import { PLATFORMS, isPlatform, generateTopics, listTopics, rewrite, listDrafts, getDraft, editDraft, setDraftStatus, draftEdits, replyDraft, draftVideo, resumeDraft, partialRewrite, draftSteps, type Deps, type DraftStatus } from './modules/content.js';
 import { CREATOR_CENTERS, handoffCard, markCopied, pushWechatDraft } from './modules/handoff.js';
 import { importCsv, summarize } from './modules/analytics.js';
 import { BOARDS, fetchAllBoards, mergeLatest, matchKeywords, clusterHots, researchCluster, lastRuns } from './modules/hot.js';
@@ -24,6 +24,8 @@ import { PLUGINS, enabledFor, type Device, type EnabledMap } from './modules/plu
 import { exportBackup, importBackup } from './modules/backup.js';
 import { registerLocalApps } from './modules/localapps.js';
 import { abTest, loadBenchmark } from './modules/evals.js';
+import { efficiencyMetrics } from './modules/efficiency.js';
+import { draftVerifySettings } from './modules/confidence.js';
 
 export interface AppOptions {
   dataDir: string;
@@ -109,7 +111,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   };
 
   /* ---------- 基础 ---------- */
-  app.get('/api/health', async () => ({ ok: true, version: '0.3.0' }));
+  app.get('/api/health', async () => ({ ok: true, version: '0.4.0' }));
   app.get('/api/boundaries', async () => ({ boundaries: HARD_BOUNDARIES, tools: ALLOWED_TOOLS }));
 
   /* ---------- 设置与密钥 ---------- */
@@ -268,6 +270,65 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
     }
     return { results };
   });
+
+  /* ---------- 断点续跑、局部重写、草稿-验证分档、效率度量 ---------- */
+  app.get('/api/drafts/:id/steps', async (req) => {
+    const id = num((req.params as { id: string }).id);
+    if (!getDraft(db, id)) throw new AppError('not_found', '草稿不存在', 404);
+    return { steps: draftSteps(db, id).map((r) => ({ step: r.step, status: r.status, error: r.error, attempts: r.attempts, display: r.output?.display ?? [] })) };
+  });
+  app.post('/api/drafts/:id/resume', async (req) => {
+    const id = num((req.params as { id: string }).id);
+    if (!getDraft(db, id)) throw new AppError('not_found', '草稿不存在', 404);
+    const r = await queue.run({ kind: 'resume', label: `续跑：草稿 #${id}`, retries: 0, timeoutMs: 900000 }, () => resumeDraft(deps, id));
+    if (!r.ok) throw new AppError('resume_failed', r.error ?? '续跑失败', 400);
+    return r.result;
+  });
+  app.post('/api/drafts/:id/partial-rewrite', async (req) => {
+    const id = num((req.params as { id: string }).id);
+    const b = (req.body ?? {}) as { start?: number; end?: number; instruction?: string; window?: number };
+    if (!getDraft(db, id)) throw new AppError('not_found', '草稿不存在', 404);
+    try {
+      return await partialRewrite(deps, id, { start: num(b.start, -1), end: num(b.end, -1), instruction: typeof b.instruction === 'string' ? b.instruction.slice(0, 500) : undefined, window: b.window === undefined ? undefined : num(b.window) });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/选中/.test(msg)) throw new AppError('bad_range', msg, 400, '在正文中选中要改写的一段再试');
+      throw e;
+    }
+  });
+  const pipelineSettings = () => {
+    const prices = hub.prices();
+    const info = (task: string) => { try { return hub.resolveInfo('llm', task); } catch { return null; } };
+    const draft = info('draft');
+    const strong = info('rewrite');
+    const unit = (x: { provider: string; model: string } | null) => {
+      if (!x) return null;
+      const p = prices[`${x.provider}:${x.model}`] ?? prices[x.provider];
+      return p ? (p.input ?? 0) + (p.output ?? 0) : null;
+    };
+    const du = unit(draft), su = unit(strong);
+    const ratio = du !== null && su ? du / su : null;
+    const routes = hub.routes().llm;
+    const warning = !routes?.tasks?.draft ? '未单独指定草稿模型（模型路由 llm → 任务 draft），开启后草稿与强模型相同，分档只省复核不省草稿' :
+      ratio !== null && ratio > 0.2 ? `草稿模型单价约为强模型的 ${(ratio * 100).toFixed(0)}%，建议 ≤ 20%，否则得不偿失` : '';
+    return { draftVerify: draftVerifySettings(db), health: hub.healthPolicy(), draftModel: draft, strongModel: strong, priceRatio: ratio, warning };
+  };
+  app.get('/api/pipeline/settings', async () => pipelineSettings());
+  app.put('/api/pipeline/settings', async (req) => {
+    const b = (req.body ?? {}) as { draftVerify?: { enabled?: boolean }; health?: { enabled?: boolean; windowMin?: number; minSamples?: number; maxFailRate?: number } };
+    if (b.draftVerify) setSetting(db, 'pipeline.draftVerify', { enabled: !!b.draftVerify.enabled });
+    if (b.health) {
+      const cur = hub.healthPolicy();
+      setSetting(db, 'models.health', {
+        enabled: b.health.enabled ?? cur.enabled,
+        windowMin: Math.min(1440, Math.max(5, num(b.health.windowMin, cur.windowMin))),
+        minSamples: Math.min(100, Math.max(1, num(b.health.minSamples, cur.minSamples))),
+        maxFailRate: Math.min(1, Math.max(0.05, num(b.health.maxFailRate, cur.maxFailRate))),
+      });
+    }
+    return pipelineSettings();
+  });
+  app.get('/api/metrics/efficiency', async (req) => efficiencyMetrics(db, hub, num((req.query as { days?: string }).days, 30)));
 
   /* ---------- 视频合成与图像编辑 ---------- */
   app.post('/api/drafts/:id/video', async (req) => {
@@ -434,7 +495,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   app.get('/api/evals/benchmark', async () => ({ cases: loadBenchmark(join(agent.dir, 'evals', 'benchmark.json')) }));
   app.post('/api/evals/ab', async (req) => {
     const b = (req.body ?? {}) as { a?: number; b?: number };
-    const r = await queue.run({ kind: 'eval', label: `A/B 评测 #${b.a} vs #${b.b}`, retries: 0, timeoutMs: 600000 }, () => abTest(hub, agent, join(agent.dir, 'evals', 'benchmark.json'), num(b.a), num(b.b)));
+    const r = await queue.run({ kind: 'eval', label: `A/B 评测 #${b.a} vs #${b.b}`, retries: 0, timeoutMs: 600000 }, () => abTest(hub, agent, join(agent.dir, 'evals', 'benchmark.json'), num(b.a), num(b.b), db));
     if (!r.ok) throw new AppError('eval_failed', r.error ?? '评测失败');
     return r.result;
   });

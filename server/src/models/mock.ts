@@ -28,7 +28,7 @@ function mockChat(messages: ChatMessage[]): string {
       const topic = /选题标题：(.+)/.exec(last)?.[1]?.trim() ?? '未命名选题';
       return JSON.stringify({
         title: (topic.startsWith("【模拟】") ? topic : `【模拟】${topic}`).slice(0, 30),
-        body: `【模拟输出·${platform}】\n围绕「${topic}」写成的示例正文。\n第一段：交代背景与来源。\n第二段：给出三点看法。\n第三段：提出一个开放问题，邀请读者思考。`,
+        body: `【模拟输出·${platform}】\n围绕「${topic}」写成的示例正文。\n开头：交代背景与来源。\n接着：给出三点看法。\n结尾：提出一个开放问题，邀请读者思考。`,
         tags: ['模拟', platform],
         image_prompts: ['简洁明亮的信息图风格封面', '生活场景插画', '要点清单卡片'],
         voiceover: `大家好。今天聊聊${topic}。第一，先看发生了什么。第二，它和你有什么关系。最后，说说我的建议。`,
@@ -51,6 +51,27 @@ function mockChat(messages: ChatMessage[]): string {
         action: '先核实来源，再选择一个角度写作',
       });
     }
+    case 'repair': {
+      // 修复重试：取上一轮输出，按错误信息里的上限截断（演示“Schema 校验 + 一次带错误信息的修复”）
+      const prev = [...messages].reverse().find((m) => m.role === 'assistant')?.content ?? '{}';
+      let obj: Record<string, unknown>;
+      try { obj = JSON.parse(/\{[\s\S]*\}/.exec(prev)?.[0] ?? '{}') as Record<string, unknown>; } catch { obj = {}; }
+      for (const m of last.matchAll(/\$\.(\w+)(?: 第 \d+ 段)? (加权)?长度 \d+ 超过上限 (\d+)/g)) {
+        const k = m[1]!; const lim = Number(m[3]);
+        if (typeof obj[k] === 'string') obj[k] = [...(obj[k] as string)].slice(0, m[2] ? Math.floor(lim / 2) : lim).join('');
+      }
+      for (const m of last.matchAll(/缺少必填字段 (\w+)/g)) if (obj[m[1]!] === undefined) obj[m[1]!] = m[1] === 'tags' ? [] : '【模拟补全】';
+      return JSON.stringify(obj);
+    }
+    case 'partial_rewrite': {
+      const sel = /<<<选中>>>\n([\s\S]*?)\n<<<\/选中>>>/.exec(last)?.[1] ?? '';
+      return JSON.stringify({ text: `【模拟局部改写】${sel.replace(/^【模拟局部改写】/, '')}` });
+    }
+    case 'verify_title': {
+      const title = /标题：(.+)/.exec(last)?.[1]?.trim() ?? '';
+      const hits = [...last.matchAll(/^- 命中「(.+?)」/gm)].map((m) => m[1]!);
+      return JSON.stringify({ title: [...title].slice(0, 20).join(''), replacements: hits.map((h) => ({ from: h, to: '较好' })) });
+    }
     case 'review_metrics':
       return '【模拟复盘】样本量较小，以下仅为观察，不构成结论：互动率最高的稿件标题更具体。建议标记为“待验证”。';
     case 'reply_draft':
@@ -66,12 +87,19 @@ function hashVec(text: string, dim = 32): number[] {
   return v;
 }
 
+/** 模拟服务商的前缀缓存：同一 system 前缀第二次出现即视为命中（用于演示缓存命中率）。 */
+const seenPrefixes = new Set<string>();
+export function resetMockCache(): void { seenPrefixes.clear(); }
+
 export function mockAdapter(): ProviderAdapter {
   return {
     async chat(messages, model) {
       const content = mockChat(messages);
       const input = Math.ceil(messages.reduce((n, m) => n + m.content.length, 0) / 2);
-      return { ...M(model), content, usage: { unit: 'token', input, output: Math.ceil(content.length / 2) } };
+      const sys = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n');
+      const cachedInput = sys && seenPrefixes.has(sys) ? Math.ceil(sys.length / 2) : 0;
+      if (sys) seenPrefixes.add(sys);
+      return { ...M(model), content, usage: { unit: 'token', input, output: Math.ceil(content.length / 2), cachedInput } };
     },
     async vision(images, prompt, model) {
       const content = /OCR|文字/.test(prompt) ? '【模拟 OCR】图片中的文字：示例文本' : `【模拟视觉理解】共 ${images.length} 张图片：画面主体清晰，适合作为封面。`;

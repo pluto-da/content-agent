@@ -92,12 +92,12 @@ describe('API 全流程（mock 模型）', () => {
     const topics = await req('GET', '/api/topics');
     expect(topics.body.topics[0].platforms).toContain('xiaohongshu');
     const plats = await req('GET', '/api/platforms?device=phone');
-    expect(plats.body.platforms).toHaveLength(6);
+    expect(plats.body.platforms).toHaveLength(8);
     expect((await req('POST', '/api/rewrite', { topicId: t.body.topicIds[0], platforms: [] })).status).toBe(400);
     const rw = await req('POST', '/api/rewrite', { topicId: t.body.topicIds[0], platforms: ['xiaohongshu', 'douyin_script', 'wechat_article'] });
     const [xhs, dy, wx] = rw.body.results;
     expect(xhs.steps.filter((s: any) => s.step.startsWith('配图'))).toHaveLength(3);
-    expect(dy.steps.map((s: any) => s.step)).toEqual(['文本生成', '配音', '字幕']);
+    expect(dy.steps.map((s: any) => s.step).slice(0, 3)).toEqual(['文本生成', '配音', '字幕']);
     const d = await req('GET', `/api/drafts/${dy.draftId}`);
     const srt = d.body.draft.assets.find((a: any) => a.type === 'subtitle').url;
     const srtRes = await app.inject({ method: 'GET', url: srt });
@@ -127,7 +127,7 @@ describe('API 全流程（mock 模型）', () => {
     expect(ok.body.media_id).toBe('MID');
     expect(ok.body.lastStep).toContain('本人');
     expect((await req('GET', '/api/drafts?status=handed_off')).body.drafts).toHaveLength(2);
-    expect((await req('GET', '/api/creator-centers')).body.centers).toHaveLength(6);
+    expect((await req('GET', '/api/creator-centers')).body.centers).toHaveLength(7);
   });
   it('回复草稿只生成不发送', async () => {
     expect((await req('POST', '/api/replies/draft', {})).status).toBe(400);
@@ -193,7 +193,7 @@ describe('API 全流程（mock 模型）', () => {
   });
   it('skills 与 A/B 评测', async () => {
     const s = await req('GET', '/api/skills');
-    expect(s.body.skills.length).toBe(10);
+    expect(s.body.skills.length).toBe(13);
     expect(s.body.errors).toEqual([]);
     expect(s.body.skills.find((x: any) => x.name === 'douyin-script').models).toEqual(['llm', 'tts', 'asr']);
     expect((await req('GET', '/api/evals/benchmark')).body.cases.length).toBeGreaterThanOrEqual(7);

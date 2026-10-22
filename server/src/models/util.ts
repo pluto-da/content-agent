@@ -54,3 +54,40 @@ export function cosine(a: number[], b: number[]): number {
 }
 
 export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** 粗估 token 数：CJK 字符约 1 token/字，其余约 4 字符/token（只用于上下文上限预检，宁高勿低）。 */
+export function estimateTokens(text: string): number {
+  let cjk = 0, other = 0;
+  for (const ch of text) {
+    if (/[\u3000-\u9fff\uac00-\ud7af\uff00-\uffef]/.test(ch)) cjk++;
+    else other++;
+  }
+  return Math.ceil(cjk * 1.1 + other / 3.5);
+}
+
+/** 统一编解码：把行内 <think>…</think> 挪进 reasoning，正文只留成稿。 */
+export function splitReasoning(content: string, reasoning?: string): { content: string; reasoning?: string } {
+  const m = /^\s*<think>([\s\S]*?)<\/think>\s*/.exec(content);
+  if (!m) return { content, reasoning: reasoning || undefined };
+  const inline = m[1]!.trim();
+  return { content: content.slice(m[0].length), reasoning: [reasoning, inline].filter(Boolean).join('\n') || undefined };
+}
+
+export const MAX_TOKENS_DEFAULT = { normal: 8192, thinking: 65536 } as const;
+export const DEFAULT_CONTEXT_WINDOW = 128_000;
+
+/** 思考模式判定：路由显式指定优先，否则按模型名推断。 */
+export function isThinkingModel(model: string, explicit?: boolean): boolean {
+  if (explicit !== undefined) return explicit;
+  return /reason|thinking|\br1\b|-r1|qwq/i.test(model);
+}
+
+/** 按思考模式给 max_tokens 默认值，并按“提示词 + max_tokens ≤ 上下文窗口”预检；提示词本身放不下则报错。 */
+export function planMaxTokens(promptTokens: number, opts: { thinking: boolean; requested?: number; maxOutput?: number; contextWindow?: number }): number {
+  const window = opts.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
+  let max = opts.requested ?? (opts.thinking ? MAX_TOKENS_DEFAULT.thinking : MAX_TOKENS_DEFAULT.normal);
+  if (opts.maxOutput) max = Math.min(max, opts.maxOutput);
+  const room = window - promptTokens;
+  if (room < 1024) throw new Error(`提示词约 ${promptTokens} token，超出上下文上限 ${window}（至少需留 1024 token 输出），请缩短素材`);
+  return Math.max(1024, Math.min(max, room));
+}

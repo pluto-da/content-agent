@@ -151,7 +151,7 @@ describe('协议适配器（假 HTTP）', () => {
     const a = anthropicAdapter(ctx('anthropic', http));
     const r = await a.chat!([{ role: 'system', content: 'S' }, { role: 'user', content: 'U' }], 'claude');
     expect(r.content).toBe('好');
-    expect(JSON.parse(String(http.calls[0]!.opts.body)).system).toBe('S');
+    expect(JSON.parse(String(http.calls[0]!.opts.body)).system[0].text).toBe('S');
     await a.vision!([{ url: 'https://i' }, { b64: 'B' }], 'p', 'claude');
   });
   it('百炼原生异步：万相图、视频、Paraformer', async () => {

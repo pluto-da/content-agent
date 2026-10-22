@@ -167,6 +167,25 @@ CREATE TABLE IF NOT EXISTS local_apps (
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(platform, os)
 );
+CREATE TABLE IF NOT EXISTS draft_steps (
+  draft_id INTEGER NOT NULL,
+  step TEXT NOT NULL,
+  status TEXT NOT NULL,
+  output TEXT,
+  error TEXT,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY(draft_id, step)
+);
+CREATE TABLE IF NOT EXISTS eval_cache (
+  key TEXT PRIMARY KEY,
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  prompt_hash TEXT NOT NULL,
+  input_hash TEXT NOT NULL,
+  output TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -179,7 +198,23 @@ export function openDb(path: string): DB {
   db.exec('PRAGMA journal_mode = WAL;');
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
+  migrate(db);
   return db;
+}
+
+/** 增量迁移：老库补列（已存在则跳过）。 */
+const COLUMNS: [table: string, column: string, ddl: string][] = [
+  ['usage', 'cached_tokens', 'INTEGER'], // NULL = 服务商未返回缓存字段
+  ['drafts', 'confidence', 'TEXT'],
+  ['drafts', 'first_pass', 'INTEGER'],
+  ['drafts', 'calls', 'INTEGER NOT NULL DEFAULT 0'],
+  ['drafts', 'min_calls', 'INTEGER NOT NULL DEFAULT 0'],
+];
+export function migrate(db: DB): void {
+  for (const [t, c, ddl] of COLUMNS) {
+    const cols = db.prepare(`PRAGMA table_info(${t})`).all() as { name: string }[];
+    if (!cols.some((x) => x.name === c)) db.exec(`ALTER TABLE ${t} ADD COLUMN ${c} ${ddl}`);
+  }
 }
 
 export function getSetting<T>(db: DB, key: string, fallback: T): T {

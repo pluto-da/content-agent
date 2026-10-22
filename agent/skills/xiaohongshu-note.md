@@ -16,3 +16,8 @@ version: 1
 
 ## 输出格式
 {"title":"","body":"","tags":[""],"image_prompts":["","",""]}
+
+## 输出 Schema（程序据此校验；不通过会带错误信息修复一次）
+```json schema
+{"type":"object","required":["title","body"],"properties":{"title":{"type":"string","minLength":1,"maxLength":20},"body":{"type":"string","minLength":1,"maxLength":1000},"tags":{"type":"array","items":{"type":"string"},"maxItems":10},"image_prompts":{"type":"array","items":{"type":"string"},"maxItems":3}}}
+```

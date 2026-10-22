@@ -1,5 +1,21 @@
 # 变更日志
 
+## 0.4.0（2026-10-22）
+把 DeepInfer 蒸馏原则（design/deepinfer-distilled.md）落到调用编排层：每一份调用只做一次有效的工作。
+- 稳定前缀：系统提示词统一为 硬边界 → soul → 规则（working-method、USER、输出规则）→ skill → 平台规范（Schema 键排序序列化），逐字节稳定；素材、时间、用户输入只在 user 消息。多平台改写共享 skill 之前的前缀（按顺序发出，后一次可命中缓存）。读取服务商缓存命中字段（DeepSeek `prompt_cache_hit_tokens`、OpenAI 兼容 `prompt_tokens_details.cached_tokens`、Anthropic `cache_read_input_tokens`），Usage 新增 `cachedInput`，usage 表新增 `cached_tokens`；价格支持 `cachedInput` 缓存价。Anthropic system 段加 `cache_control`。
+- 结构化输出：skill 可声明输出 JSON Schema（```json schema 代码块）；内置平台默认 Schema（小红书标题 20 / 正文 1000、X 每段 280 中文按 2、公众号标题 64、闲鱼标题 30）。提供方声明 `jsonMode`（json_schema / json_object），支持就传 `response_format`；本地 Schema 校验不通过时带错误信息修复重试一次。
+- 断点续跑与局部重写：流水线每步写入 `draft_steps`；`POST /api/drafts/:id/resume` 只重跑失败步；`POST /api/drafts/:id/partial-rewrite` 只发送选中段 + 前后有界窗口。创作页新增“局部重写所选”“续跑失败步骤”。
+- 草稿-验证分档（默认关闭，运行状态页开关）：草稿模型走路由任务 `draft`；代理信号（合规命中数、Schema 是否一次通过、字数越界）分高/中/低：高直接进待审，中只复核标题与合规命中（任务 `verify`，只替换命中词），低才用强模型整篇重写。草稿记录置信度、一次通过、实际/理论调用次数；草稿模型单价 > 强模型 20% 时给出提示。Mock 可演示三档。
+- 确定性评测：A/B 评测 temperature=0，支持的服务商传固定 seed；记录模型版本 + 提示词哈希 + 输入哈希，同哈希命中 `eval_cache` 直接复用。
+- 健康路由：按 usage 计算各服务商近期失败率与 p50/p95；主路失败切备用，主路近 30 分钟失败率 ≥ 50%（≥ 4 次样本）且备用健康时先走备用（可配置/关闭）。
+- 统一编解码：ChatResult 新增 `reasoning`（DeepSeek/千问 `reasoning_content`、行内 `<think>`、Anthropic thinking 块），不进成稿与日志正文；按思考模式给 max_tokens 默认（非思考 8192、思考 65536，受提供方输出上限截断），请求前粗估长度做上下文上限预检。
+- 度量：设置中心 → 运行状态新增“推理效率”（单篇成本、缓存命中率、一次通过率、返工放大系数、p50/p95、各服务商失败率、按平台单篇成本、置信度分布）与“推理策略”开关；接口 `GET /api/metrics/efficiency`、`GET/PUT /api/pipeline/settings`。
+- Agent 文件：新增 skills/inference-efficiency.md（蒸馏文档第 2、5 节精要），working-method.md 末尾引用。xiaohongshu-note、x-post 声明输出 Schema。
+- Mock：模拟前缀缓存命中、Schema 修复、局部重写、标题复核；正文示例去掉会误触“极限用语”的“第一段”。
+- 测试：新增 server/test/inference.test.ts（11 项：Schema 校验与修复、稳定前缀、max_tokens 与预检、置信度分档、断点续跑、局部重写、确定性缓存、健康路由、效率度量）；修正 app.test 中 3 处过期计数（平台 8、创作中心 7、skills 13）与抖音步骤断言，server 71/71 通过；前端新增推理效率面板测试，11/11 通过。
+- 版本 0.4.0；Android versionName 0.4.0 / versionCode 400。
+- 硬边界未变：不自动点赞/评论/私信/关注，不绕风控，发布由用户本人点击。
+
 ## 0.3.0（2026-10-22）
 - 信息架构 v4（design/IA-v4-workflow.md）：13 个平级导航改为 4 个主空间 + 设置中心，按“热点 → 选题 → 生成 → 审核 → 用户手动发布 → 复盘”工作流组织。
   - 今天：单一待办流（待审草稿、待发布、失败任务、新热点/关注词命中），每条一个主操作（审核 / 去发布 / 查看 / 转选题）；顶部 4 个小计数与“开启通知”“采集热榜”。

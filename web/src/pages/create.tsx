@@ -134,6 +134,8 @@ function DraftDetail({ id, onChange, openCenter, lay }: { id: number; onChange: 
   const [pane, setPane] = useState('edit');
   const localApps = useLocalApps();
   const [boxRef, boxW] = useWidthOf();
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+  const [instr, setInstr] = useState('');
   useEffect(() => { if (d.data?.draft) { setBody(d.data.draft.body ?? ''); setTitle(d.data.draft.title ?? ''); } }, [d.data]);
   useEffect(() => {
     if (d.data?.draft?.status !== 'approved') { setCard(null); return; }
@@ -154,6 +156,19 @@ function DraftDetail({ id, onChange, openCenter, lay }: { id: number; onChange: 
     acts.push({ id: 'approve', group: 'review', primary: true, label: t('通过'), run: () => act(async () => { if (body !== dr.body || title !== (dr.title ?? '')) await put(`/api/drafts/${id}`, { body, title }); await post(`/api/drafts/${id}/status`, { status: 'approved' }); }) });
     acts.push({ id: 'reject', group: 'review', danger: true, label: t('驳回'), run: () => act(async () => { await post(`/api/drafts/${id}/status`, { status: 'rejected' }); }) });
   }
+  if (!locked) acts.push({ id: 'partial', group: 'review', label: t('局部重写所选'), hint: '只发送选中段与前后各 200 字，不整篇重生成', run: () => act(async () => {
+    const el = bodyRef.current;
+    const start = el?.selectionStart ?? 0, end = el?.selectionEnd ?? 0;
+    if (start === end) { say('先在正文中选中要改写的一段'); return; }
+    if (body !== dr.body || title !== (dr.title ?? '')) await put(`/api/drafts/${id}`, { body, title, note: '人工编辑' });
+    const r = await post(`/api/drafts/${id}/partial-rewrite`, { start, end, instruction: instr });
+    setBody(r.body);
+    say(`已重写所选（发送 ${r.sentChars}/${r.totalChars} 字）${r.warnings?.length ? '；' + r.warnings[0] : ''}`);
+  }) });
+  if (dr.pipeline?.some((s: any) => !s.ok)) acts.push({ id: 'resume', group: 'review', label: t('续跑失败步骤'), hint: '只重跑失败或未完成的步骤，已成功的保持不变', run: () => act(async () => {
+    const r = await post(`/api/drafts/${id}/resume`);
+    say(r.rerun?.length ? `已重跑：${r.rerun.join('、')}` : '没有需要重跑的步骤');
+  }) });
   if (dr.status === 'rejected' || dr.status === 'approved') acts.push({ id: 'back', group: 'review', label: t('退回待审'), run: () => act(async () => { await post(`/api/drafts/${id}/status`, { status: 'pending' }); }) });
   if (card) {
     acts.push({ id: 'publish', group: 'handoff', primary: true, label: `${t('复制')}并${t('去发布')}（${t('网页端')}）`, run: () => act(async () => {
@@ -180,8 +195,10 @@ function DraftDetail({ id, onChange, openCenter, lay }: { id: number; onChange: 
   const editor = (
     <div className="min-w-0">
       {String(dr.model).startsWith('mock') && <div className="alert info">{t('模拟输出')}：当前使用 Mock 模型，仅用于演示流程。</div>}
+      {dr.confidence && <p className="small"><Badge tone={dr.confidence === 'high' ? 'ok' : dr.confidence === 'medium' ? 'info' : 'warn'}>{({ high: '高置信', medium: '中置信', low: '低置信' } as Record<string, string>)[dr.confidence] ?? dr.confidence}</Badge>{dr.first_pass === 0 && <span className="muted"> · Schema 修复过一次</span>}</p>}
       <Field label="标题"><input value={title} onChange={(e) => setTitle(e.target.value)} disabled={locked} /></Field>
-      <Field label="正文"><textarea rows={isPhone ? 12 : 14} value={body} onChange={(e) => setBody(e.target.value)} disabled={locked} /></Field>
+      <Field label="正文"><textarea ref={bodyRef} rows={isPhone ? 12 : 14} value={body} onChange={(e) => setBody(e.target.value)} disabled={locked} /></Field>
+      {!locked && <Field label={t('局部重写要求')} hint="选中正文一段后点“局部重写所选”"><input value={instr} onChange={(e) => setInstr(e.target.value)} placeholder="例如：更口语、更短（可留空）" /></Field>}
       {dr.tags?.length > 0 && <div className="row wrap">{dr.tags.map((g: string) => <Badge key={g}>#{g}</Badge>)}</div>}
       {dr.pipeline?.length > 0 && <p className="small"><b>{t('流水线')}：</b>{dr.pipeline.map((s: any) => `${s.step}${s.ok ? '✓' : '✗'}${s.message ? '（' + s.message + '）' : ''}`).join(' → ')}</p>}
       {dr.assets?.length > 0 && (

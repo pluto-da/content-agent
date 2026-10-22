@@ -3,6 +3,7 @@ import { get, post, del } from '../api';
 import { useT } from '../i18n';
 import { Icon } from '../icons';
 import type { Device } from '../runtime';
+import { EfficiencyPanel } from './efficiency';
 import { Badge, Card, CountUp, Empty, ErrorBox, Field, Loading, SkeletonLines, Sparkline, StatusBadge, useLoad, useToast } from '../ui';
 
 /* ---------- 总览 Dashboard ---------- */
@@ -73,6 +74,7 @@ export function Status({ go }: { go: (p: string) => void }) {
 
   return (
     <div className="dash-grid">
+      <EfficiencyPanel />
       <Card className="span-7" title={t('近 30 天成本')} actions={<button className="ghost" onClick={() => go('settings/models')}>{t('模型设置')}<Icon name="chevronRight" size={14} /></button>}>
         {costs.loading ? <SkeletonLines lines={2} /> : (
           <div className="status-cost">

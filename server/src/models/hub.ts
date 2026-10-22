@@ -7,18 +7,30 @@ import { BUILTIN_PROVIDERS } from './providers.js';
 import { createAdapter } from './adapters.js';
 import { mockAdapter } from './mock.js';
 import type { WsFactory } from './cosyvoice.js';
+import { estimateTokens, isThinkingModel, planMaxTokens } from './util.js';
 import type {
-  AsrResult, AudioResult, BaseResult, Capability, ChatMessage, ChatResult, EmbedResult, ImageEditOptions, ImageInput, ImageResult, ProviderAdapter, ProviderDef, RerankResult, Usage, VideoResult,
+  AsrResult, AudioResult, BaseResult, Capability, ChatMessage, ChatOptions, ChatResult, EmbedResult, ImageEditOptions, ImageInput, ImageResult, ProviderAdapter, ProviderDef, RerankResult, Usage, VideoResult,
 } from './types.js';
 import { CAPABILITIES, CAPABILITY_LABELS, NotConfiguredError, NotSupportedError } from './types.js';
 
 /** model：模型名；editModel：图像编辑模型名（image 能力）；voice：语音合成音色（tts 能力） */
-export interface RouteTarget { provider: string; model?: string; editModel?: string; voice?: string }
+export interface RouteTarget { provider: string; model?: string; editModel?: string; voice?: string; /** 思考模式（不填按模型名推断） */ thinking?: boolean }
 export interface CapabilityRoute { default?: RouteTarget; fallback?: RouteTarget; tasks?: Record<string, RouteTarget> }
 export type Routes = Partial<Record<Capability, CapabilityRoute>>;
 export interface ProviderOverride { baseURL?: string; nativeBaseURL?: string; useProxy?: boolean; models?: Partial<Record<Capability, string>>; imageEditModel?: string; ttsVoice?: string }
-/** 单价：token 为每百万；image 为每张；char 为每万字符；second 为每分钟；call 为每次。 */
-export interface Price { input?: number; output?: number }
+/** 单价：token 为每百万；image 为每张；char 为每万字符；second 为每分钟；call 为每次。cachedInput：缓存命中输入每百万（不填按 input 计）。 */
+export interface Price { input?: number; output?: number; cachedInput?: number }
+
+/** 健康路由：近 windowMin 分钟内样本 ≥ minSamples 且失败率 ≥ maxFailRate 视为不健康，主路不健康时先走备用。 */
+export interface HealthPolicy { windowMin: number; minSamples: number; maxFailRate: number }
+export const DEFAULT_HEALTH: HealthPolicy = { windowMin: 30, minSamples: 4, maxFailRate: 0.5 };
+export interface ProviderHealth { provider: string; calls: number; failed: number; failRate: number; p50: number; p95: number }
+
+export function percentile(sorted: number[], p: number): number {
+  if (!sorted.length) return 0;
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1));
+  return sorted[idx]!;
+}
 
 const CAP_METHOD: Record<Capability, keyof ProviderAdapter> = {
   llm: 'chat', vision: 'vision', ocr: 'vision', image: 'image', tts: 'tts', asr: 'asr', video: 'video', embedding: 'embed',
@@ -29,7 +41,11 @@ export function computeCost(usage: Usage, price: Price | undefined): number {
   const i = price.input ?? 0;
   const o = price.output ?? 0;
   switch (usage.unit) {
-    case 'token': return (usage.input * i + usage.output * o) / 1_000_000;
+    case 'token': {
+      const cached = Math.min(usage.cachedInput ?? 0, usage.input);
+      const ci = price.cachedInput ?? i;
+      return ((usage.input - cached) * i + cached * ci + usage.output * o) / 1_000_000;
+    }
     case 'image': return usage.output * (o || i);
     case 'char': return (usage.input / 10_000) * i;
     case 'second': return (usage.input / 60) * i;
@@ -112,8 +128,8 @@ export class ModelHub {
     const usage = r?.usage ?? { unit: 'call' as const, input: 0, output: 0 };
     const prices = this.prices();
     const cost = computeCost(usage, prices[`${def.id}:${model}`] ?? prices[def.id]);
-    this.db.prepare('INSERT INTO usage(task, provider, model, prompt_tokens, completion_tokens, cost, ms, ok) VALUES(?,?,?,?,?,?,?,?)').run(
-      `${cap}:${task}:${usage.unit}`, def.id, model, usage.input, usage.output, cost, ms, ok ? 1 : 0,
+    this.db.prepare('INSERT INTO usage(task, provider, model, prompt_tokens, completion_tokens, cost, ms, ok, cached_tokens) VALUES(?,?,?,?,?,?,?,?,?)').run(
+      `${cap}:${task}:${usage.unit}`, def.id, model, usage.input, usage.output, cost, ms, ok ? 1 : 0, usage.unit === 'token' && typeof usage.cachedInput === 'number' ? usage.cachedInput : null,
     );
   }
 
@@ -121,7 +137,7 @@ export class ModelHub {
   private async run<T extends BaseResult>(
     cap: Capability, task: string, call: (a: ProviderAdapter, model: string, target: RouteTarget, def: ProviderDef) => Promise<T> | undefined,
     kind: 'default' | 'edit' = 'default',
-  ): Promise<T & { fallbackUsed?: boolean }> {
+  ): Promise<T & { fallbackUsed?: boolean; routedBy?: 'health' }> {
     const attempt = async (which: 'primary' | 'fallback') => {
       const { def, model, target } = this.resolve(cap, task, which, kind);
       const a = this.adapter(def);
@@ -138,17 +154,82 @@ export class ModelHub {
         throw e;
       }
     };
+    const hasFallback = !!this.routes()[cap]?.fallback;
+    // 健康路由：主路近期失败率过高且备用健康时，先走备用；备用也失败再回主路
+    if (hasFallback && this.healthRoutingEnabled()) {
+      const primaryId = this.routeProviderId(cap, task, 'primary');
+      const fallbackId = this.routeProviderId(cap, task, 'fallback');
+      if (primaryId && fallbackId && primaryId !== fallbackId && !this.isHealthy(primaryId) && this.isHealthy(fallbackId)) {
+        try {
+          const r = await attempt('fallback');
+          return { ...r, fallbackUsed: true, routedBy: 'health' as const };
+        } catch (e) {
+          if (e instanceof NotConfiguredError) throw e;
+        }
+        return await attempt('primary');
+      }
+    }
     try {
       return await attempt('primary');
     } catch (primaryErr) {
       if (primaryErr instanceof NotConfiguredError) throw primaryErr;
-      if (!this.routes()[cap]?.fallback) throw primaryErr;
+      if (!hasFallback) throw primaryErr;
       const r = await attempt('fallback');
       return { ...r, fallbackUsed: true };
     }
   }
 
-  chat(task: string, messages: ChatMessage[]): Promise<ChatResult> { return this.run('llm', task, (a, m) => a.chat?.(messages, m)); }
+  private routeProviderId(cap: Capability, task: string, which: 'primary' | 'fallback'): string | undefined {
+    const r = this.routes()[cap];
+    return (which === 'primary' ? (r?.tasks?.[task] ?? r?.default) : r?.fallback)?.provider;
+  }
+
+  healthPolicy(): HealthPolicy & { enabled: boolean } {
+    return { enabled: true, ...DEFAULT_HEALTH, ...getSetting<Partial<HealthPolicy & { enabled: boolean }>>(this.db, 'models.health', {}) };
+  }
+  private healthRoutingEnabled(): boolean { return this.healthPolicy().enabled; }
+
+  isHealthy(providerId: string): boolean {
+    const p = this.healthPolicy();
+    const rows = this.db.prepare("SELECT ok FROM usage WHERE provider = ? AND created_at >= datetime('now', ?) ORDER BY id DESC LIMIT 50").all(providerId, `-${p.windowMin} minutes`) as { ok: number }[];
+    if (rows.length < p.minSamples) return true;
+    return rows.filter((r) => !r.ok).length / rows.length < p.maxFailRate;
+  }
+
+  /** 各服务商近期成功率与延迟分位数（运行状态页与健康路由共用）。 */
+  health(minutes = 24 * 60): ProviderHealth[] {
+    const rows = this.db.prepare("SELECT provider, ms, ok FROM usage WHERE created_at >= datetime('now', ?)").all(`-${Math.max(1, Math.floor(minutes))} minutes`) as { provider: string; ms: number; ok: number }[];
+    const by = new Map<string, { ms: number[]; failed: number }>();
+    for (const r of rows) {
+      const e = by.get(r.provider) ?? { ms: [], failed: 0 };
+      e.ms.push(r.ms);
+      if (!r.ok) e.failed++;
+      by.set(r.provider, e);
+    }
+    return [...by.entries()].map(([provider, e]) => {
+      const sorted = [...e.ms].sort((a, b) => a - b);
+      return { provider, calls: sorted.length, failed: e.failed, failRate: sorted.length ? e.failed / sorted.length : 0, p50: percentile(sorted, 50), p95: percentile(sorted, 95) };
+    }).sort((a, b) => b.calls - a.calls);
+  }
+
+  /** 解析某能力某任务当前会用到的提供方与模型（不调用），供评测记录模型版本。 */
+  resolveInfo(cap: Capability, task: string): { provider: string; model: string; jsonMode?: string; supportsSeed?: boolean } {
+    const { def, model } = this.resolve(cap, task, 'primary');
+    return { provider: def.id, model, jsonMode: def.jsonMode, supportsSeed: def.supportsSeed };
+  }
+
+  /**
+   * 统一对话入口：按思考模式给 max_tokens 默认值（非思考 8192 / 思考 65536，受提供方输出上限截断），
+   * 请求前粗估提示词长度做上下文上限预检；思考内容只在 reasoning 字段，不进入 content。
+   */
+  chat(task: string, messages: ChatMessage[], opts: ChatOptions = {}): Promise<ChatResult> {
+    const promptTokens = estimateTokens(messages.map((m) => m.content).join('\n'));
+    return this.run('llm', task, (a, m, target, def) => {
+      const thinking = isThinkingModel(m, opts.thinking ?? target.thinking);
+      const maxTokens = planMaxTokens(promptTokens, { thinking, requested: opts.maxTokens, maxOutput: def.maxOutputTokens, contextWindow: def.contextWindow });
+      return a.chat?.(messages, m, { ...opts, thinking, maxTokens });
+    });
+  }
   vision(task: string, images: ImageInput[], prompt: string): Promise<ChatResult> { return this.run('vision', task, (a, m) => a.vision?.(images, prompt, m)); }
   ocr(task: string, images: ImageInput[]): Promise<ChatResult> {
     return this.run('ocr', task, (a, m) => a.vision?.(images, '请做 OCR：逐行输出图片中的全部文字，不要解释，不要补充图片中没有的文字。', m));

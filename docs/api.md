@@ -70,6 +70,16 @@
 | GET | `/api/backup/export` | 导出备份（不含密钥） |
 | POST | `/api/backup/import` | 导入备份（先自动备份） |
 | GET | `/api/media/:draft/:name` | 生成的配图、配音、字幕文件 |
+| GET | `/api/drafts/:id/steps` | 流水线分步记录（text / verify / image-n / tts / asr / video，状态 ok / failed / skipped） |
+| POST | `/api/drafts/:id/resume` | 断点续跑：只重跑失败/跳过/缺失的步骤 |
+| POST | `/api/drafts/:id/partial-rewrite` | 局部重写 `{start,end,instruction?,window?}`：只发送选中段 + 前后窗口（默认 200，上限 800 字） |
+| GET/PUT | `/api/pipeline/settings` | 草稿-验证分档开关 `{draftVerify:{enabled}}`、健康路由 `{health:{enabled,windowMin,minSamples,maxFailRate}}`；返回草稿/强模型与单价比提示 |
+| GET | `/api/metrics/efficiency?days=30` | 单篇成本、缓存命中率、一次通过率、返工放大系数、p50/p95、各服务商失败率 |
+
+## 推理效率相关约定（0.4.0）
+- 价格 `PUT /api/models/prices` 支持 `cachedInput`（缓存命中输入，每百万 token），不填按 `input` 计。
+- 路由 `llm.tasks.draft` 指定草稿模型、`llm.tasks.verify` 指定中置信复核模型；`RouteTarget.thinking` 显式声明思考模式（否则按模型名推断）。
+- skill 可在正文中用 ```json schema 代码块声明输出 Schema（扩展关键字 `x-weightedMax`、`x-segmentSep`），未声明时用平台默认 Schema。
 
 ## 示例
 ```bash

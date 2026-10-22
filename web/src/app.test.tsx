@@ -131,3 +131,32 @@ describe('界面', () => {
     expect(screen.getByText('weird')).toBeTruthy();
   });
 });
+
+describe('推理效率', () => {
+  it('运行状态显示单篇成本、缓存命中率、一次通过率、返工系数与服务商失败率，开关草稿-验证分档', async () => {
+    const { EfficiencyPanel } = await import('./pages/efficiency');
+    const puts: unknown[] = [];
+    mockFetch((u, init) => {
+      if (u.startsWith('/api/metrics/efficiency')) return {
+        days: 30, drafts: 4, costPerDraft: 0.0123, generationCost: 0.0492, byPlatform: [{ platform: 'xiaohongshu', drafts: 4, cost: 0.0492, costPerDraft: 0.0123 }],
+        cache: { inputTokens: 1000, cachedTokens: 620, hitRate: 0.62, reportedCalls: 5 }, firstPass: { measured: 4, passed: 3, rate: 0.75 },
+        amplification: { calls: 10, minCalls: 8, factor: 1.25 }, confidence: [{ tier: 'high', n: 2 }, { tier: 'medium', n: 1 }, { tier: 'low', n: 1 }],
+        latency: { calls: 12, p50: 420, p95: 2300 }, providers: [{ provider: 'deepseek', calls: 10, failed: 1, failRate: 0.1, p50: 400, p95: 2100 }],
+      };
+      if (u === '/api/pipeline/settings') {
+        if (init?.method === 'PUT') puts.push(JSON.parse(String(init.body)));
+        return { draftVerify: { enabled: false }, health: { enabled: true, windowMin: 30, minSamples: 4, maxFailRate: 0.5 }, warning: '未单独指定草稿模型' };
+      }
+      return {};
+    });
+    render(<EfficiencyPanel />);
+    await waitFor(() => expect(screen.getByText('62%')).toBeTruthy());
+    expect(screen.getByText('75%')).toBeTruthy();
+    expect(screen.getByText('1.25×')).toBeTruthy();
+    expect(screen.getByText('2.3s')).toBeTruthy();
+    expect(screen.getByText('10.0%')).toBeTruthy();
+    expect(screen.getByText('未单独指定草稿模型')).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('checkbox')[0]!);
+    await waitFor(() => expect(puts).toEqual([{ draftVerify: { enabled: true } }]));
+  });
+});
