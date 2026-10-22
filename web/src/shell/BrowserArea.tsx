@@ -5,7 +5,6 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../icons';
-import { cn } from '../components/ui/utils';
 import { Drawer, DrawerContent, DrawerItem } from '../components/ui/drawer';
 import { browserHost, overlayManager, type LoadError, type NavState } from '../browser/browserHost';
 import { copyText, openExternal } from '../runtime';
@@ -50,6 +49,7 @@ export function BrowserArea({ target, startUrl, onSend, onMenu, patrol, onPatrol
       restored: (p) => { if (p === target.id) { setRestored(true); setTimeout(() => setRestored(false), 1000); } },
     });
     return off;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在切换平台 / 起始地址时重新激活
   }, [target.id, target.url, startUrl, target.hosts]);
 
   // 离开浏览器区：隐藏全部原生视图

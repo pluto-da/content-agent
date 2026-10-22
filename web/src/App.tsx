@@ -1,5 +1,5 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { apiMode, get } from './api';
+import { apiMode } from './api';
 import { LangContext, translate, type Lang } from './i18n';
 import { Icon } from './icons';
 import { Loading, prefersReducedMotion } from './ui';

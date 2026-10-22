@@ -3,12 +3,10 @@ import { useT } from '../i18n';
 import { Icon } from '../icons';
 import { CENTERS } from '../data/platforms';
 import { PROVIDERS } from '../data/providers';
-import { SAMPLE_IDEAS } from '../local/hot';
 import type { ProviderConfig } from '../local/llm';
 import { getModels, getPrefs, newProviderConfig, setPrefs } from '../local/store';
 import { useLocalApps } from '../format';
 import { ProviderForm } from '../components/ProviderForm';
-import { Composer } from '../components/Composer';
 import { useAddApp } from '../components/addAppContext';
 
 /**

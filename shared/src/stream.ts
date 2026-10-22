@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- 服务商流式 JSON 结构不固定，逐字段做类型守卫 */
 /**
  * 流式响应解析（0.8.0，三端共用）：SSE 行切分 + OpenAI 兼容 delta 累加（content / reasoning_content / tool_calls 按 index 合并 arguments）
  * + Anthropic 兼容事件（content_block_start / content_block_delta / message_delta）。纯函数，不做网络请求。
