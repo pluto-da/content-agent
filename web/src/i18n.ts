@@ -3,6 +3,8 @@ import { createContext, useContext } from 'react';
 export type Lang = 'zh' | 'en';
 
 const en: Record<string, string> = {
+  首页: 'Home', 找选题: 'Find topics', 写内容: 'Write', 看效果: 'Results', 我的: 'Me', 新写一篇: 'Write new', 测试连接: 'Test connection', 用它写一篇: 'Write with this',
+  '这个助手帮你找选题、写内容、准备发布，发布由你自己点。': 'This assistant finds topics, writes drafts and gets them ready — you press publish yourself.', 一句话开始: 'Start with one sentence', 下一步: 'Next step', 已连通: 'Connected',
   今天: 'Today', 灵感: 'Ideas', 创作: 'Create', 新建: 'New', 返回: 'Back', 草稿: 'Drafts', 看板: 'Board', 发布台: 'Publish desk', 草稿与审核: 'Drafts & review',
   '从哪里开始？发布始终由你本人完成。': 'Where to start? You always publish yourself.', 从内容库选素材: 'Pick from library', 改写选题: 'Rewrite a topic', 导入数据复盘: 'Import data for review',
   '抓取公开热榜，挑热点一键转选题': 'Fetch public boards, turn a trend into a topic', 勾选已采集内容生成选题: 'Select items to generate topics', '选平台，一次生成多平台草稿': 'Pick platforms, draft them all at once', '上传平台后台导出的 CSV': 'Upload CSV exported from the platform',

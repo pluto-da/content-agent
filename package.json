@@ -1,18 +1,19 @@
 {
   "name": "content-agent",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "workspaces": [
+    "shared",
     "server",
     "web"
   ],
   "scripts": {
-    "typecheck": "npm run typecheck -w server && npm run typecheck -w web",
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w web",
     "lint": "eslint .",
     "test": "npm run test -w server && npm run test -w web",
     "coverage": "npm run coverage -w server && npm run coverage -w web",
-    "build": "npm run build -w server && npm run build -w web",
+    "build": "npm run build -w shared && npm run build -w server && npm run build -w web",
     "start": "node server/dist/index.js",
     "e2e": "node server/dist/scripts/e2e.js",
     "mimo:smoke": "npm run build -w server --silent && node server/dist/scripts/mimo-smoke.js",
@@ -22,7 +23,8 @@
     "app:ios": "bash scripts/build-ios.sh",
     "app:desktop": "bash scripts/build-desktop.sh",
     "dev:server": "npm run dev -w server",
-    "dev:web": "npm run dev -w web"
+    "dev:web": "npm run dev -w web",
+    "postinstall": "npm run build -w shared"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

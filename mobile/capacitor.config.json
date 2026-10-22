@@ -2,6 +2,23 @@
   "appId": "local.contentagent.app",
   "appName": "内容运营助手",
   "webDir": "../web/dist",
-  "server": { "androidScheme": "https", "cleartext": true },
-  "plugins": { "LocalNotifications": { "smallIcon": "ic_stat_icon_config_sample" } }
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample"
+    },
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "DEFAULT"
+    }
+  },
+  "android": {
+    "adjustMarginsForEdgeToEdge": "auto"
+  }
 }

@@ -19,7 +19,7 @@ export function DropdownMenuItem({ icon, children, hint, className, ...props }: 
       {icon && <span className="mt-0.5 text-muted">{icon}</span>}
       <span className="min-w-0 flex-1">
         <span className="block text-fg">{children}</span>
-        {hint && <span className="block text-[12px] text-muted">{hint}</span>}
+        {hint && <span className="block text-[13px] text-muted">{hint}</span>}
       </span>
     </M.Item>
   );

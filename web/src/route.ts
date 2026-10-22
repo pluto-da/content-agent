@@ -1,78 +1,74 @@
 /**
- * 路由（0.5.0「一个前台」）：hash 形如 #space/tab/id。
- * 8 个一级页面：工作流 today | inspire | create | analytics；工作台 platforms | models | agent | prefs。
- * 0.3.x 的设置中心（#settings/*）与 0.2.x 的平级页面（#review、#status …）全部重定向到新位置。
+ * 路由（0.6.0「装上就能用」）：hash 形如 #space/sub。
+ * 主线 5 个动作页 home | topics | write | publish | results，加 me（我的，含子页）与 onboarding（首启引导）。
+ * 0.5.0 的 8 个名词页、0.3.x 设置中心（#settings/*）与 0.2.x 平级页面全部重定向到新位置。
  */
-export type Space = 'today' | 'inspire' | 'create' | 'analytics' | 'platforms' | 'models' | 'agent' | 'prefs';
+export type Space = 'home' | 'topics' | 'write' | 'publish' | 'results' | 'me' | 'onboarding';
 export interface Route { space: Space; sub: string; id: string | null }
 
-export const SPACES: Space[] = ['today', 'inspire', 'create', 'analytics', 'platforms', 'models', 'agent', 'prefs'];
-export const INSPIRE_TABS = ['hot', 'library', 'topics'] as const;
-export const CREATE_TABS = ['drafts', 'board', 'publish'] as const;
-export const MODELS_TABS = ['routes', 'keys', 'usage'] as const;
-export const AGENT_TABS = ['files', 'improve'] as const;
-export const PREFS_TABS = ['general', 'backup', 'logs'] as const;
+export const SPACES: Space[] = ['home', 'topics', 'write', 'publish', 'results', 'me', 'onboarding'];
+export const ME_SUBS = ['models', 'platforms', 'agent', 'prefs', 'backup', 'logs', 'server'] as const;
+export const WRITE_FILTERS = ['all', 'pending', 'approved', 'handed_off'] as const;
 
-/** 每页的标签与默认标签（每页最多 3 个）。 */
-export const TABS: Partial<Record<Space, readonly string[]>> = {
-  inspire: INSPIRE_TABS, create: CREATE_TABS, models: MODELS_TABS, agent: AGENT_TABS, prefs: PREFS_TABS,
+/** 0.5.0 页面 / 标签 → 0.6.0 位置（单测逐条覆盖）。 */
+export const V5_MAP: Record<string, string> = {
+  today: 'home',
+  inspire: 'topics', 'inspire/hot': 'topics', 'inspire/library': 'topics', 'inspire/topics': 'topics',
+  create: 'write', 'create/drafts': 'write', 'create/board': 'write', 'create/publish': 'publish',
+  analytics: 'results',
+  platforms: 'me/platforms',
+  models: 'me/models', 'models/routes': 'me/models', 'models/keys': 'me/models', 'models/usage': 'me/models',
+  agent: 'me/agent', 'agent/files': 'me/agent', 'agent/improve': 'me/agent',
+  prefs: 'me/prefs', 'prefs/general': 'me/prefs', 'prefs/backup': 'me/backup', 'prefs/logs': 'me/logs',
 };
 
-/** 0.3.x 设置中心 9 个分区 → 0.5.0 前台位置。 */
+/** 0.3.x 设置中心 9 个分区。 */
 export const SETTINGS_MAP: Record<string, string> = {
-  '': 'prefs',
-  status: 'models/usage',
-  models: 'models/routes',
-  secrets: 'models/keys',
-  plugins: 'platforms',
-  'local-apps': 'platforms',
-  agent: 'agent/files',
-  improve: 'agent/improve',
-  general: 'prefs/general',
-  backup: 'prefs/backup',
-  tasks: 'prefs/logs',
+  '': 'me/prefs', status: 'me/models', models: 'me/models', secrets: 'me/models', plugins: 'me/platforms', 'local-apps': 'me/platforms',
+  agent: 'me/agent', improve: 'me/agent', general: 'me/prefs', backup: 'me/backup', tasks: 'me/logs',
 };
 
-/** 0.2.x 的 13 个平级页面 → 新位置（经设置中心的再落到 SETTINGS_MAP）。 */
+/** 0.2.x 的 13 个平级页面。 */
 export const LEGACY: Record<string, string> = {
-  overview: 'today', hot: 'inspire/hot', library: 'inspire/library', topics: 'inspire/topics',
-  review: 'create/drafts', creator: 'create/publish', analytics: 'analytics',
-  status: 'settings/status', agent: 'settings/agent', improve: 'settings/improve', plugins: 'settings/plugins', tasks: 'settings/tasks', settings: 'settings/general',
+  overview: 'home', hot: 'topics', library: 'topics', topics: 'topics', review: 'write', creator: 'publish', analytics: 'results',
+  status: 'me/models', improve: 'me/agent', plugins: 'me/platforms', tasks: 'me/logs', settings: 'me/prefs',
 };
 
-/** 把任意目标（旧页面 id、#settings/* 或新 hash）规范成新 hash。 */
+/** 把任意目标（新 hash、0.5.0 页面、#settings/*、0.2.x 旧 id）规范成新 hash。 */
 export function normalize(target: string): string {
   const raw = target.replace(/^#/, '').trim();
-  if (!raw) return 'today';
-  const [head, ...rest] = raw.split('/');
-  if (head === 'settings') return SETTINGS_MAP[rest[0] ?? ''] ?? 'prefs';
-  if (head && (SPACES as string[]).includes(head)) {
-    // agent 既是新页面也是 0.2.x 旧 id：带标签或 id 时按新页面处理；单独 #agent 也落到 Agent 页（同一位置）
-    return raw;
-  }
-  if (head && head in LEGACY) return normalize(LEGACY[head]!);
-  return 'today';
+  if (!raw) return 'home';
+  const parts = raw.split('/');
+  const head = parts[0]!;
+  if (head === 'settings') return SETTINGS_MAP[parts[1] ?? ''] ?? 'me';
+  if (head === 'home' || head === 'topics' || head === 'results' || head === 'onboarding') return head;
+  if (head === 'write' || head === 'publish' || head === 'me') return raw;
+  // 0.5.0：草稿详情 #create/drafts/12 → #write/12
+  if (head === 'create' && parts[1] === 'drafts' && parts[2] && /^\d+$/.test(parts[2])) return `write/${parts[2]}`;
+  if (head === 'create' && parts[1] && /^\d+$/.test(parts[1])) return `write/${parts[1]}`;
+  const two = parts.slice(0, 2).join('/');
+  if (two in V5_MAP) return V5_MAP[two]!;
+  if (head in V5_MAP) return V5_MAP[head]!;
+  if (head in LEGACY) return LEGACY[head]!;
+  return 'home';
 }
 
 export function parseHash(hash: string): Route {
   const h = normalize(hash);
   const [space, sub = '', id = null] = h.split('/') as [Space, string?, string?];
-  const tab = (list: readonly string[]) => (list.includes(sub) ? sub : list[0]!);
   switch (space) {
-    case 'inspire': return { space, sub: tab(INSPIRE_TABS), id: null };
-    case 'create': {
-      if (/^\d+$/.test(sub)) return { space, sub: 'drafts', id: sub };
-      return { space, sub: tab(CREATE_TABS), id: CREATE_TABS.includes(sub as never) ? id : null };
-    }
-    case 'models': return { space, sub: tab(MODELS_TABS), id: null };
-    case 'agent': return { space, sub: tab(AGENT_TABS), id: null };
-    case 'prefs': return { space, sub: tab(PREFS_TABS), id: sub === 'logs' ? id : null };
-    case 'platforms': return { space, sub: '', id: sub || null };
-    case 'analytics': return { space, sub: '', id: null };
-    default: return { space: 'today', sub: '', id: null };
+    case 'write':
+      if (/^\d+$/.test(sub)) return { space, sub: 'all', id: sub };
+      if (sub === 'new') return { space, sub: 'all', id: 'new' };
+      return { space, sub: (WRITE_FILTERS as readonly string[]).includes(sub) ? sub : 'all', id: null };
+    case 'publish': return { space, sub: '', id: sub || null };
+    case 'me': return { space, sub: (ME_SUBS as readonly string[]).includes(sub) ? sub : '', id: sub === 'models' ? id : null };
+    case 'topics': case 'results': case 'onboarding': return { space, sub: '', id: null };
+    default: return { space: 'home', sub: '', id: null };
   }
 }
 
 export function toHash(r: Route): string {
+  if (r.space === 'write') return r.id ? `write/${r.id}` : r.sub && r.sub !== 'all' ? `write/${r.sub}` : 'write';
   return [r.space, r.sub, r.id].filter(Boolean).join('/');
 }

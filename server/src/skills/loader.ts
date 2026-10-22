@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { containsForbidden, filterTools } from '../boundaries.js';
 import { isCapability, type Capability } from '../models/types.js';
+import { extractSchema, parseFrontMatter } from '@content-agent/shared';
 
 export interface Skill {
   name: string;
@@ -16,36 +17,11 @@ export interface Skill {
   schema?: Record<string, unknown>;
 }
 
-const SCHEMA_BLOCK = /```json\s+schema[^\n]*\n([\s\S]*?)```/;
-
-/** 取出 skill 正文中的 ```json schema 代码块。 */
-export function extractSchema(body: string): { schema?: Record<string, unknown>; body: string } {
-  const m = SCHEMA_BLOCK.exec(body);
-  if (!m) return { body };
-  let schema: unknown;
-  try { schema = JSON.parse(m[1]!); } catch (e) { throw new Error(`输出 Schema 不是合法 JSON：${e instanceof Error ? e.message : String(e)}`, { cause: e }); }
-  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) throw new Error('输出 Schema 必须是 JSON 对象');
-  return { schema: schema as Record<string, unknown>, body: body.replace(m[0], '').replace(/\n{3,}/g, '\n\n').trim() };
-}
+export { extractSchema } from '@content-agent/shared';
 
 export interface SkillLoadError { file: string; error: string }
 
-/** 解析简单 YAML 头信息（key: value 与 key: [a, b]）。 */
-export function parseFrontMatter(src: string): { meta: Record<string, string | string[]>; body: string } {
-  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(src);
-  if (!m) throw new Error('缺少 --- 头信息');
-  const meta: Record<string, string | string[]> = {};
-  for (const line of m[1]!.split(/\r?\n/)) {
-    const idx = line.indexOf(':');
-    if (idx < 0) continue;
-    const k = line.slice(0, idx).trim();
-    const v = line.slice(idx + 1).trim();
-    if (!k) continue;
-    if (v.startsWith('[') && v.endsWith(']')) meta[k] = v.slice(1, -1).split(',').map((s) => s.trim()).filter(Boolean);
-    else meta[k] = v.replace(/^["']|["']$/g, '');
-  }
-  return { meta, body: m[2]!.trim() };
-}
+export { parseFrontMatter } from '@content-agent/shared';
 
 export function parseSkill(src: string, file: string): Skill {
   const { meta, body } = parseFrontMatter(src);

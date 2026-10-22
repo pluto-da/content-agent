@@ -1,4 +1,4 @@
-/** 导航定义（0.5.0）：侧栏只有 WORK_NAV（4）+ DESK_NAV（4）共 8 项，无二级菜单；命令面板与测试都从这里读取。 */
+/** 导航定义（0.6.0）：主线 5 个动作 + 我的；命令面板与测试都从这里读取。 */
 export type Layout = 'phone' | 'tablet' | 'desktop';
 export function layoutOf(width: number): Layout {
   if (width < 768) return 'phone';
@@ -6,53 +6,37 @@ export function layoutOf(width: number): Layout {
   return 'desktop';
 }
 
-export interface NavItem { id: string; label: string; icon: string; group: string; desc: string; keywords?: string }
+export interface NavItem { id: string; label: string; icon: string; desc: string; keywords?: string }
 
-export const WORK_NAV: NavItem[] = [
-  { id: 'today', label: '今天', icon: 'today', group: '工作流', desc: '待审、待发布、失败任务与新热点，一条待办流', keywords: '总览 overview 首页 待办' },
-  { id: 'inspire', label: '灵感', icon: 'inspire', group: '工作流', desc: '热点、内容库与选题', keywords: '热榜 素材' },
-  { id: 'create', label: '创作', icon: 'create', group: '工作流', desc: '草稿与审核、看板、发布台', keywords: '审核 review 发布' },
-  { id: 'analytics', label: '复盘', icon: 'analytics', group: '工作流', desc: '导入数据、复盘报告与回复草稿', keywords: 'csv 数据 回复' },
+/** 主线：每一项都是“我能在这里做什么”。 */
+export const MAIN_NAV: NavItem[] = [
+  { id: 'home', label: '首页', icon: 'home', desc: '下一步做什么，一句话开始', keywords: '今天 today 总览 overview' },
+  { id: 'topics', label: '找选题', icon: 'hot', desc: '热点 + 手动输入一个想法', keywords: '灵感 inspire 热点 热榜 hot 内容库 library 选题 topics' },
+  { id: 'write', label: '写内容', icon: 'create', desc: '生成、修改、审核', keywords: '创作 create 草稿 审核 review 看板 board' },
+  { id: 'publish', label: '去发布', icon: 'send', desc: '复制文案并打开平台 App，由你本人发布', keywords: '发布台 creator 发布 handoff' },
+  { id: 'results', label: '看效果', icon: 'analytics', desc: '录入数据，看趋势与复盘建议', keywords: '复盘 analytics 数据 csv' },
+];
+export const ME_NAV: NavItem = { id: 'me', label: '我的', icon: 'user', desc: '模型、平台与软件、规则、设置', keywords: '设置 settings 偏好 prefs 工作台' };
+
+/** “我的”分组列表（也是命令面板目的地）。 */
+export const ME_GROUPS: { title: string; items: NavItem[] }[] = [
+  { title: '工作', items: [
+    { id: 'me/models', label: '模型', icon: 'cpu', desc: '连接模型服务、测试连接、默认写作模型', keywords: '模型 models 密钥 key secrets 路由 routes 用量 usage 自定义 mimo' },
+    { id: 'me/platforms', label: '平台与软件', icon: 'platforms', desc: '要发的平台、手机上的官方 App', keywords: '平台 platforms 插件 plugins 本地应用 local-apps 添加软件' },
+    { id: 'me/agent', label: '写作助手与规则', icon: 'agent', desc: '每个平台的写作指令与模型', keywords: 'agent 规则 skills soul 系统文件 改进 improve' },
+  ] },
+  { title: '通用', items: [
+    { id: 'me/prefs', label: '通用设置', icon: 'sliders', desc: '主题、语言、热点来源', keywords: '偏好 prefs 通用 general 主题 语言' },
+    { id: 'me/backup', label: '备份与恢复', icon: 'backup', desc: '导出 / 导入本机数据', keywords: '备份 backup 导出 导入' },
+    { id: 'me/logs', label: '日志', icon: 'tasks', desc: '最近做了什么、哪里失败', keywords: '日志 logs 任务 tasks' },
+    { id: 'me/server', label: '连接自己的服务器', icon: 'server', desc: '可选：配音、配图、视频等重活', keywords: '服务器 server 服务端 地址 口令' },
+    { id: 'onboarding', label: '重新开始引导', icon: 'retry', desc: '再走一遍三步引导', keywords: '引导 onboarding 新手' },
+  ] },
 ];
 
-export const DESK_NAV: NavItem[] = [
-  { id: 'platforms', label: '平台', icon: 'platforms', group: '工作台', desc: '各平台登录状态、本地软件与模块开关', keywords: '设置 插件 plugins 本地应用 软件 账号 登录 local-apps' },
-  { id: 'models', label: '模型', icon: 'cpu', group: '工作台', desc: '路由、密钥与用量', keywords: '设置 密钥 key secrets 运行状态 status 成本 用量 mimo' },
-  { id: 'agent', label: 'Agent', icon: 'agent', group: '工作台', desc: '系统文件与改进评测', keywords: '设置 系统文件 soul 规则 skills 记忆 评测 improve' },
-  { id: 'prefs', label: '偏好', icon: 'sliders', group: '工作台', desc: '通用、备份与日志', keywords: '设置 settings 通用 主题 语言 代理 备份 任务 日志 tasks' },
-];
-
-export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
-  { title: '工作流', items: WORK_NAV },
-  { title: '工作台', items: DESK_NAV },
-];
-export const SIDEBAR_ITEMS: NavItem[] = [...WORK_NAV, ...DESK_NAV];
-
-/** 页面内标签（命令面板可直接跳到标签）。 */
-export const TAB_NAV: NavItem[] = [
-  { id: 'inspire/hot', label: '热点', icon: 'hot', group: '灵感', desc: '公开热榜采集、跨榜合并与聚类，一键转选题' },
-  { id: 'inspire/library', label: '内容库', icon: 'library', group: '灵感', desc: '信息源与已采集内容' },
-  { id: 'inspire/topics', label: '选题', icon: 'topics', group: '灵感', desc: '候选选题与多平台改写' },
-  { id: 'create/drafts', label: '草稿与审核', icon: 'review', group: '创作', desc: '编辑、审核、平台预览' },
-  { id: 'create/board', label: '看板', icon: 'kanban', group: '创作', desc: '选题 → 生成中 → 待审 → 待发布 → 已发布' },
-  { id: 'create/publish', label: '发布台', icon: 'creator', group: '创作', desc: '打开官方后台或本地软件，由你本人发布' },
-  { id: 'models/routes', label: '路由', icon: 'cpu', group: '模型', desc: '每种能力用哪个服务商和模型', keywords: '模型设置 备用 思考 单价' },
-  { id: 'models/keys', label: '密钥', icon: 'key', group: '模型', desc: '平台与模型密钥（只显示末四位）', keywords: 'secrets api key' },
-  { id: 'models/usage', label: '用量', icon: 'activity', group: '模型', desc: '花费、效率与运行状态', keywords: '运行状态 status 成本 硬边界' },
-  { id: 'agent/files', label: '文件', icon: 'agent', group: 'Agent', desc: 'soul、规则、skills 与记忆', keywords: '系统文件' },
-  { id: 'agent/improve', label: '改进', icon: 'improve', group: 'Agent', desc: 'Skills、A/B 评测与改进日志', keywords: '改进与评测' },
-  { id: 'prefs/general', label: '通用', icon: 'sliders', group: '偏好', desc: '主题、语言、连接、代理与采集' },
-  { id: 'prefs/backup', label: '备份', icon: 'backup', group: '偏好', desc: '导出与恢复业务数据' },
-  { id: 'prefs/logs', label: '日志', icon: 'tasks', group: '偏好', desc: '任务队列与运行日志', keywords: '任务与日志 tasks' },
-];
-
-/** 全部可跳转的目的地（命令面板）：8 个页面 + 各页标签。 */
-export const NAV: NavItem[] = [...SIDEBAR_ITEMS, ...TAB_NAV];
-
-/** 右下“＋”抽屉中的新建动作（原 NEW_ACTIONS 弹层并入此处；第一项“添加软件”由抽屉单独渲染）。 */
-export const NEW_ACTIONS = [
-  { to: 'inspire/hot', icon: 'hot', label: '采集热榜', hint: '抓取公开热榜，挑热点一键转选题' },
-  { to: 'inspire/library', icon: 'library', label: '从内容库选素材', hint: '勾选已采集内容生成选题' },
-  { to: 'inspire/topics', icon: 'topics', label: '改写选题', hint: '选平台，一次生成多平台草稿' },
-  { to: 'analytics', icon: 'upload', label: '导入数据复盘', hint: '上传平台后台导出的 CSV' },
-];
+/** 侧栏：主线 5 项 + 我的。 */
+export const SIDEBAR_ITEMS: NavItem[] = [...MAIN_NAV, ME_NAV];
+/** 手机底部 5 格（看效果从首页卡片、去发布页与命令面板进入）。 */
+export const BOTTOM_ITEMS: NavItem[] = [MAIN_NAV[0]!, MAIN_NAV[1]!, MAIN_NAV[2]!, MAIN_NAV[3]!, ME_NAV];
+/** 命令面板全部目的地。 */
+export const NAV: NavItem[] = [...SIDEBAR_ITEMS, ...ME_GROUPS.flatMap((g) => g.items)];

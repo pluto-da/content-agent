@@ -46,6 +46,32 @@ flowchart LR
 | 安全 | CSP、X-Frame-Options、访问口令（定时比较）、密钥不回显、日志脱敏、前端包密钥扫描、npm audit |
 | 离线 | Service Worker：外壳缓存 + 接口 GET 网络优先回落缓存；前端显示“离线” |
 
+## 0.6.0：本机模式与共用模块
+
+```mermaid
+flowchart LR
+  UI[页面 pages/*] --> API[web/src/api.ts\nget/post/put/del]
+  API -- serverBase() 为空 --> LR[web/src/local/router.ts\n按路径分派，与服务端同签名]
+  API -- 已连接服务器 --> SRV[Fastify 服务端（可选）]
+  LR --> DB[(IndexedDB\nlocal/db.ts · store.ts)]
+  LR --> GEN[local/generate.ts]
+  LR --> HOT[local/hot.ts\nRSS·公开榜单]
+  GEN --> LLM[local/llm.ts\nOpenAI / Anthropic 兼容直连\nApp 内经 CapacitorHttp]
+  GEN --> SH[app/shared\nprompt·platforms·schema·structured·compliance]
+  HOT --> SH2[app/shared\nfeeds·robots]
+  SRV --> SH
+```
+
+| 主题 | 做法 |
+|---|---|
+| 模式判断 | `api.ts`：`serverBase()` 为空 = 本机模式，请求交给 `local/router.ts`；填了服务器地址且测试连接成功 = 服务端模式。两种模式页面代码相同。 |
+| 共用模块（A14） | `app/shared/src/`：`prompt.ts`（稳定前缀组装）、`platforms.ts`（平台字数规则、默认 Schema）、`schema.ts` + `structured.ts`（JSON Schema 校验与一次修复）、`compliance.ts`、`feeds.ts`（RSS/Atom 解析）、`robots.ts`、`errors.ts`（白话错误分类）、`skill.ts`、`json.ts`。服务端 `server/src/modules/prompt.ts`、`schemas.ts`、`compliance.ts`、`models/schema.ts`、`models/structured.ts`、`sources/rss.ts`、`sources/web.ts` 改为引用它；本机 `local/generate.ts`、`local/hot.ts` 同样引用。 |
+| 模型直连 | `local/llm.ts`：OpenAI 兼容 `/chat/completions` 与 Anthropic 兼容 `/messages`；Capacitor 开启 `plugins.CapacitorHttp.enabled`，原生层发请求，不受 WebView 跨域限制；网页版跨域失败归类为“跨域被拒”并提示。 |
+| 本机数据 | IndexedDB 集合：drafts、topics、apps、metrics、logs，另有 kv 存设置与服务商配置；Key，界面只显示末四位，不写日志，备份默认不含。 |
+| 平台数据 | `web/src/data/platforms.ts`：7 个平台与官方 App 包名 / Scheme 为前端静态数据（`data/providers.ts` 服务商预设，`data/assistants.ts` 写作助手默认指令），添加软件与平台页不再依赖接口。 |
+| 安全区 | `statusbar.ts` 调 `@capacitor/status-bar`（不覆盖内容、按主题切图标颜色）；CSS 用 `env(safe-area-inset-*)`（变量 `--sa-top` 等，测试可注入）。 |
+| 服务端（可选） | 配音、配图、合成视频、多设备共用需要服务端；本机模式下这些入口显示“需要连接服务器”。 |
+
 ## 数据表
 
 sources、runs、items、topics、drafts、draft_edits、handoffs、metrics、versions、tasks、usage、hot_items、hot_runs、local_apps、settings。

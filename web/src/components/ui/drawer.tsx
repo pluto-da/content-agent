@@ -12,7 +12,7 @@ export function DrawerContent({ className, children, title, description, ...prop
     <Vaul.Portal>
       <Vaul.Overlay className="fixed inset-0 z-50 bg-black/32" />
       <Vaul.Content
-        className={cn('fixed inset-x-0 bottom-0 z-50 flex max-h-[86dvh] flex-col rounded-t-card bg-surface text-fg shadow-pop outline-none', className)}
+        className={cn('fixed inset-x-0 bottom-0 z-50 flex max-h-[calc(90dvh-var(--sa-top))] flex-col rounded-t-card bg-surface text-fg shadow-pop outline-none', className)}
         {...props}
       >
         <div aria-hidden="true" className="mx-auto mt-2 mb-1 h-1 w-9 shrink-0 rounded-full bg-line-strong" />
@@ -20,7 +20,7 @@ export function DrawerContent({ className, children, title, description, ...prop
           <Vaul.Title className="text-base font-semibold text-fg">{title}</Vaul.Title>
           {description ? <Vaul.Description className="mt-0.5 text-[13px] text-muted">{description}</Vaul.Description> : <Vaul.Description className="sr-only">{title}</Vaul.Description>}
         </div>
-        <div className="overflow-y-auto px-2 pb-[calc(12px+env(safe-area-inset-bottom))]">{children}</div>
+        <div className="overflow-y-auto px-2 pb-[calc(12px+var(--sa-bottom))]">{children}</div>
       </Vaul.Content>
     </Vaul.Portal>
   );
@@ -42,7 +42,7 @@ export function DrawerItem({ icon, label, hint, onClick, tone, disabled }: { ico
       {icon && <span className="grid w-5 place-items-center text-muted">{icon}</span>}
       <span className="min-w-0 flex-1">
         <span className="block">{label}</span>
-        {hint && <span className="block text-[12px] leading-snug text-muted">{hint}</span>}
+        {hint && <span className="block text-[13px] leading-snug text-muted">{hint}</span>}
       </span>
     </button>
   );

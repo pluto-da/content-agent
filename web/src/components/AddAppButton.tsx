@@ -16,7 +16,7 @@ export function AddAppButton({ variant }: { variant: 'side' | 'rail' | 'drawer' 
   const { open, count } = useAddApp();
   const badge = count > 0 && (
     <span
-      className={cn('absolute grid h-[18px] min-w-[18px] place-items-center rounded-full border border-ink bg-surface px-1 text-[11px] font-semibold leading-none tabular-nums text-fg', variant === 'rail' ? '-right-1 -top-1' : '-right-1.5 -top-1.5')}
+      className={cn('absolute grid h-[18px] min-w-[18px] place-items-center rounded-full border border-ink bg-surface px-1 text-[13px] font-semibold leading-none tabular-nums text-fg', variant === 'rail' ? '-right-1 -top-1' : '-right-1.5 -top-1.5')}
       aria-hidden="true"
     >{count}</span>
   );

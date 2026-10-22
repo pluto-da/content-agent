@@ -1,3 +1,4 @@
+import { parseBaiduHot } from '@content-agent/shared';
 import type { DB } from '../db.js';
 import { parseJson } from '../db.js';
 import type { SecretVault } from '../crypto.js';
@@ -92,11 +93,7 @@ interface BoardDef {
 export const BOARDS: BoardDef[] = [
   {
     id: 'baidu', label: '百度热搜', url: 'https://top.baidu.com/api/board?platform=wise&tab=realtime',
-    parse(text) {
-      const j = JSON.parse(text) as { data?: { cards?: { content?: { content?: { word?: string; url?: string; hotScore?: string; index?: number }[] }[] }[] } };
-      const list = j.data?.cards?.[0]?.content?.flatMap((c) => c.content ?? []) ?? [];
-      return list.filter((x) => x.word).map((x, i) => ({ title: x.word!, rank: i + 1, heat: x.hotScore, url: x.url }));
-    },
+    parse: parseBaiduHot,
   },
   {
     id: 'weibo', label: '微博热搜', url: 'https://weibo.com/ajax/side/hotSearch',

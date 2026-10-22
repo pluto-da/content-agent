@@ -54,11 +54,16 @@ export function deviceClass(width: number, rt: Runtime): Device {
   return 'desktop';
 }
 
-/** 服务地址：网页版同源；App 版由用户填写（保存在本机）。 */
-export function serverBase(): string {
-  if (runtime() === 'web') return '';
-  return (localStorage.getItem('ca.server') ?? '').replace(/\/+$/, '');
+/**
+ * 0.6.0：默认本机模式，不需要任何服务器。只有用户在“我的 → 连接服务器”测试连通后才走服务端。
+ * 返回服务器基地址（'' 表示与网页同源），未连接返回 null。
+ */
+export function connectedServer(): string | null {
+  if (typeof localStorage === 'undefined' || localStorage.getItem('ca.mode') !== 'server') return null;
+  return (localStorage.getItem('ca.server') ?? '').trim().replace(/\/+$/, '');
 }
+/** 兼容旧调用：未连接服务器时为空串。 */
+export function serverBase(): string { return connectedServer() ?? ''; }
 
 export async function openExternal(url: string): Promise<void> {
   const rt = runtime();

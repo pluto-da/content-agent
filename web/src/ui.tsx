@@ -173,3 +173,78 @@ export function Field({ label, children, hint }: { label: string; children: Reac
     </label>
   );
 }
+
+/* ---------------- 0.6.0 反馈组件：任何失败 = 一句白话原因 + 一个下一步按钮；空状态 = 为什么空 + 怎么变不空 ---------------- */
+
+export function Problem({ title, advice, action, onAction, secondary, testId }: { title: string; advice?: string; action?: string; onAction?: () => void; secondary?: ReactNode; testId?: string }) {
+  return (
+    <div className="problem" role="alert" data-testid={testId ?? 'problem'}>
+      <Icon name="error" size={18} className="problem-ico" />
+      <div className="grow">
+        <strong>{title}</strong>
+        {advice && <p>{advice}</p>}
+        {(action || secondary) && <div className="problem-a">{action && onAction && <button type="button" className="primary" onClick={onAction}>{action}</button>}{secondary}</div>}
+      </div>
+    </div>
+  );
+}
+
+/** ApiError → Problem；next 决定唯一的下一步按钮。 */
+export function ErrorNext({ error, action, onAction }: { error: ApiError | { message: string; advice?: string } | null; action?: string; onAction?: () => void }) {
+  if (!error) return null;
+  return <Problem title={error.message} advice={error.advice} action={action} onAction={onAction} />;
+}
+
+export function EmptyState({ icon = 'inbox', title, why, action, onAction }: { icon?: string; title: string; why: string; action?: string; onAction?: () => void }) {
+  return (
+    <div className="empty-state" data-testid="empty">
+      <span className="empty-ico"><Icon name={icon} size={20} /></span>
+      <strong>{title}</strong>
+      <p>{why}</p>
+      {action && onAction && <button type="button" className="primary" onClick={onAction}>{action}</button>}
+    </div>
+  );
+}
+
+/** “?” 说明：解释性文字收进这里，不在页面顶部堆小字。 */
+export function HelpTip({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="help-tip">
+      <button type="button" className="ghost help-btn" aria-label={`说明：${label}`} aria-expanded={open} onClick={() => setOpen((x) => !x)}>?</button>
+      {open && <span className="help-pop" role="note">{children}</span>}
+    </span>
+  );
+}
+
+/** 分组列表（“我的”、设置类页面）：图标 + 文字 + ›，行高 56px。 */
+export function GroupList({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <section className="group">
+      {title && <h2 className="group-t">{title}</h2>}
+      <ul className="group-list">{children}</ul>
+    </section>
+  );
+}
+export function ListRow({ icon, label, hint, value, onClick, href, danger, testId }: { icon?: string; label: string; hint?: string; value?: ReactNode; onClick?: () => void; href?: string; danger?: boolean; testId?: string }) {
+  const inner = (
+    <>
+      {icon && <span className="row-ico"><Icon name={icon} size={18} /></span>}
+      <span className="row-text"><span className={danger ? 'row-label danger' : 'row-label'}>{label}</span>{hint && <span className="row-hint">{hint}</span>}</span>
+      {value !== undefined && <span className="row-value">{value}</span>}
+      {(onClick || href) && <Icon name="chevronRight" size={16} className="row-chev" />}
+    </>
+  );
+  return (
+    <li>
+      {href ? <a className="list-row" href={href} data-testid={testId} onClick={onClick ? (e) => { e.preventDefault(); onClick(); } : undefined}>{inner}</a>
+        : onClick ? <button type="button" className="list-row" data-testid={testId} onClick={onClick}>{inner}</button>
+          : <div className="list-row static" data-testid={testId}>{inner}</div>}
+    </li>
+  );
+}
+
+/** 进度提示（生成、测试连接等耗时操作）。 */
+export function Busy({ label }: { label: string }) {
+  return <span className="busy" role="status" aria-live="polite"><Icon name="spinner" size={16} className="spin" />{label}</span>;
+}

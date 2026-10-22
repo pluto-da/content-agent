@@ -14,6 +14,7 @@ import type { AgentFiles } from './agentfiles.js';
 import { checkCompliance } from './compliance.js';
 import { getItems } from './library.js';
 import { composeDraftVideo, VIDEO_PLATFORMS } from './video.js';
+import { rewriteUserMessage as sharedRewriteMessage, partialRewriteMessage } from '@content-agent/shared';
 
 export const PLATFORMS = {
   xiaohongshu: { label: '小红书图文', skill: 'xiaohongshu-note' },
@@ -106,15 +107,7 @@ function pipelineOf(db: DB, draftId: number): PipelineStep[] {
 }
 
 function rewriteUserMessage(platform: Platform, topic: Record<string, unknown>, research: unknown, items: { title: string; url?: string | null }[], extra = ''): string {
-  return [
-    `[TASK:rewrite] [PLATFORM:${platform}]`,
-    `选题标题：${String(topic.title)}`,
-    `角度：${String(topic.angle ?? '')}`,
-    research ? `调研：${JSON.stringify(research)}` : '',
-    items.length ? `素材：\n${items.map((i) => `- ${i.title} ${i.url ?? ''}`).join('\n')}` : '',
-    extra,
-    '请输出 JSON：{"title","body","tags","image_prompts"(可选),"voiceover"(可选)}',
-  ].filter(Boolean).join('\n');
+  return sharedRewriteMessage(platform, { title: String(topic.title), angle: topic.angle == null ? '' : String(topic.angle) }, research, items, extra);
 }
 
 /** 应用中置信复核结果：只替换合规命中词，避免模型借机改动正文其他部分。 */
@@ -334,15 +327,7 @@ export async function partialRewrite(deps: Deps, draftId: number, opts: { start:
   const schema = schemaFor(skill, platform);
   const r = await chatStructured<{ text: string }>(deps.hub, `partial:${platform}`, [
     { role: 'system', content: systemPrompt(deps.agent, skill, schema) },
-    { role: 'user', content: [
-      `[TASK:partial_rewrite] [PLATFORM:${platform}]`,
-      '只改写“选中”部分，与前后文衔接、语气一致；不要输出前后文。',
-      `修改要求：${opts.instruction?.trim() || '润色，使表达更清晰'}`,
-      `<<<前文>>>\n${before}\n<<</前文>>>`,
-      `<<<选中>>>\n${sel}\n<<</选中>>>`,
-      `<<<后文>>>\n${after}\n<<</后文>>>`,
-      '请输出 JSON：{"text":"改写后的选中段"}',
-    ].join('\n') },
+    { role: 'user', content: partialRewriteMessage(platform, before, sel, after, opts.instruction) },
   ], { type: 'object', required: ['text'], properties: { text: { type: 'string', minLength: 1, maxLength: Math.max(200, [...sel].length * 3) } } }, { name: 'partial_rewrite' });
   const text = r.data.text;
   const body = d.body.slice(0, start) + text + d.body.slice(end);

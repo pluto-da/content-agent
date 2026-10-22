@@ -89,6 +89,19 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
     reply.header('X-Frame-Options', 'DENY');
     return payload;
   });
+  // 0.6.0：App（Capacitor WebView 源 https://localhost / capacitor://localhost）、本机调试页与 CA_CORS_ORIGINS 中的源可跨域访问 /api。
+  const extraOrigins = (process.env.CA_CORS_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  const corsOk = (o: string) => /^(https?|capacitor):\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o) || extraOrigins.includes(o);
+  app.addHook('onRequest', async (req, reply) => {
+    const origin = String(req.headers.origin ?? '');
+    if (origin && req.url.startsWith('/api/') && corsOk(origin)) {
+      reply.header('Access-Control-Allow-Origin', origin);
+      reply.header('Vary', 'Origin');
+      reply.header('Access-Control-Allow-Headers', 'content-type, x-access-token');
+      reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      if (req.method === 'OPTIONS') return reply.code(204).send();
+    }
+  });
   app.addHook('onRequest', async (req, reply) => {
     if (!token || !req.url.startsWith('/api/') || req.url === '/api/health') return;
     const got = String(req.headers['x-access-token'] ?? '');
@@ -111,7 +124,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   };
 
   /* ---------- 基础 ---------- */
-  app.get('/api/health', async () => ({ ok: true, version: '0.5.0' }));
+  app.get('/api/health', async () => ({ ok: true, version: '0.6.0' }));
   app.get('/api/boundaries', async () => ({ boundaries: HARD_BOUNDARIES, tools: ALLOWED_TOOLS }));
 
   /* ---------- 设置与密钥 ---------- */
@@ -270,6 +283,19 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
       results.push({ platform: p, ok: r.ok, error: r.error, ...(r.result ?? {}) });
     }
     return { results };
+  });
+
+  /** 0.6.0：一句话想法直接生成（App“连接服务器”模式用；本机模式在前端完成同样的流程）。 */
+  app.post('/api/compose', async (req) => {
+    const b = (req.body ?? {}) as { idea?: string; platform?: string };
+    const idea = String(b.idea ?? '').trim().slice(0, 500);
+    const platform = String(b.platform ?? 'xiaohongshu');
+    if (!idea) throw new AppError('bad_request', '先输入一个想法');
+    if (!isPlatform(platform)) throw new AppError('bad_request', '不支持的平台');
+    const topicId = Number(db.prepare("INSERT INTO topics(title, angle, platforms, item_ids, origin) VALUES(?, '', ?, '[]', 'manual')").run(idea, JSON.stringify([platform])).lastInsertRowid);
+    const r = await queue.run({ kind: 'rewrite', label: `改写：${PLATFORMS[platform].label}`, retries: 1, timeoutMs: 600000 }, () => rewrite(deps, topicId, platform));
+    if (!r.ok) throw new Error(r.error);
+    return { topicId, ...r.result, draft: getDraft(db, r.result!.draftId) };
   });
 
   /* ---------- 断点续跑、局部重写、草稿-验证分档、效率度量 ---------- */

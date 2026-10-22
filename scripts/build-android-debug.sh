@@ -4,6 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 npm ci
+npm run build -w shared   # 0.6.0：前端本机模式依赖共用模块（postinstall 也会构建，这里显式再跑一次）
 (cd web && VITE_TARGET=app npx vite build)
 cd mobile
 npm install

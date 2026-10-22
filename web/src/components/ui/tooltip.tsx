@@ -9,7 +9,7 @@ export function Tip({ label, side = 'right', children }: { label: string; side?:
     <T.Root>
       <T.Trigger asChild>{children}</T.Trigger>
       <T.Portal>
-        <T.Content side={side} sideOffset={8} className="z-[90] rounded-ctl bg-ink px-2 py-1 text-[12px] font-medium text-ink-fg shadow-pop">
+        <T.Content side={side} sideOffset={8} className="z-[90] rounded-ctl bg-ink px-2 py-1 text-[13px] font-medium text-ink-fg shadow-pop">
           {label}
         </T.Content>
       </T.Portal>

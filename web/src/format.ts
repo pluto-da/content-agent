@@ -3,13 +3,18 @@ import { get } from './api';
 import type { KnownApp, LocalAppEntry } from './native';
 import type { AppOs } from './runtime';
 import { useLoad } from './ui';
+/** 0.6.0：平台清单是静态数据，接口失败时也能列出全部平台。 */
+import { KNOWN_APPS } from './data/platforms';
 
 export const PLATFORM_LABEL: Record<string, string> = { xiaohongshu: '小红书', douyin_script: '抖音', channels: '视频号', wechat_article: '公众号', xianyu: '闲鱼', x_post: 'X', zhihu_answer: '知乎回答', zhihu_article: '知乎文章' };
 export const OS_LABEL: Record<AppOs, string> = { android: 'Android', ios: 'iOS', windows: 'Windows', mac: 'macOS' };
 
 export interface LocalAppsData { apps: (LocalAppEntry & { id: number })[]; known: KnownApp[] }
 export function useLocalApps(version = 0) {
-  return useLoad<LocalAppsData>(() => get('/api/local-apps'), [version]);
+  return useLoad<LocalAppsData>(async () => {
+    const d = await get<LocalAppsData>('/api/local-apps');
+    return { apps: d.apps ?? [], known: d.known?.length ? d.known : KNOWN_APPS };
+  }, [version]);
 }
 
 /** 某平台在本机系统上的预设条目（官方包名 / Scheme）。 */
