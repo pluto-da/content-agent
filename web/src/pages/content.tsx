@@ -110,7 +110,7 @@ export function Overview({ go }: { go: (p: string) => void }) {
 
       <div className="dash-grid">
         <div className="kpis span-12">
-          <Kpi label={t('待审草稿')} value={Number(n.data?.pendingDrafts ?? 0)} loading={n.loading} onClick={() => go('review')} delta={weekDelta(draftSeries)} />
+          <Kpi label={t('待审草稿')} value={Number(n.data?.pendingDrafts ?? 0)} loading={n.loading} onClick={() => go('review')} delta={weekDelta(draftSeries)} hint={t('去审核')} />
           <Kpi label={t('候选选题')} value={candidates} loading={topics.loading} onClick={() => go('topics')} hint={t('待改写')} />
           <Kpi label={t('热榜条目')} value={merged.length} loading={hot.loading} onClick={() => go('hot')} hint={`${t('热点命中')} ${hotMatches.length}`} />
           <Kpi label={t('任务成功率')} value={successRate} decimals={0} suffix="%" loading={tasks.loading} onClick={() => go('tasks')} hint={`${t('失败任务')} ${failN}`} />

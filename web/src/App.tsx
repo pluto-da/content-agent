@@ -11,7 +11,7 @@ import { Settings, type Theme } from './pages/settings';
 
 export type NavGroup = 'make' | 'publish' | 'system';
 export const NAV: { id: string; label: string; icon: string; group: NavGroup; desc: string; plugin?: string }[] = [
-  { id: 'overview', label: '总览', icon: 'overview', group: 'make', desc: '今天要处理什么' },
+  { id: 'overview', label: '总览', icon: 'overview', group: 'make', desc: '今日待审、热点与关键指标' },
   { id: 'hot', label: '热点', icon: 'hot', group: 'make', desc: '公开热榜采集、跨榜合并与聚类' },
   { id: 'library', label: '内容库', icon: 'library', group: 'make', desc: '信息源与已采集内容' },
   { id: 'topics', label: '选题', icon: 'topics', group: 'make', desc: '候选选题与多平台改写' },

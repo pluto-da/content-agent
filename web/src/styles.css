@@ -227,6 +227,7 @@ input[type='checkbox'] { width: 16px; height: 16px; min-height: 16px; padding: 0
 .topbar-actions .badge { margin: 0 4px 0 0; }
 .theme-ico { display: grid; }
 
+main:focus, main:focus-visible { outline: none; }
 main { width: 100%; max-width: 1200px; margin: 0 auto; padding: 8px 32px 64px; outline: none; }
 
 /* 手机：底部标签栏（唯一允许轻模糊的元素）+ 底部抽屉 */
