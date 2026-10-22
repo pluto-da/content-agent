@@ -60,6 +60,19 @@ function android() {
   if (/QUERY_ALL_PACKAGES/.test(m)) console.warn('警告：清单中存在 QUERY_ALL_PACKAGES，上架 Google Play 需要特别审批，建议移除');
   writeFileSync(manifestPath, m);
   console.log(`Android：已写入 LocalApps 插件与 <queries>（${pkgs.length} 个包名）`);
+
+  // 版本号与 mobile/package.json 保持一致：versionName = x.y.z，versionCode = x*10000 + y*100 + z
+  const gradlePath = join(root, 'android', 'app', 'build.gradle');
+  const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+  const mv = /^(\d+)\.(\d+)\.(\d+)/.exec(version ?? '');
+  if (existsSync(gradlePath) && mv) {
+    const code = Number(mv[1]) * 10000 + Number(mv[2]) * 100 + Number(mv[3]);
+    const g = readFileSync(gradlePath, 'utf8')
+      .replace(/versionCode\s+\d+/, `versionCode ${code}`)
+      .replace(/versionName\s+"[^"]*"/, `versionName "${version}"`);
+    writeFileSync(gradlePath, g);
+    console.log(`Android：versionName ${version}，versionCode ${code}`);
+  }
 }
 
 function ios() {

@@ -1,9 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { get, post, del } from '../api';
 import { useT } from '../i18n';
 import { Icon } from '../icons';
 import { notify, type Device } from '../runtime';
-import { Badge, Card, CountUp, Empty, ErrorBox, Field, Loading, MiniBars, Skeleton, SkeletonLines, Sparkline, StatusBadge, useLoad, useToast } from '../ui';
+import { Badge, Card, CountUp, Empty, ErrorBox, Field, Loading, Skeleton, SkeletonLines, Sparkline, StatusBadge, useLoad, useToast } from '../ui';
 
 /* ---------- 总览 Dashboard ---------- */
 
@@ -41,36 +41,33 @@ function ago(ts: string | undefined, lang: string): string {
   return zh ? `${Math.floor(s / 86400)} 天前` : `${Math.floor(s / 86400)}d ago`;
 }
 
-function Kpi({ label, value, decimals, prefix, suffix, delta, deltaGoodWhenUp = true, chart, icon, loading, onClick, hint }: {
+function Kpi({ label, value, decimals, prefix, suffix, delta, deltaGoodWhenUp = true, loading, onClick, hint }: {
   label: string; value: number; decimals?: number; prefix?: string; suffix?: string; delta?: number | null; deltaGoodWhenUp?: boolean;
-  chart: ReactNode; icon: string; loading: boolean; onClick?: () => void; hint?: string;
+  loading: boolean; onClick?: () => void; hint?: string;
 }) {
   const { t } = useT();
   const good = delta == null ? null : (delta >= 0) === deltaGoodWhenUp;
   return (
     <button className="kpi" onClick={onClick} aria-label={`${label}：${loading ? t('加载中') : value.toFixed(decimals ?? 0)}${suffix ?? ''}`}>
       <span className="kpi-top">
-        <span className="kpi-label"><Icon name={icon} size={15} />{label}</span>
+        <span className="kpi-label">{label}</span>
         <Icon name="arrowRight" size={14} className="kpi-go" />
       </span>
-      {loading ? <Skeleton w="45%" h={30} r={8} style={{ margin: '6px 0 4px' }} /> : <span className="kpi-value"><CountUp value={value} decimals={decimals} prefix={prefix} suffix={suffix} /></span>}
+      {loading ? <Skeleton w="40%" h={32} r={6} style={{ margin: '4px 0' }} /> : <span className="kpi-value"><CountUp value={value} decimals={decimals} prefix={prefix} suffix={suffix} /></span>}
       <span className="kpi-foot">
         {delta != null && !loading
-          ? <span className={`delta ${good ? 'up' : 'down'}`}><Icon name={delta >= 0 ? 'arrowUp' : 'arrowDown'} size={12} strokeWidth={2.2} />{Math.abs(delta)}%<span className="muted"> {t('较上周')}</span></span>
-          : <span className="muted small">{hint ?? ''}</span>}
-        <span className="kpi-chart">{chart}</span>
+          ? <span className={`delta ${good ? 'up' : 'down'}`}><Icon name={delta >= 0 ? 'arrowUp' : 'arrowDown'} size={12} />{Math.abs(delta)}%<span className="muted"> {t('较上周')}</span></span>
+          : <span className="muted">{hint ?? ''}</span>}
       </span>
     </button>
   );
 }
 
+/** 总览：只回答“今天要处理什么”——4 个指标卡 + 待审队列 + 热点前 5。成本、模型、流水线、任务与硬边界见“运行状态”页。 */
 export function Overview({ go }: { go: (p: string) => void }) {
   const { t, lang } = useT();
   const n = useLoad(() => get('/api/notifications'));
   const tasks = useLoad(() => get('/api/tasks?limit=200'));
-  const models = useLoad(() => get('/api/models'));
-  const b = useLoad(() => get('/api/boundaries'));
-  const costs = useLoad(() => get('/api/models/costs?days=30'));
   const hot = useLoad(() => get('/api/hot'));
   const drafts = useLoad(() => get('/api/drafts'));
   const topics = useLoad(() => get('/api/topics'));
@@ -78,37 +75,18 @@ export function Overview({ go }: { go: (p: string) => void }) {
 
   const days = lastDays(14);
   const draftRows: any[] = Array.isArray(drafts.data?.drafts) ? drafts.data.drafts : [];
-  const taskRows: any[] = Array.isArray(tasks.data?.tasks) ? tasks.data.tasks : [];
   const topicRows: any[] = Array.isArray(topics.data?.topics) ? topics.data.topics : [];
   const merged: any[] = Array.isArray(hot.data?.merged) ? hot.data.merged : [];
-  const runs: any[] = Array.isArray(hot.data?.runs) ? hot.data.runs : [];
   const hotMatches: string[] = Array.isArray(n.data?.hotMatches) ? n.data.hotMatches : [];
   const stats: Record<string, number> = tasks.data?.stats ?? {};
 
   const draftSeries = perDay(draftRows, days);
-  const taskSeries = perDay(taskRows, days);
-  const costSeries = perDay(costs.data?.byDay ?? [], days, 'day', (r) => Number(r.cost) || 0);
   const okN = stats.succeeded ?? 0;
   const failN = stats.failed ?? 0;
   const successRate = okN + failN ? (okN / (okN + failN)) * 100 : 0;
-  const boardCounts = runs.map((r) => Number(r.count ?? r.items?.length ?? 0));
-
-  const byStatus = (s: string) => draftRows.filter((d) => d.status === s).length;
+  const pendingAll = draftRows.filter((d) => d.status === 'pending');
+  const pendingList = pendingAll.slice(0, 5);
   const candidates = topicRows.filter((x) => x.status === 'candidate').length;
-  const stages: { key: string; label: string; n: number; page: string; tone: string }[] = [
-    { key: 'topic', label: '候选选题', n: candidates, page: 'topics', tone: 's1' },
-    { key: 'pending', label: '待审核', n: byStatus('pending'), page: 'review', tone: 's2' },
-    { key: 'approved', label: '已通过', n: byStatus('approved'), page: 'review', tone: 's3' },
-    { key: 'handed_off', label: '已交接', n: byStatus('handed_off'), page: 'review', tone: 's4' },
-    { key: 'rejected', label: '已驳回', n: byStatus('rejected'), page: 'review', tone: 's5' },
-  ];
-  const stageTotal = stages.reduce((s, x) => s + x.n, 0);
-  const pendingList = draftRows.filter((d) => d.status === 'pending').slice(0, 5);
-  const capCosts: any[] = Array.isArray(costs.data?.byCapability) ? costs.data.byCapability : [];
-  const capMax = Math.max(...capCosts.map((c) => Number(c.cost) || 0), 0);
-  const callMax = Math.max(...capCosts.map((c) => Number(c.calls) || 0), 1);
-  const hour = new Date().getHours();
-  const greet = hour < 6 ? '夜深了' : hour < 12 ? '早上好' : hour < 18 ? '下午好' : '晚上好';
   const dateStr = new Date().toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'long', day: 'numeric', weekday: 'long' });
 
   return (
@@ -117,56 +95,28 @@ export function Overview({ go }: { go: (p: string) => void }) {
       <section className="dash-hero">
         <div>
           <p className="eyebrow">{dateStr}</p>
-          <h2 className="hero-title">{t(greet)}<span className="muted">，{t('这是今天的内容运营概况')}</span></h2>
+          <h2 className="hero-title">{t('今天要处理什么')}</h2>
         </div>
         <div className="row wrap">
           <button onClick={async () => {
             const d = n.data;
             const ok = await notify('内容运营助手', `待审草稿 ${d?.pendingDrafts ?? 0} 篇；热点命中 ${d?.hotMatches?.length ?? 0} 条`);
             say(ok ? '已发送本地通知' : '通知权限未开启');
-          }}><Icon name="bell" size={16} />{t('开启通知')}</button>
-          <button className="primary" onClick={() => go('hot')}><Icon name="hot" size={16} />{t('采集热榜')}</button>
+          }}><Icon name="bell" />{t('开启通知')}</button>
+          <button className="primary" onClick={() => go('hot')}>{t('采集热榜')}</button>
         </div>
       </section>
       <ErrorBox error={n.error} />
 
       <div className="dash-grid">
         <div className="kpis span-12">
-          <Kpi icon="inbox" label={t('待审草稿')} value={Number(n.data?.pendingDrafts ?? 0)} loading={n.loading} onClick={() => go('review')}
-            delta={weekDelta(draftSeries)} chart={<Sparkline values={draftSeries} label={t('近 14 天草稿数')} />} />
-          <Kpi icon="hot" label={t('热榜条目')} value={merged.length} loading={hot.loading} onClick={() => go('hot')}
-            hint={`${t('热点命中')} ${hotMatches.length}`} chart={<MiniBars values={boardCounts.length ? boardCounts : [0, 0, 0, 0, 0]} label={t('各榜单条目数')} />} />
-          <Kpi icon="coin" label={t('近 30 天成本')} value={Number(costs.data?.total ?? 0)} decimals={2} prefix="¥" loading={costs.loading} onClick={() => go('settings')}
-            delta={weekDelta(costSeries)} deltaGoodWhenUp={false} chart={<Sparkline values={costSeries} label={t('近 14 天成本')} />} />
-          <Kpi icon="activity" label={t('任务成功率')} value={successRate} decimals={0} suffix="%" loading={tasks.loading} onClick={() => go('tasks')}
-            hint={`${t('失败任务')} ${failN}`} chart={<Sparkline values={taskSeries} label={t('近 14 天任务数')} />} />
+          <Kpi label={t('待审草稿')} value={Number(n.data?.pendingDrafts ?? 0)} loading={n.loading} onClick={() => go('review')} delta={weekDelta(draftSeries)} />
+          <Kpi label={t('候选选题')} value={candidates} loading={topics.loading} onClick={() => go('topics')} hint={t('待改写')} />
+          <Kpi label={t('热榜条目')} value={merged.length} loading={hot.loading} onClick={() => go('hot')} hint={`${t('热点命中')} ${hotMatches.length}`} />
+          <Kpi label={t('任务成功率')} value={successRate} decimals={0} suffix="%" loading={tasks.loading} onClick={() => go('tasks')} hint={`${t('失败任务')} ${failN}`} />
         </div>
 
-        <Card className="span-8" icon="activity" title={t('流水线状态')} subtitle={t('从选题到交接的内容流转')} actions={<button className="ghost" onClick={() => go('review')}>{t('审核')}<Icon name="chevronRight" size={14} /></button>}>
-          {drafts.loading || topics.loading ? <SkeletonLines lines={3} /> : (
-            <>
-              <div className="stack-bar" role="img" aria-label={stages.map((s) => `${t(s.label)} ${s.n}`).join('，')}>
-                {stageTotal > 0
-                  ? stages.filter((s) => s.n > 0).map((s) => <span key={s.key} className={`seg ${s.tone}`} style={{ flexGrow: s.n }} />)
-                  : <span className="seg empty" style={{ flexGrow: 1 }} />}
-              </div>
-              <ol className="stages">
-                {stages.map((s, i) => (
-                  <li key={s.key}>
-                    <button className="stage" onClick={() => go(s.page)}>
-                      <span className={`dot ${s.tone}`} aria-hidden="true" />
-                      <span className="stage-n"><CountUp value={s.n} /></span>
-                      <span className="stage-l">{t(s.label)}</span>
-                    </button>
-                    {i < stages.length - 2 && <Icon name="chevronRight" size={14} className="stage-arrow" />}
-                  </li>
-                ))}
-              </ol>
-            </>
-          )}
-        </Card>
-
-        <Card className="span-4" icon="inbox" title={t('审核队列')} actions={<Badge tone={pendingList.length ? 'warn' : 'ok'}>{byStatus('pending')}</Badge>}>
+        <Card className="span-7" title={t('审核队列')} subtitle={`${pendingAll.length} ${t('篇待审')}`} actions={<button className="ghost" onClick={() => go('review')}>{t('全部')}<Icon name="chevronRight" size={14} /></button>}>
           {drafts.loading ? <SkeletonLines lines={4} /> : pendingList.length ? (
             <ul className="list rows">
               {pendingList.map((d) => (
@@ -182,7 +132,7 @@ export function Overview({ go }: { go: (p: string) => void }) {
           ) : <Empty icon="check">{t('没有待审草稿')}</Empty>}
         </Card>
 
-        <Card className="span-5" icon="hot" title={t('热点榜')} subtitle={t('跨榜单合并 · 最新')} actions={<button className="ghost" onClick={() => go('hot')}>{t('全部')}<Icon name="chevronRight" size={14} /></button>}>
+        <Card className="span-5" title={t('热点前 5')} subtitle={t('跨榜单合并 · 最新')} actions={<button className="ghost" onClick={() => go('hot')}>{t('全部')}<Icon name="chevronRight" size={14} /></button>}>
           {hotMatches.length > 0 && (
             <div className="matches" aria-label={t('关注词命中')}>
               <span className="muted small">{t('关注词命中')}</span>
@@ -191,68 +141,140 @@ export function Overview({ go }: { go: (p: string) => void }) {
           )}
           {hot.loading ? <SkeletonLines lines={5} /> : merged.length ? (
             <ol className="list hot-list">
-              {merged.slice(0, 8).map((m, i) => (
+              {merged.slice(0, 5).map((m, i) => (
                 <li key={m.id ?? m.title}>
                   <span className={`rank r${i + 1}`}>{i + 1}</span>
                   <span className="grow ellipsis">{m.title}</span>
-                  <span className="muted small nowrap">{(m.boards ?? []).length} {t('榜')}</span>
+                  <span className="muted small nowrap num">{(m.boards ?? []).length} {t('榜')}</span>
                 </li>
               ))}
             </ol>
           ) : <Empty icon="hot">{t('暂无数据')}：{t('先采集热榜')}</Empty>}
         </Card>
-
-        <Card className="span-4" icon="coin" title={t('各能力成本')} subtitle={t('近 30 天')}>
-          {costs.loading ? <SkeletonLines lines={4} /> : capCosts.length ? (
-            <ul className="bars">
-              {capCosts.map((c) => {
-                const v = Number(c.cost) || 0;
-                const pct = capMax > 0 ? (v / capMax) * 100 : ((Number(c.calls) || 0) / callMax) * 100;
-                return (
-                  <li key={c.capability || 'other'}>
-                    <div className="row between small"><span>{c.capability || '—'}</span><span className="num muted">¥{v.toFixed(4)} · {c.calls}{t('次')}{c.failed ? ` · ${c.failed}✗` : ''}</span></div>
-                    <div className="bar"><span style={{ width: `${Math.max(2, pct)}%` }} /></div>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : <Empty icon="coin">{t('暂无调用记录')}</Empty>}
-        </Card>
-
-        <Card className="span-3" icon="cpu" title={t('模型能力')} actions={<button className="ghost icon-btn" aria-label={t('设置')} onClick={() => go('settings')}><Icon name="settings" size={16} /></button>}>
-          <ErrorBox error={models.error} />
-          {models.loading ? <SkeletonLines lines={4} /> : (
-            <ul className="caps">
-              {(models.data?.status ?? []).map((s: any) => (
-                <li key={s.capability}>
-                  <span className="cap-name"><span className={`led ${s.configured ? (s.provider === 'mock' ? 'info' : 'ok') : 'warn'}`} aria-hidden="true" />{s.label}</span>
-                  {s.configured ? <Badge tone={s.provider === 'mock' ? 'info' : 'ok'}>{s.provider === 'mock' ? t('模拟输出') : `${s.provider}/${s.model}`}</Badge> : <Badge tone="warn">{t('未配置')}</Badge>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
-        <Card className="span-8" icon="tasks" title={t('最近任务')} actions={<button className="ghost" onClick={() => go('tasks')}>{t('任务与日志')}<Icon name="chevronRight" size={14} /></button>}>
-          {tasks.loading ? <SkeletonLines lines={5} /> : taskRows.length ? (
-            <ul className="list rows">
-              {taskRows.slice(0, 6).map((x) => (
-                <li key={x.id} className="task-row">
-                  <span className={`led ${x.status === 'succeeded' ? 'ok' : x.status === 'failed' ? 'bad' : x.status === 'running' ? 'info pulse' : 'neutral'}`} aria-hidden="true" />
-                  <span className="grow ellipsis">{x.label}{x.error && <span className="muted small"> · {x.error}</span>}</span>
-                  <StatusBadge status={x.status} />
-                  <span className="muted small nowrap num">{x.ms != null ? `${x.ms}ms` : '–'}</span>
-                  <span className="muted small nowrap hide-sm">{ago(x.created_at, lang)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : <Empty icon="tasks">{t('暂无数据')}</Empty>}
-        </Card>
-
-        <Card className="span-4" icon="shield" title={t('硬边界')} subtitle={t('写在代码中，不可放宽')}>
-          {b.loading ? <SkeletonLines lines={4} /> : <ol className="boundaries">{(b.data?.boundaries ?? []).map((x: string) => <li key={x}>{x}</li>)}</ol>}
-        </Card>
       </div>
+    </div>
+  );
+}
+
+/** 运行状态（二级页）：成本、各能力成本、模型能力、流水线、最近任务、硬边界。从总览下沉，功能不变。 */
+export function Status({ go }: { go: (p: string) => void }) {
+  const { t, lang } = useT();
+  const tasks = useLoad(() => get('/api/tasks?limit=200'));
+  const models = useLoad(() => get('/api/models'));
+  const b = useLoad(() => get('/api/boundaries'));
+  const costs = useLoad(() => get('/api/models/costs?days=30'));
+  const drafts = useLoad(() => get('/api/drafts'));
+  const topics = useLoad(() => get('/api/topics'));
+
+  const days = lastDays(14);
+  const draftRows: any[] = Array.isArray(drafts.data?.drafts) ? drafts.data.drafts : [];
+  const taskRows: any[] = Array.isArray(tasks.data?.tasks) ? tasks.data.tasks : [];
+  const topicRows: any[] = Array.isArray(topics.data?.topics) ? topics.data.topics : [];
+  const costSeries = perDay(costs.data?.byDay ?? [], days, 'day', (r) => Number(r.cost) || 0);
+  const byStatus = (s: string) => draftRows.filter((d) => d.status === s).length;
+  const candidates = topicRows.filter((x) => x.status === 'candidate').length;
+  const stages: { key: string; label: string; n: number; page: string; tone: string }[] = [
+    { key: 'topic', label: '候选选题', n: candidates, page: 'topics', tone: 's1' },
+    { key: 'pending', label: '待审核', n: byStatus('pending'), page: 'review', tone: 's2' },
+    { key: 'approved', label: '已通过', n: byStatus('approved'), page: 'review', tone: 's3' },
+    { key: 'handed_off', label: '已交接', n: byStatus('handed_off'), page: 'review', tone: 's4' },
+    { key: 'rejected', label: '已驳回', n: byStatus('rejected'), page: 'review', tone: 's5' },
+  ];
+  const stageTotal = stages.reduce((s, x) => s + x.n, 0);
+  const capCosts: any[] = Array.isArray(costs.data?.byCapability) ? costs.data.byCapability : [];
+  const capMax = Math.max(...capCosts.map((c) => Number(c.cost) || 0), 0);
+  const callMax = Math.max(...capCosts.map((c) => Number(c.calls) || 0), 1);
+  const delta = weekDelta(costSeries);
+
+  return (
+    <div className="dash-grid">
+      <Card className="span-7" title={t('近 30 天成本')} actions={<button className="ghost" onClick={() => go('settings')}>{t('模型设置')}<Icon name="chevronRight" size={14} /></button>}>
+        {costs.loading ? <SkeletonLines lines={2} /> : (
+          <div className="status-cost">
+            <div>
+              <div className="kpi-value"><CountUp value={Number(costs.data?.total ?? 0)} decimals={2} prefix="¥" /></div>
+              {delta != null
+                ? <span className={`delta ${delta <= 0 ? 'up' : 'down'}`}><Icon name={delta >= 0 ? 'arrowUp' : 'arrowDown'} size={12} />{Math.abs(delta)}%<span className="muted"> {t('较上周')}</span></span>
+                : <span className="muted small">{t('近 14 天成本')}</span>}
+            </div>
+            <span className="kpi-chart"><Sparkline values={costSeries} label={t('近 14 天成本')} /></span>
+          </div>
+        )}
+      </Card>
+
+      <Card className="span-5" title={t('模型能力')}>
+        <ErrorBox error={models.error} />
+        {models.loading ? <SkeletonLines lines={4} /> : (
+          <ul className="caps">
+            {(models.data?.status ?? []).map((s: any) => (
+              <li key={s.capability}>
+                <span className="cap-name"><span className={`led ${s.configured ? (s.provider === 'mock' ? 'info' : 'ok') : 'warn'}`} aria-hidden="true" />{s.label}</span>
+                {s.configured ? <Badge tone={s.provider === 'mock' ? 'info' : 'ok'}>{s.provider === 'mock' ? t('模拟输出') : `${s.provider}/${s.model}`}</Badge> : <Badge tone="warn">{t('未配置')}</Badge>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card className="span-7" title={t('流水线状态')} subtitle={t('从选题到交接的内容流转')}>
+        {drafts.loading || topics.loading ? <SkeletonLines lines={3} /> : (
+          <>
+            <div className="stack-bar" role="img" aria-label={stages.map((s) => `${t(s.label)} ${s.n}`).join('，')}>
+              {stageTotal > 0
+                ? stages.filter((s) => s.n > 0).map((s) => <span key={s.key} className={`seg ${s.tone}`} style={{ flexGrow: s.n }} />)
+                : <span className="seg empty" style={{ flexGrow: 1 }} />}
+            </div>
+            <ol className="stages">
+              {stages.map((s) => (
+                <li key={s.key}>
+                  <button className="stage" onClick={() => go(s.page)}>
+                    <span className={`dot ${s.tone}`} aria-hidden="true" />
+                    <span className="stage-n"><CountUp value={s.n} /></span>
+                    <span className="stage-l">{t(s.label)}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
+      </Card>
+
+      <Card className="span-5" title={t('各能力成本')} subtitle={t('近 30 天')}>
+        {costs.loading ? <SkeletonLines lines={4} /> : capCosts.length ? (
+          <ul className="bars">
+            {capCosts.map((c) => {
+              const v = Number(c.cost) || 0;
+              const pct = capMax > 0 ? (v / capMax) * 100 : ((Number(c.calls) || 0) / callMax) * 100;
+              return (
+                <li key={c.capability || 'other'}>
+                  <div className="row between small"><span>{c.capability || '—'}</span><span className="num muted">¥{v.toFixed(4)} · {c.calls}{t('次')}{c.failed ? ` · ${c.failed} ${t('失败')}` : ''}</span></div>
+                  <div className="bar"><span style={{ width: `${Math.max(2, pct)}%` }} /></div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : <Empty icon="coin">{t('暂无调用记录')}</Empty>}
+      </Card>
+
+      <Card className="span-7" title={t('最近任务')} actions={<button className="ghost" onClick={() => go('tasks')}>{t('任务与日志')}<Icon name="chevronRight" size={14} /></button>}>
+        {tasks.loading ? <SkeletonLines lines={5} /> : taskRows.length ? (
+          <ul className="list rows">
+            {taskRows.slice(0, 6).map((x) => (
+              <li key={x.id} className="task-row">
+                <span className={`led ${x.status === 'succeeded' ? 'ok' : x.status === 'failed' ? 'bad' : x.status === 'running' ? 'info' : 'neutral'}`} aria-hidden="true" />
+                <span className="grow ellipsis">{x.label}{x.error && <span className="muted small"> · {x.error}</span>}</span>
+                <StatusBadge status={x.status} />
+                <span className="muted small nowrap num">{x.ms != null ? `${x.ms}ms` : '–'}</span>
+                <span className="muted small nowrap hide-sm">{ago(x.created_at, lang)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : <Empty icon="tasks">{t('暂无数据')}</Empty>}
+      </Card>
+
+      <Card className="span-5" title={t('硬边界')} subtitle={t('写在代码中，不可放宽')}>
+        {b.loading ? <SkeletonLines lines={4} /> : <ol className="boundaries">{(b.data?.boundaries ?? []).map((x: string) => <li key={x}>{x}</li>)}</ol>}
+      </Card>
     </div>
   );
 }

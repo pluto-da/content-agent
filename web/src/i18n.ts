@@ -27,6 +27,7 @@ const en: Record<string, string> = {
   热榜条目: 'Trend items', '近 30 天成本': 'Cost (30d)', 任务成功率: 'Task success', 失败任务: 'Failed tasks', '近 14 天草稿数': 'Drafts, last 14 days', 各榜单条目数: 'Items per board', '近 14 天成本': 'Cost, last 14 days', '近 14 天任务数': 'Tasks, last 14 days',
   流水线状态: 'Pipeline', 从选题到交接的内容流转: 'From topic to hand-off', 候选选题: 'Candidates', 待审核: 'Pending', 已通过: 'Approved', 已交接: 'Handed off', 已驳回: 'Rejected',
   审核队列: 'Review queue', 没有待审草稿: 'Nothing to review', 热点榜: 'Trending', '跨榜单合并 · 最新': 'Merged across boards · latest', 全部: 'All', 关注词命中: 'Keyword matches', 榜: 'boards', 先采集热榜: 'fetch boards first',
+  今天要处理什么: 'What needs you today', 待改写: 'awaiting rewrite', 篇待审: 'to review', '热点前 5': 'Top 5 trends', 运行状态: 'Status', '成本、模型能力、流水线、最近任务与硬边界': 'Cost, models, pipeline, recent tasks and boundaries', 模型设置: 'Model settings', 失败: 'failed',
   各能力成本: 'Cost by capability', '近 30 天': 'Last 30 days', 次: ' calls', 暂无调用记录: 'No usage yet', 最近任务: 'Recent tasks', '写在代码中，不可放宽': 'Enforced in code',
 };
 

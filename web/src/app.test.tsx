@@ -62,13 +62,14 @@ describe('api 客户端', () => {
 });
 
 describe('界面', () => {
-  it('渲染导航、总览数据与硬边界', async () => {
+  it('渲染导航、总览数据；硬边界与模型状态在运行状态页', async () => {
     mockFetch((u) => DATA[u] ?? {});
     render(<App />);
     expect(screen.getByRole('navigation', { name: '主导航' })).toBeTruthy();
     expect(screen.getAllByRole('link').length).toBeGreaterThanOrEqual(NAV.length);
+    await waitFor(() => expect(screen.getAllByText(/大模型降价/).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByRole('link', { name: /运行状态/ })[0]!);
     await waitFor(() => expect(screen.getByText('不做反检测')).toBeTruthy());
-    expect(screen.getAllByText(/大模型降价/).length).toBeGreaterThan(0);
     expect(screen.getAllByText('未配置').length).toBeGreaterThan(0);
   });
   it('切换语言与页面', async () => {

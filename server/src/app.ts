@@ -109,7 +109,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   };
 
   /* ---------- 基础 ---------- */
-  app.get('/api/health', async () => ({ ok: true, version: '0.1.0' }));
+  app.get('/api/health', async () => ({ ok: true, version: '0.2.1' }));
   app.get('/api/boundaries', async () => ({ boundaries: HARD_BOUNDARIES, tools: ALLOWED_TOOLS }));
 
   /* ---------- 设置与密钥 ---------- */

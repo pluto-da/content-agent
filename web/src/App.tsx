@@ -4,20 +4,21 @@ import { LangContext, translate, type Lang } from './i18n';
 import { Icon } from './icons';
 import { deviceClass, runtime, type Device } from './runtime';
 import { prefersReducedMotion } from './ui';
-import { Overview, Hot, Library, Topics } from './pages/content';
+import { Overview, Hot, Library, Topics, Status } from './pages/content';
 import { Review, CreatorCenters, Analytics } from './pages/publish';
 import { AgentFiles, Improve, Plugins, Tasks } from './pages/system';
 import { Settings, type Theme } from './pages/settings';
 
 export type NavGroup = 'make' | 'publish' | 'system';
 export const NAV: { id: string; label: string; icon: string; group: NavGroup; desc: string; plugin?: string }[] = [
-  { id: 'overview', label: '总览', icon: 'overview', group: 'make', desc: '今日运营概况与待办' },
+  { id: 'overview', label: '总览', icon: 'overview', group: 'make', desc: '今天要处理什么' },
   { id: 'hot', label: '热点', icon: 'hot', group: 'make', desc: '公开热榜采集、跨榜合并与聚类' },
   { id: 'library', label: '内容库', icon: 'library', group: 'make', desc: '信息源与已采集内容' },
   { id: 'topics', label: '选题', icon: 'topics', group: 'make', desc: '候选选题与多平台改写' },
   { id: 'review', label: '审核', icon: 'review', group: 'publish', desc: '人工审核草稿与发布交接' },
   { id: 'creator', label: '创作中心', icon: 'creator', group: 'publish', desc: '官方创作后台与本地应用' },
   { id: 'analytics', label: '复盘', icon: 'analytics', group: 'publish', desc: '导入数据、生成复盘与回复草稿' },
+  { id: 'status', label: '运行状态', icon: 'activity', group: 'system', desc: '成本、模型能力、流水线、最近任务与硬边界' },
   { id: 'agent', label: '系统文件', icon: 'agent', group: 'system', desc: 'soul、规则、skills 与记忆' },
   { id: 'improve', label: '改进与评测', icon: 'improve', group: 'system', desc: 'Skills 状态、A/B 评测与改进日志' },
   { id: 'plugins', label: '插件管理', icon: 'plugins', group: 'system', desc: '按终端启用平台模块与本地应用' },
@@ -84,7 +85,7 @@ function CommandPalette({ open, onClose, go, t }: { open: boolean; onClose: () =
     <div className="cmdk-backdrop" onMouseDown={onClose}>
       <div className="cmdk" role="dialog" aria-modal="true" aria-label={t('快速跳转')} onMouseDown={(e) => e.stopPropagation()}>
         <div className="cmdk-input">
-          <Icon name="search" size={18} />
+          <Icon name="search" size={16} />
           <input
             ref={input} value={q} placeholder={t('搜索页面…')} aria-label={t('快速跳转')} aria-controls="cmdk-list" aria-activedescendant={items[idx] ? `cmdk-${items[idx]!.id}` : undefined}
             onChange={(e) => { setQ(e.target.value); setIdx(0); }}
@@ -129,10 +130,10 @@ export function App() {
   useEffect(() => {
     localStorage.setItem('ca.theme', theme);
     const root = document.documentElement;
-    // 平滑切换主题：短暂为颜色属性开启过渡（首次渲染与减少动态效果时跳过）。
+    // 切换主题：短暂为颜色属性开启 200ms 过渡（首次渲染与减少动态效果时跳过）。
     if (!firstTheme.current && !prefersReducedMotion()) {
       root.classList.add('theme-switching');
-      const tm = setTimeout(() => root.classList.remove('theme-switching'), 320);
+      const tm = setTimeout(() => root.classList.remove('theme-switching'), 240);
       root.dataset.theme = theme;
       return () => clearTimeout(tm);
     }
@@ -173,6 +174,7 @@ export function App() {
       case 'review': return <Review openCenter={openCenter} />;
       case 'creator': return <CreatorCenters active={center} setActive={setCenter} />;
       case 'analytics': return <Analytics />;
+      case 'status': return <Status go={go} />;
       case 'agent': return <AgentFiles />;
       case 'improve': return <Improve />;
       case 'plugins': return <Plugins device={device} />;
@@ -185,7 +187,7 @@ export function App() {
   const navLink = (n: (typeof NAV)[number]) => (
     <li key={n.id}>
       <a href={`#${n.id}`} aria-current={page === n.id ? 'page' : undefined} data-tip={t(n.label)} onClick={(e) => { e.preventDefault(); go(n.id); }}>
-        <span aria-hidden="true" className="ico"><Icon name={n.icon} size={18} /></span>
+        <span aria-hidden="true" className="ico"><Icon name={n.icon} size={16} /></span>
         <span className="label">{t(n.label)}</span>
         {n.id === 'review' && pending > 0 && <span className="pill" aria-label={`${pending} 篇待审`}>{pending}</span>}
       </a>
@@ -204,7 +206,7 @@ export function App() {
 
   const themeBtn = (
     <button className="icon-btn ghost" aria-label={t(dark ? '切换到浅色' : '切换到深色')} title={t(dark ? '切换到浅色' : '切换到深色')} onClick={toggleTheme}>
-      <span className="theme-ico" key={dark ? 'd' : 'l'}><Icon name={dark ? 'sun' : 'moon'} size={18} /></span>
+      <span className="theme-ico" key={dark ? 'd' : 'l'}><Icon name={dark ? 'sun' : 'moon'} size={16} /></span>
     </button>
   );
 
@@ -218,9 +220,9 @@ export function App() {
             {isTablet && menu && <div className="scrim" onClick={() => setMenu(false)} aria-hidden="true" />}
             <nav className={`side ${collapsed ? 'collapsed' : ''} ${isTablet && menu ? 'overlay' : ''}`} aria-label="主导航">
               <div className="brand">
-                <span className="logo" aria-hidden="true"><Icon name="topics" size={16} strokeWidth={2} /></span>
+                <span className="logo" aria-hidden="true"><Icon name="topics" size={14} strokeWidth={1.75} /></span>
                 <span className="brand-name label">{t('内容运营助手')}<small>Content Agent</small></span>
-                {isTablet && <button className="icon-btn ghost rail-toggle" aria-label="展开/收起导航" aria-expanded={menu} onClick={() => setMenu(!menu)}><Icon name="sidebar" size={18} /></button>}
+                {isTablet && <button className="icon-btn ghost rail-toggle" aria-label="展开/收起导航" aria-expanded={menu} onClick={() => setMenu(!menu)}><Icon name="sidebar" size={16} /></button>}
               </div>
               <button className="search-btn" onClick={() => setCmdk(true)} aria-label={t('快速跳转')} data-tip={t('快速跳转')}>
                 <Icon name="search" size={16} /><span className="label grow">{t('搜索或跳转')}</span><kbd className="label">⌘K</kbd>
@@ -240,7 +242,7 @@ export function App() {
                 <div className="sheet-h">
                   <span className="sheet-grip" aria-hidden="true" />
                   <strong>{t('全部功能')}</strong>
-                  <button className="icon-btn ghost" aria-label="关闭" onClick={() => setMenu(false)}><Icon name="close" size={18} /></button>
+                  <button className="icon-btn ghost" aria-label="关闭" onClick={() => setMenu(false)}><Icon name="close" size={16} /></button>
                 </div>
                 <nav aria-label="全部功能">{navList}</nav>
               </div>
@@ -255,14 +257,13 @@ export function App() {
               {cur && !isPhone && <p className="topbar-sub">{t(cur.desc)}</p>}
             </div>
             <div className="row topbar-actions">
-              {!online && <span className="badge warn" role="status"><Icon name="wifiOff" size={13} /> {t('离线')}</span>}
-              {!isPhone && <span className="badge neutral small hide-sm" title="发布永远由你本人完成"><Icon name="shield" size={13} /> {t('发布由你本人完成')}</span>}
-              {!isPhone && <button className="icon-btn ghost" aria-label={t('快速跳转')} title="⌘K" onClick={() => setCmdk(true)}><Icon name="command" size={17} /></button>}
+              {!online && <span className="badge warn" role="status"><Icon name="wifiOff" size={14} /> {t('离线')}</span>}
+              {!isPhone && <button className="icon-btn ghost" aria-label={t('快速跳转')} title="⌘K" onClick={() => setCmdk(true)}><Icon name="command" size={16} /></button>}
               {themeBtn}
             </div>
           </header>
           <main id="main" tabIndex={-1}>
-            <div className="page" key={page}>
+            <div key={page}>
               <ErrorBoundary key={page}>{body}</ErrorBoundary>
             </div>
           </main>
@@ -273,13 +274,13 @@ export function App() {
               const n = NAV.find((x) => x.id === id)!;
               return (
                 <a key={id} href={`#${id}`} aria-current={page === id ? 'page' : undefined} onClick={(e) => { e.preventDefault(); go(id); }}>
-                  <span aria-hidden="true" className="tab-ico"><Icon name={n.icon} size={21} /></span><small>{t(n.label)}</small>
+                  <span aria-hidden="true" className="tab-ico"><Icon name={n.icon} size={20} /></span><small>{t(n.label)}</small>
                   {id === 'review' && pending > 0 && <span className="pill">{pending}</span>}
                 </a>
               );
             })}
             <button className={`tab-more ${!PHONE_TABS.includes(page) ? 'current' : ''}`} aria-label={t('更多')} aria-haspopup="dialog" onClick={() => setMenu(true)}>
-              <span aria-hidden="true" className="tab-ico"><Icon name="more" size={21} /></span><small>{t('更多')}</small>
+              <span aria-hidden="true" className="tab-ico"><Icon name="more" size={20} /></span><small>{t('更多')}</small>
             </button>
           </nav>
         )}

@@ -1,4 +1,4 @@
-/** 极简内联 SVG 图标集（24×24，1.75 描边，currentColor）。无外部依赖。 */
+/** 极简内联 SVG 图标集（24×24，默认 16px、1.5 描边，currentColor）。无外部依赖。 */
 import type { ReactNode } from 'react';
 
 const P: Record<string, ReactNode> = {
@@ -40,7 +40,7 @@ const P: Record<string, ReactNode> = {
 
 export type IconName = keyof typeof P;
 
-export function Icon({ name, size = 18, className, strokeWidth = 1.75 }: { name: IconName | string; size?: number; className?: string; strokeWidth?: number }) {
+export function Icon({ name, size = 16, className, strokeWidth = 1.5 }: { name: IconName | string; size?: number; className?: string; strokeWidth?: number }) {
   return (
     <svg className={`icon ${className ?? ''}`} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       {P[name] ?? P.overview}

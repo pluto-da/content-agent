@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { ApiError } from './api';
 import { useT } from './i18n';
 import { Icon } from './icons';
@@ -24,31 +24,9 @@ export function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/** 数字滚动：从上一个值缓动到目标值（ease-out，约 600ms）。减少动态效果时直接显示。 */
-export function useCountUp(target: number, ms = 600): number {
-  const [v, setV] = useState(() => (prefersReducedMotion() || typeof requestAnimationFrame !== 'function' ? target : 0));
-  const from = useRef(0);
-  useEffect(() => {
-    if (!Number.isFinite(target)) return;
-    if (prefersReducedMotion() || typeof requestAnimationFrame !== 'function') { from.current = target; setV(target); return; }
-    const start = performance.now();
-    const a = from.current;
-    let raf = 0;
-    const step = (now: number) => {
-      const p = Math.min(1, (now - start) / ms);
-      const e = 1 - Math.pow(1 - p, 3);
-      setV(a + (target - a) * e);
-      if (p < 1) raf = requestAnimationFrame(step); else from.current = target;
-    };
-    raf = requestAnimationFrame(step);
-    return () => { cancelAnimationFrame(raf); from.current = target; };
-  }, [target, ms]);
-  return v;
-}
-
+/** 数字显示（v3：不做滚动动画，直接显示，等宽数字）。 */
 export function CountUp({ value, decimals = 0, prefix = '', suffix = '' }: { value: number; decimals?: number; prefix?: string; suffix?: string }) {
-  const v = useCountUp(value);
-  return <span className="num">{prefix}{v.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</span>;
+  return <span className="num">{prefix}{value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</span>;
 }
 
 export function ErrorBox({ error }: { error: ApiError | null }) {
@@ -88,13 +66,13 @@ export function Loading({ show, lines = 3 }: { show: boolean; lines?: number }) 
   );
 }
 
-export function Card({ title, actions, children, subtitle, icon, className, style }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; subtitle?: ReactNode; icon?: string; className?: string; style?: CSSProperties }) {
+/** 卡片：平面 + 发丝线。v3 起标题不再带彩色图标底块（icon 参数保留以兼容调用方，但不渲染）。 */
+export function Card({ title, actions, children, subtitle, className, style }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; subtitle?: ReactNode; icon?: string; className?: string; style?: CSSProperties }) {
   return (
     <section className={`card ${className ?? ''}`} style={style}>
       {(title || actions) && (
         <header className="card-h">
           <div className="card-t">
-            {icon && <span className="card-ico"><Icon name={icon} size={16} /></span>}
             <div className="grow">
               {title && <h2>{title}</h2>}
               {subtitle && <p className="card-sub">{subtitle}</p>}
@@ -109,7 +87,7 @@ export function Card({ title, actions, children, subtitle, icon, className, styl
 }
 
 export function Empty({ children, icon = 'inbox' }: { children: ReactNode; icon?: string }) {
-  return <div className="empty"><span className="empty-ico"><Icon name={icon} size={18} /></span><span>{children}</span></div>;
+  return <div className="empty"><span className="empty-ico"><Icon name={icon} size={20} /></span><span>{children}</span></div>;
 }
 
 export function Badge({ tone = 'neutral', children }: { tone?: 'ok' | 'warn' | 'bad' | 'neutral' | 'info'; children: ReactNode }) {
@@ -156,13 +134,13 @@ export function MiniBars({ values, w = 120, h = 36, label }: { values: number[];
     <svg className="spark bars" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
       {vs.map((v, i) => {
         const bh = Math.max(2, (v / max) * (h - 2));
-        return <rect key={i} x={i * (bw + gap)} y={h - bh} width={bw} height={bh} rx={1.5} style={{ animationDelay: `${i * 25}ms` }} />;
+        return <rect key={i} x={i * (bw + gap)} y={h - bh} width={bw} height={bh} rx={1} />;
       })}
     </svg>
   );
 }
 
-/** 轻提示：屏幕阅读器可读，带进入/退出动画。 */
+/** 轻提示：屏幕阅读器可读，150–200ms 淡入淡出。 */
 export function useToast(): [ReactNode, (msg: string) => void] {
   const [msg, setMsg] = useState('');
   const [shown, setShown] = useState('');
