@@ -1,6 +1,6 @@
 {
   "appId": "local.contentagent.app",
-  "appName": "内容运营助手",
+  "appName": "超级工作台",
   "webDir": "../web/dist",
   "server": {
     "androidScheme": "https",

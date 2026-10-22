@@ -71,6 +71,8 @@ export function normalize(target: string): string {
   if (!raw) return 'agent';
   const [path = ''] = raw.split('?');
   const head = path.split('/')[0]!;
+  // 0.5.0 的 #agent/files、#agent/improve（Agent 系统文件页）→ 我的 → 写作助手与规则；裸 #agent 在 0.8.0 起是首页
+  if (head === 'agent' && /^agent\/(files|improve)$/.test(path)) return 'me/agent';
   if (head === 'agent' || head === 'p' || head === 'onboarding') return raw;
   if (head === 'me') return path === 'me/sources' || path === 'me/profile' ? path : normalizeV7(path);
   const v7 = normalizeV7(path);

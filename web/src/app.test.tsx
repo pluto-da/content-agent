@@ -2,8 +2,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { classifyHttpError, classifyThrown } from '@content-agent/shared';
 import { App } from './App';
-import { LEGACY, normalize, parseHash, SETTINGS_MAP, toHash, V5_MAP } from './route';
-import { BOTTOM_ITEMS, MAIN_NAV, ME_GROUPS, NAV, SIDEBAR_ITEMS } from './nav';
+import { LEGACY, normalize, normalizeV7, parseHash, SETTINGS_MAP, toHash, V5_MAP, V7_MAP } from './route';
+import { AGENT_NAV, ME_GROUPS, NAV, SIDEBAR_ITEMS } from './nav';
 import { nextStep, type Snapshot } from './state';
 import { parseIntent } from './services';
 import { CENTERS, detectPlatform, KNOWN_APPS } from './data/platforms';
@@ -29,17 +29,25 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 /* ---------------- A12 旧路由全部重定向 ---------------- */
-describe('A12 路由重定向', () => {
-  const valid = /^(home|topics|results|onboarding|write(\/(pending|approved|handed_off|\d+|new))?|publish|me(\/(models|platforms|agent|prefs|backup|logs|server))?)$/;
-  it.each(Object.entries(V5_MAP))('0.5.0 %s → %s', (from, to) => { expect(normalize(from)).toBe(to); expect(toHash(parseHash(from))).toMatch(valid); });
+describe('A12 / B14 路由重定向', () => {
+  // 0.8.0：先按旧规则映射到 0.6.0/0.7.0 位置（normalizeV7，断言保持原样），再经 V7_MAP 到 0.8.0 位置
+  const valid = /^(agent(\/(drafts(\/\d+)?|inbox))?(\?(ask|filter)=\w+)?|onboarding|p\/[a-z0-9_-]+|me(\/(models|platforms|sources|profile|agent|prefs|backup|logs|server))?)$/;
+  it.each(Object.entries(V5_MAP))('0.5.0 %s → %s', (from, to) => { expect(normalizeV7(from)).toBe(to); expect(toHash(parseHash(from))).toMatch(valid); });
   it.each(Object.entries(SETTINGS_MAP))('#settings/%s → %s', (from, to) => { expect(normalize(`settings/${from}`.replace(/\/$/, ''))).toBe(to); });
-  it.each(Object.entries(LEGACY))('0.2.x %s → %s', (from, to) => { expect(normalize(from)).toBe(to); expect(toHash(parseHash(from))).toMatch(valid); });
+  it.each(Object.entries(LEGACY))('0.2.x %s → %s', (from, to) => { expect(normalizeV7(from)).toBe(to); expect(toHash(parseHash(from))).toMatch(valid); });
+  it.each(Object.entries(V7_MAP))('0.7.0 #%s → #%s', (from, to) => { expect(normalize(from)).toBe(to); expect(toHash(parseHash(from))).toMatch(valid); });
   it('草稿详情与未知地址', () => {
-    expect(toHash(parseHash('#create/drafts/12'))).toBe('write/12');
-    expect(toHash(parseHash('#create/7'))).toBe('write/7');
-    expect(toHash(parseHash('#nonsense'))).toBe('home');
+    expect(toHash(parseHash('#create/drafts/12'))).toBe('agent/drafts/12');
+    expect(toHash(parseHash('#create/7'))).toBe('agent/drafts/7');
+    expect(toHash(parseHash('#write/12'))).toBe('agent/drafts/12');
+    expect(toHash(parseHash('#publish/3'))).toBe('agent/drafts?filter=approved');
+    expect(toHash(parseHash('#nonsense'))).toBe('agent');
+    expect(toHash(parseHash('#home'))).toBe('agent');
+    expect(toHash(parseHash('#topics'))).toBe('agent?ask=hot');
+    expect(toHash(parseHash('#agent/files'))).toBe('me/agent');
     expect(parseHash('#me/models/mimo')).toEqual({ space: 'me', sub: 'models', id: 'mimo' });
-    expect(toHash(parseHash('#write/pending'))).toBe('write/pending');
+    expect(parseHash('#p/xiaohongshu')).toEqual({ space: 'p', sub: 'xiaohongshu', id: null });
+    expect(toHash(parseHash('#write/pending'))).toBe('agent/drafts?filter=pending');
   });
   it('App 启动时把旧 hash 替换为新地址', async () => {
     location.hash = '#settings/secrets';
@@ -50,18 +58,18 @@ describe('A12 路由重定向', () => {
 });
 
 /* ---------------- A9 导航为 5 个动作项 + 我的 ---------------- */
-describe('A9 导航', () => {
-  it('侧栏 = 主线 5 个动作 + 我的；手机底部 5 格', () => {
-    expect(MAIN_NAV.map((n) => n.label)).toEqual(['首页', '找选题', '写内容', '去发布', '看效果']);
-    expect(SIDEBAR_ITEMS.map((n) => n.id)).toEqual(['home', 'topics', 'write', 'publish', 'results', 'me']);
-    expect(BOTTOM_ITEMS.map((n) => n.label)).toEqual(['首页', '找选题', '写内容', '去发布', '我的']);
+describe('A9 / B3 导航（0.8.0：首页即 Agent，平台在侧栏）', () => {
+  it('侧栏底部固定 Agent / 我的；Agent 入口含草稿、待发布、素材箱等', () => {
+    expect(SIDEBAR_ITEMS.map((n) => n.id)).toEqual(['agent', 'me']);
+    expect(AGENT_NAV.map((n) => n.label)).toEqual(['Agent', '看热点', '草稿', '待发布', '数据复盘', '素材箱']);
   });
-  it('“我的”是分组列表，包含模型、平台与软件、规则、通用、备份、日志、连接服务器、重新开始引导', () => {
-    expect(ME_GROUPS.flatMap((g) => g.items.map((i) => i.id))).toEqual(['me/models', 'me/platforms', 'me/agent', 'me/prefs', 'me/backup', 'me/logs', 'me/server', 'onboarding']);
+  it('“我的”是分组列表，包含模型、平台与软件、数据源、账号画像、规则、通用、备份、日志、连接服务器、重新开始引导', () => {
+    expect(ME_GROUPS.flatMap((g) => g.items.map((i) => i.id))).toEqual(['me/models', 'me/platforms', 'me/sources', 'me/profile', 'me/agent', 'me/prefs', 'me/backup', 'me/logs', 'me/server', 'onboarding']);
   });
   it('命令面板别名：旧名称都能搜到新位置', () => {
     const find = (q: string) => NAV.filter((n) => `${n.label}${n.desc}${n.keywords ?? ''}`.toLowerCase().includes(q)).map((n) => n.id);
-    expect(find('灵感')).toContain('topics'); expect(find('创作')).toContain('write'); expect(find('复盘')).toContain('results');
+    expect(find('灵感')).toContain('agent?ask=hot'); expect(find('找选题')).toContain('agent?ask=hot'); expect(find('创作')).toContain('agent/drafts');
+    expect(find('去发布')).toContain('agent/drafts?filter=approved'); expect(find('复盘')).toContain('agent?ask=metrics'); expect(find('首页')).toContain('agent');
     expect(find('密钥')).toContain('me/models'); expect(find('插件')).toContain('me/platforms'); expect(find('偏好')).toContain('me/prefs');
   });
   it('首页主按钮与卡片文字都是动作', () => {
@@ -235,24 +243,31 @@ describe('A1 无服务端', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('blocked')));
     render(<App />);
     expect(await screen.findByTestId('onboarding', {}, { timeout: 8000 })).toBeTruthy();
-    expect(screen.getByText('这个助手帮你找选题、写内容、准备发布，发布由你自己点。')).toBeTruthy();
+    expect(screen.getByText('超级工作台——一个 Agent 帮你管理各大平台：找热点、写内容、准备发布、记录效果；发布由你本人点击。')).toBeTruthy();
   }, 20000);
-  it('已有模型 → 首页显示一句话说明、下一步卡片与一句话输入框', async () => {
+  it('已有模型 → 首页即 Agent：“超级工作台”一句话定义、起手式与输入框（B1）', async () => {
     await saveModels({ ...EMPTY_MODELS, providers: [{ ...mimo, check: { ok: true, at: 'x' } }], defaultProvider: 'mimo' });
     location.hash = '#home';
     render(<App />);
-    expect(await screen.findByTestId('intro', {}, { timeout: 8000 })).toBeTruthy();
-    await waitFor(() => expect(screen.getByTestId('next-step').dataset.step).toBe('write'));
-    expect(screen.getByTestId('ask-input')).toBeTruthy();
-    expect((await getModels()).defaultProvider).toBe('mimo');
+    expect(await screen.findByTestId('hero-title', {}, { timeout: 8000 })).toBeTruthy();
+    expect(screen.getByTestId('definition').textContent).toBe('一个 Agent 帮你管理各大平台：找热点、写内容、准备发布、记录效果。发布由你本人点击。');
+    expect(screen.getAllByTestId('starter').map((b) => b.textContent)).toEqual(['看看今天各平台热点', '把一个想法写成小红书笔记', '这周数据怎么样']);
+    expect(screen.getByTestId('agent-input')).toBeTruthy();
+    await waitFor(() => expect(location.hash).toBe('#agent'));
   }, 20000);
-  it('导航：侧栏 6 项、点击跳转', async () => {
+  it('导航：侧栏有已登记平台 + 添加 + Agent + 我的，点击跳转', async () => {
     await saveModels({ ...EMPTY_MODELS, providers: [{ ...mimo, check: { ok: true, at: 'x' } }] });
-    location.hash = '#home';
+    await db.setKV('prefs', { platforms: ['xiaohongshu', 'douyin'], onboarded: true, backupHinted: false, hotSources: [] });
+    location.hash = '#agent';
     render(<App />);
-    const nav = await screen.findByRole('navigation', { name: '主导航' });
-    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['首页', '找选题', '写内容', '去发布', '看效果', '我的']);
-    await act(async () => { fireEvent.click(within(nav).getByRole('link', { name: '我的' })); });
+    const nav = await screen.findByRole('navigation', { name: '平台侧栏' });
+    await waitFor(() => expect(within(nav).getByTestId('side-xiaohongshu')).toBeTruthy());
+    expect(within(nav).getByTestId('side-douyin').textContent).toContain('抖音');
+    expect(within(nav).getByTestId('side-add')).toBeTruthy();
+    await act(async () => { fireEvent.click(within(nav).getByTestId('side-me')); });
     expect(location.hash).toBe('#me');
+    await act(async () => { fireEvent.click(within(nav).getByTestId('side-xiaohongshu')); });
+    expect(location.hash).toBe('#p/xiaohongshu');
+    expect(await screen.findByTestId('web-fallback')).toBeTruthy();
   });
 });

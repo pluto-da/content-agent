@@ -104,6 +104,11 @@ export function useAgent() {
     void getModels().then(setModels);
   }, [cfg, cid, onEvent, pick, refreshConvs, running]);
 
+  // 首启引导第 3 步：进入首页后真实发送第一句话
+  useEffect(() => {
+    const first = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('ca.firstAsk') : null;
+    if (first && cfg && !running) { sessionStorage.removeItem('ca.firstAsk'); void send(first); }
+  }, [cfg, running, send]);
   const stop = useCallback(() => abort.current?.abort(), []);
   const userTool = useCallback(async (name: string, args: Record<string, unknown>) => {
     const spec = toolByName(name);

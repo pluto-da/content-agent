@@ -119,7 +119,7 @@ async function createWindow() {
   const port = await startServer();
   const origin = `http://127.0.0.1:${port}`;
   const win = new BrowserWindow({
-    width: 1360, height: 880, title: '内容运营助手',
+    width: 1360, height: 880, title: '超级工作台',
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: true },
   });
   // 只接受来自主界面的 IPC 请求

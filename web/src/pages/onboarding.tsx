@@ -20,6 +20,7 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
   const { open: openAdd, version } = useAddApp();
   const apps = useLocalApps(version);
   const [step, setStep] = useState(1);
+  const [first, setFirst] = useState('看看今天各平台热点，给我 3 个选题');
   const [prov, setProv] = useState('mimo');
   const [cfg, setCfg] = useState<ProviderConfig | null>(null);
   const [connected, setConnected] = useState(false);
@@ -37,7 +38,7 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
     const m = await getModels();
     setCfg(m.providers.find((p) => p.id === id) ?? newProviderConfig(id));
   };
-  const finish = async () => { await setPrefs({ onboarded: true, platforms: plats }); go('home'); };
+  const finish = async () => { await setPrefs({ onboarded: true, platforms: plats }); go('agent'); };
   const registered = (id: string) => !!apps.data?.apps.some((a) => a.platform === id);
   const toggle = (id: string) => {
     const on = plats.includes(id);
@@ -58,7 +59,7 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
         {step === 1 && (
           <section className="flex grow flex-col gap-4" aria-label={t('连接一个模型')}>
             <div>
-              <h1>{t('这个助手帮你找选题、写内容、准备发布，发布由你自己点。')}</h1>
+              <h1>{t('超级工作台——一个 Agent 帮你管理各大平台：找热点、写内容、准备发布、记录效果；发布由你本人点击。')}</h1>
               <p className="sub !text-[15px]">{t('第 1 步：连接一个写作模型。选一家，粘贴 Key，点“测试连接”。')}</p>
             </div>
             <div className="provider-grid" role="group" aria-label={t('选服务商')}>
@@ -75,7 +76,7 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
 
         {step === 2 && (
           <section className="flex grow flex-col gap-4" aria-label={t('选你要发的平台')}>
-            <div><h1>{t('选你要发的平台')}</h1><p className="sub !text-[15px]">{t('勾选后，可以顺手把手机上的官方 App 加进来，发布时一键打开。')}</p></div>
+            <div><h1>{t('选你要放进工作台的平台')}</h1><p className="sub !text-[15px]">{t('勾选的平台会出现在侧栏，点一下就在工作台里打开它的官方网页；也可以顺手登记手机上的官方 App。')}</p></div>
             <ul className="group-list">
               {CENTERS.map((c) => (
                 <li key={c.id}><label className="list-row cursor-pointer"><input type="checkbox" checked={plats.includes(c.id)} onChange={() => toggle(c.id)} aria-label={c.label} /><span className="row-text"><span className="row-label">{c.label}</span>{registered(c.id) && <span className="row-hint">{t('手机上的 App 已加入')}</span>}</span></label></li>
@@ -97,12 +98,13 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
         )}
 
         {step === 3 && (
-          <section className="flex grow flex-col gap-4" aria-label={t('写第一篇')}>
-            <div><h1>{t('写第一篇')}</h1><p className="sub !text-[15px]">{t('输入一个想法，或点一个示例，然后点发送。')}</p></div>
-            <Composer go={go} autoFocus initialPlatform={plats.includes('douyin') && !plats.includes('xiaohongshu') ? 'douyin_script' : 'xiaohongshu'} suggestions={SAMPLE_IDEAS.map((s) => ({ label: `${t('示例')}：${s}`, text: s }))} />
+          <section className="flex grow flex-col gap-4" aria-label={t('和 Agent 说第一句话')}>
+            <div><h1>{t('和 Agent 说第一句话')}</h1><p className="sub !text-[15px]">{t('点“发送”后进入首页对话，Agent 会真实执行：拉取合法来源的热点、分析并给出选题。')}</p></div>
+            <textarea rows={3} value={first} onChange={(e) => setFirst(e.target.value)} aria-label={t('第一句话')} data-testid="onb-first" className="!text-[15px]" />
             <div className="onb-actions flex gap-2">
               <button type="button" className="!min-h-12" onClick={() => setStep(2)}>{t('上一步')}</button>
-              <button type="button" className="primary !min-h-12 flex-1" onClick={() => void finish()} data-testid="onb-finish">{t('完成，进入首页')}</button>
+              <button type="button" className="primary !min-h-12 flex-1" disabled={!first.trim()} onClick={() => { sessionStorage.setItem('ca.firstAsk', first.trim()); void finish(); }} data-testid="onb-send">{t('发送')}</button>
+              <button type="button" className="!min-h-12" onClick={() => void finish()} data-testid="onb-finish">{t('跳过')}</button>
             </div>
           </section>
         )}

@@ -1,6 +1,6 @@
 {
-  "name": "内容运营助手 Content Agent",
-  "short_name": "内容助手",
+  "name": "超级工作台 Content Agent",
+  "short_name": "超级工作台",
   "description": "合规的多平台内容获取与运营助手：发布由你本人完成",
   "start_url": "/",
   "scope": "/",

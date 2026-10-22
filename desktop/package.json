@@ -1,8 +1,8 @@
 {
   "name": "content-agent-desktop",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
-  "description": "内容运营助手桌面端（Electron 外壳 + 本机后端）",
+  "description": "超级工作台桌面端（Electron 外壳 + 本机后端）",
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
@@ -15,7 +15,7 @@
   },
   "build": {
     "appId": "local.contentagent.desktop",
-    "productName": "内容运营助手",
+    "productName": "超级工作台",
     "directories": { "output": "release" },
     "files": ["main.cjs", "preload.cjs", "package.json"],
     "extraResources": [

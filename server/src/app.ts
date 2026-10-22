@@ -124,7 +124,7 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   };
 
   /* ---------- 基础 ---------- */
-  app.get('/api/health', async () => ({ ok: true, version: '0.7.0' }));
+  app.get('/api/health', async () => ({ ok: true, version: '0.8.0' }));
   app.get('/api/boundaries', async () => ({ boundaries: HARD_BOUNDARIES, tools: ALLOWED_TOOLS }));
 
   /* ---------- 设置与密钥 ---------- */

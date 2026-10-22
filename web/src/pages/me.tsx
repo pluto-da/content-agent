@@ -12,6 +12,9 @@ import { HARD_BOUNDARIES } from '../../../server/src/boundaries';
 import { useLocalApps, OS_LABEL } from '../format';
 import { Busy, EmptyState, ErrorNext, GroupList, ListRow, Problem, useToast } from '../ui';
 import { ModelsPage } from './me/models';
+import { SourcesPage } from './me/sources';
+import { ProfilePage } from './me/profile';
+import { KEEP_ALIVE_MAX, KEEP_ALIVE_MIN } from '../browser/pool';
 import { ModelPicker, type Pick } from '../components/ModelPicker';
 import { useAddApp } from '../components/addAppContext';
 import type { Theme } from '../state';
@@ -20,6 +23,8 @@ export function Me({ sub, id, go, lay, theme, setTheme, lang, setLang }: { sub: 
   switch (sub) {
     case 'models': return <ModelsPage id={id} go={go} lay={lay} />;
     case 'platforms': return <PlatformsSub go={go} />;
+    case 'sources': return <SourcesPage />;
+    case 'profile': return <ProfilePage />;
     case 'agent': return <AgentSub go={go} />;
     case 'prefs': return <PrefsSub theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />;
     case 'backup': return <BackupSub />;
@@ -164,7 +169,13 @@ function PrefsSub({ theme, setTheme, lang, setLang }: { theme: Theme; setTheme: 
         <li><div className="list-row static flex-wrap"><span className="row-text"><span className="row-label">{t('主题')}</span></span>{seg(theme, [['system', '跟随系统'], ['light', '浅色'], ['dark', '深色']], setTheme, t('主题'))}</div></li>
         <li><div className="list-row static flex-wrap"><span className="row-text"><span className="row-label">{t('语言')}</span></span>{seg(lang, [['zh', '中文'], ['en', 'English']], setLang, t('语言'))}</div></li>
       </GroupList>
-      <GroupList title={t('热点来源')}>
+      <GroupList title={t('工作台')}>
+        <li><div className="list-row static flex-wrap"><span className="row-text"><span className="row-label">{t('同时保活的平台数')}</span><span className="row-hint">{t('超过后最久没用的平台会休眠，切回时按上次地址重新打开')}</span></span>
+          <div className="seg" role="group" aria-label={t('同时保活的平台数')}>{Array.from({ length: KEEP_ALIVE_MAX - KEEP_ALIVE_MIN + 1 }, (_, i) => i + KEEP_ALIVE_MIN).map((n) => <button key={n} type="button" aria-pressed={(prefs?.keepAlive ?? 4) === n} onClick={async () => setP(await setPrefs({ keepAlive: n }))}>{n}</button>)}</div></div></li>
+        <li><label className="list-row cursor-pointer"><input type="checkbox" checked={!!prefs?.bindSessions} onChange={async () => setP(await setPrefs({ bindSessions: !prefs?.bindSessions }))} /><span className="row-text"><span className="row-label">{t('平台↔会话绑定')}</span><span className="row-hint">{t('打开某平台时，Agent 面板自动切到该平台的会话')}</span></span></label></li>
+        <li><div className="list-row static flex-wrap"><span className="row-text"><span className="row-label">{t('Agent 面板停靠')}</span></span>{seg(prefs?.agentDock ?? 'right', [['right', '右侧'], ['left', '左侧']], async (v) => setP(await setPrefs({ agentDock: v })), t('Agent 面板停靠'))}</div></li>
+      </GroupList>
+      <GroupList title={t('公开热点来源（更多数据源在“我的 → 数据源”）')}>
         {HOT_SOURCES.map((s) => (
           <li key={s.id}><label className="list-row cursor-pointer"><input type="checkbox" checked={!!prefs?.hotSources.includes(s.id)} onChange={async () => { if (!prefs) return; const on = prefs.hotSources.includes(s.id); setP(await setPrefs({ hotSources: on ? prefs.hotSources.filter((x) => x !== s.id) : [...prefs.hotSources, s.id] })); }} aria-label={s.label} /><span className="row-text"><span className="row-label">{s.label}</span><span className="row-hint">{s.kind === 'rss' ? t('官方 RSS') : t('公开榜单（先检查 robots.txt）')}</span></span></label></li>
         ))}
