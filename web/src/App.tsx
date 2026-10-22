@@ -3,26 +3,21 @@ import { apiMode, get } from './api';
 import { LangContext, translate, type Lang } from './i18n';
 import { Icon } from './icons';
 import { Loading, prefersReducedMotion } from './ui';
-import { BOTTOM_ITEMS, MAIN_NAV, ME_NAV, NAV, SIDEBAR_ITEMS, layoutOf, type NavItem } from './nav';
+import { NAV, layoutOf, type NavItem } from './nav';
 import { normalize, parseHash, toHash, type Route } from './route';
 import { Button } from './components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from './components/ui/dialog';
-import { Drawer, DrawerContent, DrawerItem } from './components/ui/drawer';
-import { Tip, TooltipProvider } from './components/ui/tooltip';
+import { TooltipProvider } from './components/ui/tooltip';
 import { cn } from './components/ui/utils';
-import { AddAppButton } from './components/AddAppButton';
 import { AddAppSheet } from './components/AddAppSheet';
 import { AddAppContext } from './components/addAppContext';
-import { Home } from './pages/home';
+import { Workbench, shellLayoutOf } from './shell/Workbench';
+import { CENTERS } from './data/platforms';
 import { useLocalApps } from './format';
 import { getModels, getPrefs } from './local/store';
 import type { Theme } from './state';
 
 // 页面级懒加载：首页随主包，其余按需加载（首屏轻量，借鉴 NextChat）。
-const Topics = lazy(() => import('./pages/topics').then((m) => ({ default: m.Topics })));
-const Write = lazy(() => import('./pages/write').then((m) => ({ default: m.Write })));
-const Publish = lazy(() => import('./pages/publish').then((m) => ({ default: m.Publish })));
-const Results = lazy(() => import('./pages/results').then((m) => ({ default: m.Results })));
 const Me = lazy(() => import('./pages/me').then((m) => ({ default: m.Me })));
 const Onboarding = lazy(() => import('./pages/onboarding').then((m) => ({ default: m.Onboarding })));
 
@@ -39,7 +34,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
         <div className="grow">
           <strong>页面出错了</strong>
           <p>{this.state.error.message}</p>
-          <div className="problem-a"><button type="button" className="primary" onClick={() => this.setState({ error: null })}>重试</button><button type="button" onClick={() => { location.hash = 'home'; this.setState({ error: null }); }}>回到首页</button></div>
+          <div className="problem-a"><button type="button" className="primary" onClick={() => this.setState({ error: null })}>重试</button><button type="button" onClick={() => { location.hash = 'agent'; this.setState({ error: null }); }}>回到首页</button></div>
         </div>
       </div>
     );
@@ -47,10 +42,10 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
   }
 }
 
-function useWidth(): number {
-  const [w, setW] = useState(typeof window === 'undefined' ? 1280 : window.innerWidth);
+function useSize(): { w: number; h: number } {
+  const [w, setW] = useState(() => (typeof window === 'undefined' ? { w: 1280, h: 800 } : { w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => {
-    const on = () => setW(window.innerWidth);
+    const on = () => setW({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
   }, []);
@@ -77,7 +72,8 @@ function systemDark(): boolean {
 function CommandPalette({ open, onClose, go, t }: { open: boolean; onClose: () => void; go: (p: string) => void; t: (k: string) => string }) {
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(0);
-  const items = NAV.filter((n) => !q || `${n.label}${t(n.label)}${n.id}${n.desc}${n.keywords ?? ''}`.toLowerCase().includes(q.toLowerCase()));
+  const all: NavItem[] = [...NAV, ...CENTERS.map((c) => ({ id: `p/${c.id}`, label: c.label, icon: 'globe', desc: `在主区打开 ${c.label}`, keywords: c.id }))];
+  const items = all.filter((n) => !q || `${n.label}${t(n.label)}${n.id}${n.desc}${n.keywords ?? ''}`.toLowerCase().includes(q.toLowerCase()));
   useEffect(() => { if (open) { setQ(''); setIdx(0); } }, [open]);
   const pick = (id: string) => { onClose(); go(id); };
   return (
@@ -112,27 +108,22 @@ function CommandPalette({ open, onClose, go, t }: { open: boolean; onClose: () =
   );
 }
 
-const V6_HINT = 'ca.v6.hint';
-
 export function App() {
-  const width = useWidth();
+  const size = useSize();
   const online = useOnline();
-  const lay = layoutOf(width);
+  const lay = layoutOf(size.w);
+  const shell = shellLayoutOf(size.w, size.h);
   const [route, setRoute] = useState<Route>(() => parseHash(location.hash));
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('ca.theme') as Theme) || 'system');
   const [lang, setLang] = useState<Lang>(() => (localStorage.getItem('ca.lang') as Lang) || 'zh');
   const [cmdk, setCmdk] = useState(false);
-  const [fabOpen, setFabOpen] = useState(false);
-  const [pending, setPending] = useState(0);
-  const [hint, setHint] = useState(() => !!localStorage.getItem('ca.v5.hint') && !localStorage.getItem(V6_HINT));
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('ca.side.collapsed6') === '1');
-  // 添加软件（全局 Sheet）
+  // 添加软件（全局 Sheet，登记手机上的官方 App）
   const [addOpen, setAddOpen] = useState(false);
   const [addInitial, setAddInitial] = useState<string | undefined>(undefined);
   const [appsVersion, setAppsVersion] = useState(0);
   const apps = useLocalApps(appsVersion);
   const appCount = apps.data?.apps?.length ?? 0;
-  const openAdd = useCallback((platform?: string) => { setFabOpen(false); setAddInitial(platform); setAddOpen(true); }, []);
+  const openAdd = useCallback((platform?: string) => { setAddInitial(platform); setAddOpen(true); }, []);
   const addCtx = useMemo(() => ({ open: openAdd, count: appCount, version: appsVersion }), [openAdd, appCount, appsVersion]);
   const t = useMemo(() => (k: string) => translate(lang, k), [lang]);
 
@@ -144,7 +135,7 @@ export function App() {
   }, [theme]);
   useEffect(() => { localStorage.setItem('ca.lang', lang); document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en'; }, [lang]);
 
-  // 旧 hash 兼容：首次进入把 0.5.0 / #settings/* / 0.2.x 地址替换为新地址（不新增历史记录）。
+  // 旧 hash 兼容：0.7.0 六页、0.5.0、#settings/*、0.2.x 地址替换为 0.8.0 地址（不新增历史记录）。
   useEffect(() => {
     const raw = location.hash.slice(1);
     const norm = toHash(parseHash(raw));
@@ -158,7 +149,6 @@ export function App() {
     const h = toHash(parseHash(normalize(target)));
     setRoute(parseHash(h));
     if (location.hash.slice(1) !== h) location.hash = h;
-    window.scrollTo?.(0, 0);
   }, []);
 
   // 首次打开（本机没有任何模型配置、也没走过引导）→ 进入首启引导。
@@ -168,162 +158,58 @@ export function App() {
       if (!m.providers.length && !p.onboarded && !location.hash.slice(1).startsWith('me')) go('onboarding');
     }).catch(() => {});
   }, [go]);
-
-  useEffect(() => {
-    const load = () => get('/api/notifications').then((n) => setPending(Number(n?.pendingDrafts) || 0)).catch(() => {});
-    load();
-    const iv = setInterval(load, 30000);
-    window.addEventListener('hashchange', load);
-    return () => { clearInterval(iv); window.removeEventListener('hashchange', load); };
-  }, []);
   useEffect(() => {
     const on = (e: KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setCmdk((x) => !x); } };
     window.addEventListener('keydown', on);
     return () => window.removeEventListener('keydown', on);
   }, []);
+  useEffect(() => { document.title = '超级工作台'; }, []);
 
-  const isPhone = lay === 'phone';
   const dark = theme === 'dark' || (theme === 'system' && systemDark());
-  const toggleRail = () => { setCollapsed((c) => { localStorage.setItem('ca.side.collapsed6', c ? '0' : '1'); return !c; }); };
-  const rail = !isPhone && collapsed;
-
+  const isPhone = lay === 'phone';
   const meSubItem = route.space === 'me' && route.sub ? NAV.find((n) => n.id === `me/${route.sub}`) : null;
-  const item = meSubItem ?? SIDEBAR_ITEMS.find((s) => s.id === route.space);
-  const phoneDetail = isPhone && ((route.space === 'write' && !!route.id) || (route.space === 'me' && route.sub === 'models' && !!route.id));
   const back = route.space === 'me' && route.sub ? () => go(route.sub === 'models' && route.id ? 'me/models' : 'me') : null;
 
-  if (route.space === 'onboarding') {
-    return (
-      <LangContext.Provider value={{ lang, t }}>
-        <AddAppContext.Provider value={addCtx}>
-          <TooltipProvider delayDuration={200}>
-            <div className={cn('shell app-root', lay)}>
-              <ErrorBoundary><Suspense fallback={<div className="page"><Loading show lines={5} /></div>}><Onboarding go={go} /></Suspense></ErrorBoundary>
-            </div>
-            <AddAppSheet open={addOpen} onOpenChange={setAddOpen} lay={lay} data={apps.data} initial={addInitial} onSaved={() => setAppsVersion((v) => v + 1)} />
-          </TooltipProvider>
-        </AddAppContext.Provider>
-      </LangContext.Provider>
-    );
-  }
-
-  const body = (() => {
-    switch (route.space) {
-      case 'topics': return <Topics go={go} />;
-      case 'write': return <Write filter={route.sub} id={route.id} go={go} lay={lay} />;
-      case 'publish': return <Publish go={go} />;
-      case 'results': return <Results go={go} />;
-      case 'me': return <Me sub={route.sub} id={route.id} go={go} lay={lay} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />;
-      default: return <Home go={go} />;
-    }
-  })();
-
-  const navActive = (id: string) => route.space === id;
-  const sideLink = (n: NavItem) => {
-    const label = n.id === 'write' && pending > 0 ? `${t(n.label)}（${pending} ${t('篇待审核')}）` : t(n.label);
-    const a = (
-      <a
-        href={`#${n.id}`} aria-current={navActive(n.id) ? 'page' : undefined} aria-label={rail || (n.id === 'write' && pending > 0) ? label : undefined}
-        onClick={(e) => { e.preventDefault(); go(n.id); }}
-        className={cn('relative flex items-center gap-3 rounded-[10px] text-[15px] text-side-fg no-underline transition-colors duration-150 hover:bg-side-active hover:text-fg hover:no-underline', rail ? 'h-11 w-11 justify-center' : 'h-11 px-3', navActive(n.id) && 'bg-side-active font-medium text-fg')}
-      >
-        <Icon name={n.icon} size={18} strokeWidth={navActive(n.id) ? 2 : 1.5} />
-        {!rail && <span className="truncate">{t(n.label)}</span>}
-        {n.id === 'write' && pending > 0 && (rail
-          ? <span className="absolute right-0.5 top-0.5 inline-grid h-4 min-w-4 place-items-center rounded-full bg-ink px-1 text-[13px] font-medium leading-none text-ink-fg" aria-hidden="true">{pending}</span>
-          : <span className="ml-auto inline-grid h-5 min-w-5 place-items-center rounded-full bg-surface-3 px-1.5 text-[13px] font-medium tabular-nums text-fg" aria-hidden="true">{pending}</span>)}
-      </a>
-    );
-    return <li key={n.id}>{rail ? <Tip label={t(n.label)}>{a}</Tip> : a}</li>;
-  };
-
-  const sidebar = !isPhone && (
-    <nav aria-label="主导航" data-rail={rail ? 'true' : 'false'} className={cn('app-side sticky top-0 flex h-dvh shrink-0 flex-col overflow-y-auto bg-side safe-top transition-[width] duration-200', rail ? 'w-[68px] items-center px-2' : 'w-[240px] px-3')}>
-      <div className={cn('flex min-h-16 shrink-0 items-center gap-2', rail ? 'flex-col justify-center pt-3' : 'px-1')} data-testid="side-brand">
-        <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-ink text-ink-fg"><Icon name="topics" size={16} strokeWidth={1.75} /></span>
-        {!rail && <span className="flex min-w-0 flex-1 flex-col leading-tight"><span className="truncate text-[15px] font-semibold text-fg">{t('内容运营助手')}</span><small className="text-[13px] text-muted">{apiMode() === 'server' ? t('已连接服务器') : t('本机模式')}</small></span>}
-        <Tip label={rail ? t('展开侧栏') : t('收起侧栏')}><Button variant="ghost" size="icon-lg" aria-label={rail ? t('展开侧栏') : t('收起侧栏')} aria-expanded={!rail} onClick={toggleRail}><Icon name={rail ? 'sidebar' : 'collapse'} size={18} /></Button></Tip>
-      </div>
-      {rail
-        ? <Tip label={`${t('快速跳转')} ⌘K`}><Button variant="ghost" size="icon-lg" className="mb-2" aria-label={t('快速跳转')} onClick={() => setCmdk(true)}><Icon name="search" size={18} /></Button></Tip>
-        : <button type="button" onClick={() => setCmdk(true)} aria-label={t('快速跳转')} className="!mb-3 !h-10 !min-h-10 w-full shrink-0 !justify-start gap-2 !border-line !bg-transparent !px-3 text-[14px] !font-normal !text-muted"><Icon name="search" size={16} /><span className="flex-1 text-left">{t('搜索或跳转')}</span><kbd>⌘K</kbd></button>}
-      <div className={cn('flex-1', rail && 'flex w-full flex-col items-center')}>
-        <ul className={cn('m-0 flex list-none flex-col gap-1 p-0', rail && 'items-center')} aria-label={t('主线')}>{MAIN_NAV.map(sideLink)}</ul>
-        <div className={cn('my-3 border-t border-line', rail ? 'w-8' : 'mx-1')} role="separator" />
-        <ul className={cn('m-0 flex list-none flex-col gap-1 p-0', rail && 'items-center')}>{sideLink(ME_NAV)}</ul>
-      </div>
-      <div className={cn('add-app-dock sticky bottom-0 z-10 mt-4 w-full shrink-0 border-t border-line bg-side pt-3 pb-[calc(12px+var(--sa-bottom))]', rail && 'flex justify-center')}>
-        <AddAppButton variant={rail ? 'rail' : 'side'} />
-      </div>
-    </nav>
+  const tools = (
+    <div className="flex shrink-0 items-center gap-1">
+      {!online && <span className="badge warn" role="status"><Icon name="wifiOff" size={14} /> {t('离线')}</span>}
+      <Button variant="ghost" size="icon-lg" aria-label={t('快速跳转')} onClick={() => setCmdk(true)}><Icon name="search" size={18} /></Button>
+      <Button variant="ghost" size="icon-lg" aria-label={t(dark ? '切换到浅色' : '切换到深色')} onClick={() => setTheme(dark ? 'light' : 'dark')}><Icon name={dark ? 'sun' : 'moon'} size={18} /></Button>
+    </div>
   );
 
-  const topbar = (
-    <header className="app-top sticky top-0 z-20 shrink-0 bg-canvas safe-top" data-testid="topbar">
-      <div className={cn('flex items-center gap-2', isPhone ? 'min-h-14 px-2' : 'min-h-16 px-6')}>
-        {back ? <Button variant="ghost" size="icon-lg" aria-label={t('返回')} onClick={back}><Icon name="arrowLeft" size={20} /></Button> : isPhone && <span className="w-2" />}
+  const meContent = route.space === 'me' ? (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="app-top sticky top-0 z-20 flex shrink-0 items-center gap-2 bg-canvas px-2 sm:px-6" style={{ minHeight: isPhone ? 48 : 64 }} data-testid="topbar">
+        {back ? <Button variant="ghost" size="icon-lg" aria-label={t('返回')} onClick={back}><Icon name="arrowLeft" size={20} /></Button> : null}
         <div className="min-w-0 flex-1">
-          <h1 className={cn('truncate', isPhone ? 'text-[18px]' : 'text-[20px]')}>{t(item?.label ?? '')}</h1>
-          {!isPhone && item?.desc && <p className="m-0 truncate text-[13px] text-muted">{t(item.desc)}</p>}
+          <h1 className={isPhone ? 'truncate text-[18px]' : 'truncate text-[20px]'}>{t(meSubItem?.label ?? '我的')}</h1>
+          {!isPhone && <p className="m-0 truncate text-[13px] text-muted">{t(meSubItem?.desc ?? '模型、平台与软件、数据源、规则、设置')}</p>}
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {!online && <span className="badge warn" role="status"><Icon name="wifiOff" size={14} /> {t('离线')}</span>}
-          {isPhone && <Button variant="ghost" size="icon-lg" aria-label={t('快速跳转')} onClick={() => setCmdk(true)}><Icon name="search" size={20} /></Button>}
-          <Button variant="ghost" size="icon-lg" aria-label={t(dark ? '切换到浅色' : '切换到深色')} onClick={() => setTheme(dark ? 'light' : 'dark')}><Icon name={dark ? 'sun' : 'moon'} size={isPhone ? 20 : 18} /></Button>
-        </div>
-      </div>
-    </header>
-  );
-
-  const bottomTab = (n: NavItem) => (
-    <a key={n.id} href={`#${n.id}`} aria-current={navActive(n.id) ? 'page' : undefined} aria-label={t(n.label)} onClick={(e) => { e.preventDefault(); go(n.id); }}
-      className={cn('relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-[10px] text-muted no-underline hover:no-underline', navActive(n.id) && 'font-medium text-fg')}>
-      <Icon name={n.icon} size={24} strokeWidth={navActive(n.id) ? 2.25 : 1.5} />
-      <small className="text-[13px] leading-tight">{t(n.label)}</small>
-      {n.id === 'write' && pending > 0 && <span className="absolute left-[calc(50%+6px)] top-1 inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-ink px-1.5 text-[13px] font-medium text-ink-fg" aria-hidden="true">{pending}</span>}
-    </a>
-  );
+        {!isPhone && tools}
+      </header>
+      <main id="main" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto pb-[calc(24px+var(--sa-bottom))] outline-none">
+        <ErrorBoundary key={route.sub}>
+          <Suspense fallback={<div className="page"><Loading show lines={5} /></div>}>
+            <Me sub={route.sub} id={route.id} go={go} lay={lay} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />
+          </Suspense>
+        </ErrorBoundary>
+      </main>
+    </div>
+  ) : undefined;
 
   return (
     <LangContext.Provider value={{ lang, t }}>
       <AddAppContext.Provider value={addCtx}>
         <TooltipProvider delayDuration={200}>
           <a className="skip" href="#main">跳到主要内容</a>
-          <div className={cn('shell app-root', lay, 'flex min-h-dvh bg-canvas', !isPhone && 'h-dvh overflow-hidden')}>
-            {sidebar}
-            <div className="flex min-w-0 flex-1 flex-col">
-              {topbar}
-              <main id="main" tabIndex={-1} className={cn('flex min-h-0 flex-1 flex-col outline-none', !isPhone && 'overflow-y-auto', isPhone && (phoneDetail ? 'pb-[calc(24px+var(--sa-bottom))]' : 'pb-[calc(64px+88px+var(--sa-bottom))]'))}>
-                {hint && (
-                  <div role="status" className={cn('mb-3 flex items-center gap-3 rounded-[16px] border border-line bg-surface px-4 py-3 text-[14px] text-fg-2', isPhone ? 'mx-4' : 'mx-6')}>
-                    <Icon name="info" size={16} className="shrink-0 text-muted" />
-                    <span className="min-w-0 flex-1">{t('0.6.0 起导航改成了动作：首页、找选题、写内容、去发布、看效果；设置都在“我的”。')}</span>
-                    <Button size="sm" variant="ghost" onClick={() => { localStorage.setItem(V6_HINT, '1'); setHint(false); }}>{t('知道了')}</Button>
-                  </div>
-                )}
-                <ErrorBoundary key={route.space + route.sub}>
-                  <Suspense fallback={<div className="page"><Loading show lines={5} /></div>}>{body}</Suspense>
-                </ErrorBoundary>
-              </main>
-            </div>
-            {isPhone && !phoneDetail && (
-              <>
-                <button type="button" aria-label={t('新写一篇或添加软件')} aria-haspopup="dialog" onClick={() => setFabOpen(true)} data-testid="fab"
-                  className="add-app-fab !fixed right-4 z-30 !h-14 !min-h-14 !w-14 !rounded-full !p-0 bottom-[calc(64px+16px+var(--sa-bottom))]">
-                  <Icon name="plus" size={24} strokeWidth={1.75} />
-                </button>
-                <nav aria-label="快捷导航" className="app-bottom fixed inset-x-0 bottom-0 z-30 grid h-[calc(64px+var(--sa-bottom))] grid-cols-5 items-start border-t border-line bg-surface px-2 pb-[var(--sa-bottom)] pt-1" data-testid="bottom-nav">
-                  {BOTTOM_ITEMS.map(bottomTab)}
-                </nav>
-              </>
-            )}
-            {isPhone && (
-              <Drawer open={fabOpen} onOpenChange={setFabOpen}>
-                <DrawerContent title={t('新建')} description={t('发布始终由你本人完成。')}>
-                  <DrawerItem icon={<Icon name="create" size={18} />} label={t('新写一篇')} hint={t('输入一个想法，助手帮你写')} tone="primary" onClick={() => { setFabOpen(false); go('write/new'); }} />
-                  <DrawerItem icon={<Icon name="plus" size={18} />} label={t('添加软件')} hint={t('把手机上的官方 App 加进来，发布时一键打开')} onClick={() => openAdd()} />
-                </DrawerContent>
-              </Drawer>
+          <div className={cn('shell app-root', lay)}>
+            {route.space === 'onboarding' ? (
+              <ErrorBoundary><Suspense fallback={<div className="page"><Loading show lines={5} /></div>}><Onboarding go={go} /></Suspense></ErrorBoundary>
+            ) : (
+              <ErrorBoundary>
+                <Workbench route={route} go={go} lay={shell} header={tools} meContent={meContent} />
+              </ErrorBoundary>
             )}
           </div>
           <AddAppSheet open={addOpen} onOpenChange={setAddOpen} lay={lay} data={apps.data} initial={addInitial} onSaved={() => setAppsVersion((v) => v + 1)} />

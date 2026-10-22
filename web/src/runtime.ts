@@ -14,6 +14,20 @@ export interface ElectronBridge {
     launch: (o: { execPath?: string | null; protocol?: string | null }) => Promise<{ ok: boolean; error?: string }>;
     share: (o: { text: string; draftId?: number; execPath?: string | null; protocol?: string | null }) => Promise<{ ok: boolean; error?: string; copied?: boolean; mediaDir?: string | null }>;
   };
+  /** 0.8.0 内嵌浏览器（WebContentsView，主进程管理；渲染层只同步矩形与收发状态） */
+  browser?: {
+    open: (o: { platform: string; url: string; hosts: string[] }) => Promise<void>;
+    show: (o: { platform: string }) => Promise<void>;
+    destroy: (o: { platform: string }) => Promise<void>;
+    hideAll: () => Promise<void>;
+    setBounds: (r: { x: number; y: number; width: number; height: number }) => Promise<void>;
+    setVisible: (v: boolean) => Promise<void>;
+    nav: (o: { platform: string; action: 'back' | 'forward' | 'reload' | 'stop' | 'load'; url?: string }) => Promise<void>;
+    clear: (o: { platform: string }) => Promise<void>;
+    onState: (fn: (s: any) => void) => void;
+    onError?: (fn: (e: any) => void) => void;
+    onSendToAgent?: (fn: (p: any) => void) => void;
+  };
 }
 
 export function electronBridge(w: Window = window): ElectronBridge | undefined {
