@@ -5,6 +5,8 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 OS="$1"; OUT="${OUT:-$HOME/desk-out}"; mkdir -p "$OUT/smoke"
 ROOT="$(pwd)"; R=0
+# macOS 没有 GNU timeout：用后台 sleep + kill 实现同样的上限
+tmo(){ local t=$1; shift; "$@" & local p=$!; ( sleep "$t"; kill "$p" 2>/dev/null ) & local w=$!; wait "$p"; local rc=$?; kill "$w" 2>/dev/null; return $rc; }
 log(){ echo "[desktop-ci] $*" | tee -a "$OUT/desktop-ci.log"; }
 bash scripts/build-desktop.sh "$OS" 2>&1 | tee "$OUT/build.log"; B=${PIPESTATUS[0]}
 [ "$B" = 0 ] || { log "构建失败（$B）"; exit 1; }
@@ -18,7 +20,7 @@ if [ "$OS" = win ]; then
   log "已安装：$EXE"; [ -n "$EXE" ] || { log "未找到安装后的 exe"; R=1; }
   if [ -n "$EXE" ]; then
     INST="$(dirname "$EXE")"; ls "$INST" | tee -a "$OUT/desktop-ci.log"
-    CA_SMOKE_DIR="$(cygpath -w "$SMOKE" 2>/dev/null || echo "$SMOKE")" timeout 200 "$EXE"; log "冒烟退出码 $?"
+    CA_SMOKE_DIR="$(cygpath -w "$SMOKE" 2>/dev/null || echo "$SMOKE")" tmo 200 "$EXE"; log "冒烟退出码 $?"
     UN=$(find "$INST" -maxdepth 1 -iname 'Uninstall*.exe' | head -1); log "卸载程序：$UN"
     "$UN" /S; sleep 15
     if [ -e "$EXE" ]; then log "卸载后 exe 仍存在"; R=1; else log "卸载完成：$EXE 已删除"; echo '{"uninstalled":true}' > "$SMOKE/uninstall.json"; fi
@@ -30,7 +32,7 @@ else
   APP=$(ls -d "$MNT"/*.app | head -1); cp -R "$APP" /Applications/; hdiutil detach "$MNT" -quiet || true
   INSTALLED="/Applications/$(basename "$APP")"; BIN=$(ls "$INSTALLED/Contents/MacOS/"* | head -1); log "已安装：$INSTALLED"
   codesign -dv "$INSTALLED" 2>&1 | tee -a "$OUT/desktop-ci.log" || true
-  CA_SMOKE_DIR="$SMOKE" timeout 200 "$BIN"; log "冒烟退出码 $?"
+  CA_SMOKE_DIR="$SMOKE" tmo 200 "$BIN"; log "冒烟退出码 $?"
   rm -rf "$INSTALLED"; [ -e "$INSTALLED" ] && { log "卸载失败"; R=1; } || { log "卸载完成：$INSTALLED 已删除"; echo '{"uninstalled":true}' > "$SMOKE/uninstall.json"; }
 fi
 [ -f "$SMOKE/smoke.json" ] && cat "$SMOKE/smoke.json" | tee -a "$OUT/desktop-ci.log" || { log "没有 smoke.json"; R=1; }

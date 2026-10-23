@@ -90,7 +90,7 @@ async function startServer() {
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', PORT: String(port), HOST: '127.0.0.1', CA_DATA_DIR: dataDir, CA_WEB_DIST: path.join(res, 'web', 'dist'), CA_AGENT_DEFAULTS: path.join(res, 'agent') },
     stdio: 'inherit',
   });
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 150; i++) {   // 最多约 30 s（慢机 / 首次启动 SQLite 初始化）
     try { const r = await fetch(`http://127.0.0.1:${port}/api/health`); if (r.ok) return port; } catch { /* 等待 */ }
     await new Promise((r) => setTimeout(r, 200));
   }

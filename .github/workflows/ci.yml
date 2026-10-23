@@ -66,10 +66,15 @@ jobs:
       - name: accept:v11 (ROADMAP 0.11)
         if: always()
         run: node scripts/accept-v11.mjs --strict
+      - name: accept:v1 (ROADMAP 1.0)
+        if: always()
+        run: |
+          node scripts/i18n-audit.mjs >/dev/null || true
+          node scripts/accept-v1.mjs --strict
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: reports-0.11.0
+          name: reports-1.0.0
           path: |
             out/accept-v9.json
             out/accept-v9.md
@@ -77,6 +82,8 @@ jobs:
             out/accept-v10.md
             out/accept-v11.json
             out/accept-v11.md
+            out/accept-v1.json
+            out/accept-v1.md
             out/search-v11.json
             evals/real/
             out/aigc-v10/
