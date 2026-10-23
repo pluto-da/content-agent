@@ -1,6 +1,6 @@
 ---
 name: x-post
-description: 把选题改写成 X 帖子（280 字符以内）
+description: 发到 X 时怎么写：280 字符以内的帖子
 platform: x_post
 tools: [llm.chat, compliance.check, handoff.x_intent]
 models: [llm]

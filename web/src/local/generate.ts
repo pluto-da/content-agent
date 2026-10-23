@@ -4,28 +4,30 @@
  */
 import { buildSystemPrompt, checkCompliance, rewriteUserMessage, runStructured, schemaForPlatform, validate, type ChatTurn, type SchemaError } from '@content-agent/shared';
 import { boundaryPreamble } from '../../../server/src/boundaries';
-import { AGENT_FILES, assistantOf } from '../data/assistants';
-import { writePlatform } from '../data/platforms';
+import { AGENT_FILES } from '../data/agentFiles';
+import { isFree, writePlatform } from '../data/platforms';
+import { defaultSkillSchema, platformSkill } from './platformSkill';
 import { db, type Row } from './db';
 import { chat, costOf, ModelError, type ChatOut } from './llm';
-import { activeProvider, addUsage, getAssistantOverrides, getModels, log } from './store';
+import { activeProvider, addUsage, getModels, getModelsV3, log } from './store';
+import { resolveModel } from '@content-agent/shared';
 
 export interface RewriteOut { title?: string; body: string; tags?: string[]; image_prompts?: string[]; voiceover?: string }
 
 export async function systemFor(platform: string): Promise<{ system: string; schema: Record<string, unknown> }> {
-  const a = assistantOf(platform);
-  const ov = (await getAssistantOverrides())[platform];
-  const schema = schemaForPlatform(platform, a?.schema ?? null);
+  const a = await platformSkill(platform);
+  const schema = schemaForPlatform(isFree(platform) ? undefined : platform, a?.schema ?? null);
   const system = buildSystemPrompt({
     boundary: boundaryPreamble(), soul: AGENT_FILES.soul, workingMethod: AGENT_FILES.workingMethod, user: AGENT_FILES.user,
-    skill: a ? { name: a.name, body: ov?.body?.trim() || a.body } : undefined, schema,
+    skill: a ? { name: a.name, body: a.body } : undefined, schema,
   });
   return { system, schema };
 }
 
 async function run(platform: string, messages: ChatTurn[], schema: Record<string, unknown>, pick?: { providerId?: string | null; model?: string | null }) {
-  const ov = (await getAssistantOverrides())[platform];
-  const cfg = await activeProvider({ providerId: pick?.providerId ?? ov?.providerId, model: pick?.model ?? ov?.model });
+  // 1.1.0：本次手动选择 > resolveModel(write:<平台>, 对话)（按任务指定 → 主模型 → 同服务商 → 其他）
+  const r = pick?.providerId ? null : resolveModel(await getModelsV3(), `write:${platform}`, 'chat');
+  const cfg = await activeProvider({ providerId: pick?.providerId ?? r?.target.accountId, model: pick?.model ?? r?.target.model });
   if (!cfg) throw new ModelError({ kind: 'key', reason: '还没有连接模型', advice: '先到“我的 → 模型”连接一个模型服务' });
   const adv = (await getModels()).advanced;
   let total = { input: 0, output: 0 };
@@ -79,6 +81,21 @@ export async function reviseDraft(draft: Row, instruction: string, pick?: { prov
 
 /** 平台硬限制检查（标题 / 正文字数），编辑器实时提示用。 */
 export function limitWarnings(platform: string, title: string, body: string): string[] {
-  const schema = schemaForPlatform(platform, assistantOf(platform)?.schema ?? null);
+  const schema = schemaForPlatform(isFree(platform) ? undefined : platform, defaultSkillSchema(platform));
   return validate(schema, { title, body }).filter((e) => e.kind === 'length').map((e) => e.message.replace('$.title', '标题').replace('$.body', '正文'));
+}
+
+/** 1.1.0 一稿多适配：母稿保持不变，按平台技能各生成一篇适配稿（parent_id 指向母稿）。 */
+export async function adaptDraft(motherId: number, platforms: string[], pick?: { providerId?: string | null; model?: string | null }): Promise<GenResult[]> {
+  const m = await db.get('drafts', motherId);
+  if (!m) throw new ModelError({ kind: 'unknown', reason: '母稿不存在', advice: '先写一篇' });
+  const out: GenResult[] = [];
+  for (const p of platforms.filter((x) => !isFree(x))) {
+    const idea = `把下面这篇母稿适配成「${writePlatform(p).label}」：保留核心观点、事实与作者口吻，不新增数据；按该平台的字数、结构、标签、配图与配音提示要求调整。\n标题：${String(m.title ?? '')}\n正文：${String(m.body ?? '')}`;
+    const r = await generateDraft(idea, p, pick);
+    await db.update('drafts', r.draft.id, { parent_id: motherId, idea: String(m.idea ?? m.title ?? '') });
+    out.push({ ...r, draft: (await db.get('drafts', r.draft.id))! });
+  }
+  await log('info', `母稿 #${motherId} 适配到 ${platforms.map((x) => writePlatform(x).short).join('、')}（母稿保留）`);
+  return out;
 }

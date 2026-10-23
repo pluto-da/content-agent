@@ -5,7 +5,8 @@ import { useT } from '../i18n';
 import { Icon } from '../icons';
 import type { Layout } from '../nav';
 import { WRITE_FILTERS } from '../route';
-import { writePlatform, WRITE_PLATFORMS } from '../data/platforms';
+import { writePlatform, WRITE_PLATFORMS, WRITE_TARGETS } from '../data/platforms';
+import { adaptDraft } from '../local/generate';
 import { limitWarnings } from '../local/generate';
 import { listDrafts, revise, setStatus, STATUS_LABEL, type Draft } from '../services';
 import { ago } from '../format';
@@ -92,7 +93,8 @@ function Editor({ id, go, onChanged }: { id: number; go: (to: string) => void; o
   const [d, setD] = useState<Draft | null>(null);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [platform, setPlatform] = useState('xiaohongshu');
+  const [platform, setPlatform] = useState('free');
+  const [targets, setTargets] = useState<string[]>([]);
   const [err, setErr] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [ask, setAsk] = useState('');
@@ -120,7 +122,7 @@ function Editor({ id, go, onChanged }: { id: number; go: (to: string) => void; o
         <button type="button" className="ghost !px-1" onClick={() => go('write')} aria-label={t('ui.back_to_list_2')}><Icon name="arrowLeft" size={18} /></button>
         <StatusDot tone={tone(d.status)}>{t(STATUS_LABEL[d.status] ?? d.status)}</StatusDot>
         <span className="grow" />
-        <select aria-label={t('ui.platforms')} className="!w-auto" value={platform} onChange={(e) => setPlatform(e.target.value)}>{WRITE_PLATFORMS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select>
+        <select aria-label={t('ui.platforms')} className="!w-auto" value={platform} onChange={(e) => setPlatform(e.target.value)}>{WRITE_TARGETS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select>
       </div>
       <label className="field !m-0"><span>{t('ui.title')}</span><input value={title} onChange={(e) => setTitle(e.target.value)} data-testid="edit-title" /></label>
       <label className="field !m-0"><span>{t('ui.body')} <span className="font-normal text-muted">· {[...body].length} {t('ui.chars')}</span></span><textarea rows={14} value={body} onChange={(e) => setBody(e.target.value)} data-testid="edit-body" /></label>
@@ -136,6 +138,13 @@ function Editor({ id, go, onChanged }: { id: number; go: (to: string) => void; o
         </div>
         <ModelPicker value={pick} onChange={setPick} go={go} />
       </form>
+
+      <fieldset className="m-0 flex flex-col gap-2 border-0 p-0" data-testid="adapt">
+        <legend className="mb-1 text-[14px] font-medium text-fg">{t('ui.adapt_to_platforms')}</legend>
+        <span className="text-[13px] text-muted">{t('ui.this_draft_stays_as_the')}</span>
+        <div className="flex flex-wrap gap-1">{WRITE_PLATFORMS.map((p) => <label key={p.id} className={`v9-chip ${targets.includes(p.id) ? 'on' : ''}`}><input type="checkbox" checked={targets.includes(p.id)} onChange={() => setTargets((x) => (x.includes(p.id) ? x.filter((y) => y !== p.id) : [...x, p.id]))} data-testid={`adapt-${p.id}`} />{p.short}</label>)}</div>
+        <button type="button" className="self-start" disabled={!targets.length || !!busy} data-testid="adapt-run" onClick={() => void act(t('ui.adapting'), async () => { if (dirty) await save(); await adaptDraft(id, targets, pick); setTargets([]); }, t('ui.adapted_the_original_is_kept'))}>{t('ui.adapt')}（{targets.length}）</button>
+      </fieldset>
 
       {err && <Problem title={err.message} advice={err.advice} action={err.code.startsWith('model_') ? t('ui.check_models') : undefined} onAction={() => go('me/models')} />}
       {busy && <Busy label={busy} />}

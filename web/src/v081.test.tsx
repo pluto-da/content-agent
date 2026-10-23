@@ -12,7 +12,8 @@ import { db, onStoreChange, resetLocalDb } from './local/db';
 import { activeProvider, checkState, EMPTY_MODELS, getModels, hasConfiguredModel, isConfigured, resolveProvider, saveModels, setPrefs, upsertProvider, getPrefs } from './local/store';
 import type { ProviderConfig } from './local/llm';
 import { useStoreChange, useStoreValue } from './local/useStore';
-import { addInbox, createConversation, listConversations, listMessages } from './agent/store';
+import { addInbox, createConversation, getProfile, listConversations, listMessages } from './agent/store';
+import { getVfs, resetVfsForTests } from './v9/vfsBackend';
 import { ToolCard, type CardActions } from './agent/cards';
 import type { AgentEvent } from './agent/events';
 import { runTurnV9 as runTurn } from './v9/engine';
@@ -25,7 +26,7 @@ const untested: ProviderConfig = { id: 'mimo', label: '小米 MiMo', protocol: '
 const tested: ProviderConfig = { ...untested, check: { ok: true, at: 'x' } };
 
 beforeEach(() => {
-  resetLocalDb(); resetSecureKey();
+  resetLocalDb(); resetSecureKey(); resetVfsForTests();
   localStorage.clear(); sessionStorage.clear();
   location.hash = '';
   Object.defineProperty(window, 'matchMedia', { configurable: true, value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }) });
@@ -332,9 +333,10 @@ describe('B6 工具卡片补测', () => {
   it('画像更新卡：先展示差异，采纳后才写入画像', async () => {
     render(<ToolCard card={{ type: 'profile', tool: 'profile_update', status: 'done', data: { reason: '最近常写通勤', diff: [{ field: 'positioning', before: '', after: '通勤效率' }], next: { positioning: '通勤效率' } } }} actions={actions()} />);
     expect(screen.getByText(/理由：最近常写通勤/)).toBeTruthy();
-    expect(await db.getKV('profile')).toBeUndefined();
+    expect((await getProfile()).positioning).toBe('');
     await act(async () => { fireEvent.click(screen.getByTestId('profile-adopt')); });
-    expect(await db.getKV('profile')).toMatchObject({ positioning: '通勤效率' });
+    await waitFor(async () => expect((await getProfile()).positioning).toBe('通勤效率'));   // 1.1.0：写入 user/profile.md（与 USER 同源）
+    expect(await (await getVfs()).text('user/profile.md')).toContain('通勤效率');
     expect(screen.getByText('已采纳，写入画像')).toBeTruthy();
   });
   it('进度卡：列出已完成 / 失败的步骤，未完成时可“继续”；没有任务时给白话', () => {

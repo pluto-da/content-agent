@@ -1,6 +1,6 @@
 ---
 name: wechat-article
-description: 把选题改写成公众号长文，并生成封面图提示词
+description: 发到公众号时怎么写：长文结构与封面图提示词
 platform: wechat_article
 tools: [llm.chat, compliance.check, handoff.wechat_draft]
 models: [llm, image]

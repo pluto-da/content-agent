@@ -4,14 +4,14 @@
  * L2 修改 / 覆盖本机已有数据，执行前出确认卡（允许 / 拒绝 / 记住此类）；L3 对外写入（发布、评论、私信……）——不存在这样的工具。
  */
 import { charLen, checkCompliance, cleanAndGroup, riskOf, runStructured, scoreOf, snapshotOf, trendOf, type JsonSchema, type RawHot } from '@content-agent/shared';
-import { assistantOf } from '../data/assistants';
+import { platformSkill } from '../local/platformSkill';
 import { PATROL_STOPS } from '../data/hotSources';
-import { CENTERS, center, centerOfWrite, detectPlatform, publishUrlOfWrite, WRITE_PLATFORMS, writePlatform } from '../data/platforms';
+import { CENTERS, center, centerOfWrite, detectPlatform, isFree, publishUrlOfWrite, WRITE_PLATFORMS, writePlatform } from '../data/platforms';
 import { collectHot, type HotFetchResult } from '../hot/collect';
 import { db, type Row } from '../local/db';
-import { generateDraft, limitWarnings, reviseDraft } from '../local/generate';
+import { adaptDraft, generateDraft, limitWarnings, reviseDraft } from '../local/generate';
 import { costOf, type ProviderConfig } from '../local/llm';
-import { addUsage, getAssistantOverrides, getPrefs } from '../local/store';
+import { addUsage, getPrefs } from '../local/store';
 import { copyText } from '../runtime';
 import { chatAgent } from './model';
 import { applyProfilePatch, bus, getProfile, lastUnfinishedTask, listInbox, markInboxUsed, type CardData } from './store';
@@ -33,11 +33,12 @@ const str = (description: string, extra: Record<string, unknown> = {}) => ({ typ
 const WRITE_IDS = WRITE_PLATFORMS.map((p) => p.id);
 
 /** 用户说的平台名 / 中心 id → 写作平台 id。 */
-export function toWritePlatform(p: string): string {
+export function toWritePlatform(p: string | undefined | null): string {
+  if (!p || isFree(p) || p === '自由创作') return 'free';   // 1.1.0：不指定平台 = 自由创作
   if (WRITE_IDS.includes(p)) return p;
   const c = CENTERS.find((x) => x.id === p || x.label === p);
-  if (c) return WRITE_PLATFORMS.find((w) => w.center === c.id)?.id ?? 'xiaohongshu';
-  return detectPlatform(p) ?? 'xiaohongshu';
+  if (c) return WRITE_PLATFORMS.find((w) => w.center === c.id)?.id ?? 'free';
+  return detectPlatform(p) ?? 'free';
 }
 async function draftOf(id: unknown): Promise<Row> {
   const d = await db.get('drafts', Number(id));
@@ -49,7 +50,7 @@ export class ToolError extends Error { constructor(public reason: string, public
 /* ---------- 发布前质量门禁（publish_check 与写作标准共用一套规则） ---------- */
 export interface Check { id: string; label: string; pass: boolean; detail: string; fix?: string; blocking: boolean }
 export async function standardOf(platform: string): Promise<{ titleMax?: number; bodyMax?: number; tagsMax: number; must: string[]; avoid: string[] }> {
-  const a = assistantOf(platform);
+  const a = await platformSkill(platform);
   const props = ((a?.schema as Record<string, any> | undefined)?.properties ?? {}) as Record<string, any>;
   const prof = await getProfile();
   const def: Record<string, { titleMax?: number; bodyMax?: number }> = { xiaohongshu: { titleMax: 20, bodyMax: 1000 }, douyin_script: { bodyMax: 600 }, x_post: { bodyMax: 280 } };
@@ -245,10 +246,10 @@ export const TOOLS: ToolSpec[] = [
   },
   {
     name: 'draft_write', label: '写草稿', level: 'L1',
-    description: '按画像、平台限制与写作助手写一篇草稿（先定本篇标准，再写），保存为待审草稿。',
-    parameters: obj({ topic: str('选题'), platform: str('写作平台 id'), angle: str('角度，可选'), sources: { type: 'array', items: { type: 'string' }, description: '参考标题或链接，可选' } }, ['topic', 'platform']),
+    description: '按画像与符号—结构底座写一篇草稿（先定本篇标准，再写），保存为待审草稿。默认自由创作（platform 不填或 free）；只有用户明确指定平台时才按该平台技能写。写完要发到多个平台用 draft_adapt。',
+    parameters: obj({ topic: str('选题'), platform: str('写作平台 id；不填 = 自由创作'), angle: str('角度，可选'), sources: { type: 'array', items: { type: 'string' }, description: '参考标题或链接，可选' } }, ['topic']),
     async run(a, ctx) {
-      const platform = toWritePlatform(String(a.platform));
+      const platform = toWritePlatform(a.platform == null ? null : String(a.platform));
       const route = await routeSkill(platform);
       const st = await standardOf(platform);
       const idea = [String(a.topic), a.angle ? `角度：${a.angle}` : '', Array.isArray(a.sources) && a.sources.length ? `参考：${a.sources.slice(0, 5).join('；')}` : '',
@@ -261,6 +262,19 @@ export const TOOLS: ToolSpec[] = [
         result: { draftId: d.id, platform, title: d.title, bodyChars: charLen(String(d.body ?? '')), limit: st.bodyMax, warnings: r.warnings },
         card: draftCard(d, { assistant: route.name, assistantNote: route.reason, standard: st, ms: r.ms, cost: r.cost }), refs: { draftId: d.id },
       };
+    },
+  },
+  {
+    name: 'draft_adapt', label: '适配到平台', level: 'L1',
+    description: '一稿多适配：把一篇母稿按平台技能适配到一个或多个平台（字数、结构、标签、配图与配音提示）。母稿保留不变，每个平台各存一篇适配稿。',
+    parameters: obj({ draftId: { type: 'integer' }, platforms: { type: 'array', minItems: 1, items: { type: 'string' }, description: '写作平台 id 列表' } }, ['draftId', 'platforms']),
+    async run(a, ctx) {
+      const mother = await draftOf(a.draftId);
+      const list = [...new Set((a.platforms as string[]).map((x) => toWritePlatform(String(x))).filter((x) => !isFree(x)))];
+      if (!list.length) throw new ToolError('没有可适配的平台', '说一下要发到哪些平台，例如小红书、公众号');
+      const rs = await adaptDraft(Number(mother.id), list, ctx.cfg ? { providerId: ctx.cfg.id, model: ctx.cfg.model } : undefined);
+      bus.emit({ type: 'drafts-changed' });
+      return { result: { motherId: mother.id, adapted: rs.map((r) => ({ draftId: r.draft.id, platform: r.draft.platform, title: r.draft.title })) }, refs: { draftId: rs[0]?.draft.id } };
     },
   },
   {
@@ -426,9 +440,9 @@ export function fullText(d: Row): string {
 }
 
 export async function routeSkill(platform: string): Promise<{ assistantId: string; name: string; skill: string; reason: string }> {
-  const ov = (await getAssistantOverrides())[platform];
-  const a = assistantOf(platform);
-  if (ov?.body?.trim()) return { assistantId: platform, name: `${a?.name ?? writePlatform(platform).label}（你自定义的）`, skill: writePlatform(platform).skill, reason: '用户自定义的写作助手优先' };
-  if (a) return { assistantId: platform, name: a.name, skill: writePlatform(platform).skill, reason: '内置平台写作助手' };
-  return { assistantId: 'generic', name: '通用写作规则', skill: 'generic', reason: '没有专门的助手，已用通用规则' };
+  if (isFree(platform)) return { assistantId: 'free', name: '自由创作', skill: 'free-writing', reason: '没有指定平台：先自由写出好内容，需要时再按平台适配' };
+  const a = await platformSkill(platform);
+  if (a?.userEdited) return { assistantId: platform, name: `${a.name}（你修订过的版本）`, skill: a.skillId, reason: '平台技能有你的修订版本，优先使用' };
+  if (a) return { assistantId: platform, name: a.name, skill: a.skillId, reason: '内置平台技能' };
+  return { assistantId: 'free', name: '自由创作', skill: 'free-writing', reason: '没有这个平台的技能，已按自由创作写' };
 }

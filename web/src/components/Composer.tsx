@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '../api';
 import { useT } from '../i18n';
 import { Icon } from '../icons';
-import { detectPlatform, writePlatform, WRITE_PLATFORMS } from '../data/platforms';
+import { detectPlatform, writePlatform, WRITE_TARGETS } from '../data/platforms';
 import { compose, parseIntent, revise, type Draft } from '../services';
 import { Busy, Problem } from '../ui';
 import { DraftCard } from './DraftCard';
@@ -11,7 +11,7 @@ import { DraftCard } from './DraftCard';
  * 一句话驱动主线（原则 2）：“帮我找今天的选题” → 找选题；“写一篇小红书：通勤时间怎么利用” → 生成；
  * “把这篇改得更口语一点” → 改写刚才那篇。结果以卡片出现在输入框下方，卡片上有“编辑”“去发布”。
  */
-export function Composer({ go, onPlus, autoFocus, initialPlatform = 'xiaohongshu', placeholder, onDone, suggestions, initialText }: {
+export function Composer({ go, onPlus, autoFocus, initialPlatform = 'free', placeholder, onDone, suggestions, initialText }: {
   go: (to: string) => void; initialText?: string; onPlus?: () => void; autoFocus?: boolean; initialPlatform?: string; placeholder?: string;
   onDone?: (d: Draft) => void; suggestions?: { label: string; text?: string; to?: string }[];
 }) {
@@ -72,7 +72,7 @@ export function Composer({ go, onPlus, autoFocus, initialPlatform = 'xiaohongshu
       <div className="flex flex-wrap items-center gap-2">
         <span className="kbd-hint">{t('ui.write_as')}</span>
         <select aria-label={t('ui.which_platform_to_write_for')} value={platform} onChange={(e) => setPlatform(e.target.value)} className="!w-auto !min-h-10">
-          {WRITE_PLATFORMS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+          {WRITE_TARGETS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
         </select>
         {busy && <Busy label={busy} />}
       </div>

@@ -2,7 +2,7 @@
  * Agent 本机数据（0.8.0）：会话、消息、素材箱、任务检查点、账号画像、L2“记住此类”、界面事件总线。
  * 全部在 IndexedDB；素材只存本机。
  */
-import { db, type Row } from '../local/db';
+import { db, emitStoreChange, type Row } from '../local/db';
 
 /* ---------- 事件总线（工具 → 外壳：打开平台、开始巡视、预览“发给 Agent”） ---------- */
 export type ShellEvent =
@@ -75,8 +75,23 @@ export interface Profile {
   performance: { note: string; draftIds: number[]; date: string }[];
 }
 export const EMPTY_PROFILE: Profile = { positioning: '', audience: '', style: { tone: '', banned: [], emoji: '', samples: [] }, platforms: {}, redlines: [], performance: [] };
-export async function getProfile(): Promise<Profile> { const p = await db.getKV<Profile>('profile'); return { ...EMPTY_PROFILE, ...(p ?? {}), style: { ...EMPTY_PROFILE.style, ...(p?.style ?? {}) } }; }
-export async function saveProfile(p: Profile): Promise<void> { await db.setKV('profile', p); }
+/** 1.1.0：画像唯一真相源 = Agent 文件 user/profile.md（与 USER.md 同源，带版本）；旧 kv:profile 只在迁移前读取。 */
+export async function getProfile(): Promise<Profile> {
+  const { getVfs } = await import('../v9/vfsBackend');
+  const { profileFromMd, PROFILE_PATH } = await import('../v11/migrate');
+  let fromFile: Profile | null;
+  try { fromFile = profileFromMd(await (await getVfs()).text(PROFILE_PATH)); } catch { fromFile = null; }
+  const p = fromFile ?? (await db.getKV<Profile>('profile'));
+  return { ...EMPTY_PROFILE, ...(p ?? {}), style: { ...EMPTY_PROFILE.style, ...(p?.style ?? {}) } };
+}
+export async function saveProfile(p: Profile): Promise<void> {
+  const { getVfs } = await import('../v9/vfsBackend');
+  const { profileToMd, PROFILE_PATH } = await import('../v11/migrate');
+  const vfs = await getVfs();
+  await vfs.write(PROFILE_PATH, profileToMd(p, await vfs.text(PROFILE_PATH)), { author: 'user', note: '我的 → 账号画像' });
+  await db.setKV('profile', null);
+  emitStoreChange('kv:profile');
+}
 /** 只允许改画像字段；返回新画像与改动列表（不写入）。 */
 export function applyProfilePatch(cur: Profile, patch: Record<string, unknown>): { next: Profile; diff: { field: string; before: unknown; after: unknown }[] } {
   const allowed = ['positioning', 'audience', 'style', 'platforms', 'redlines', 'performance'];

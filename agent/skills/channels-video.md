@@ -1,6 +1,6 @@
 ---
 name: channels-video
-description: 把选题改写成视频号短视频文案，并生成配音与字幕
+description: 发到视频号时怎么写：短视频文案、配音与字幕要点
 platform: channels
 tools: [llm.chat, compliance.check, clipboard.copy, handoff.deeplink]
 models: [llm, tts, asr]

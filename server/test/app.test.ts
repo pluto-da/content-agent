@@ -193,7 +193,7 @@ describe('API 全流程（mock 模型）', () => {
   });
   it('skills 与 A/B 评测', async () => {
     const s = await req('GET', '/api/skills');
-    expect(s.body.skills.length).toBe(14);
+    expect(s.body.skills.length).toBe(15);
     expect(s.body.errors).toEqual([]);
     expect(s.body.skills.find((x: any) => x.name === 'douyin-script').models).toEqual(['llm', 'tts', 'asr']);
     expect((await req('GET', '/api/evals/benchmark')).body.cases.length).toBeGreaterThanOrEqual(7);

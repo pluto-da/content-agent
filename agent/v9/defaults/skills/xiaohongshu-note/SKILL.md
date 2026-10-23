@@ -1,6 +1,6 @@
 ---
 name: xiaohongshu-note
-description: 把选题写成小红书图文笔记，并给出 3 条配图提示词。用户要写小红书、种草笔记、图文笔记时使用。
+description: 发到小红书时怎么写：图文笔记与 3 条配图提示词。用户指定小红书、种草笔记、图文笔记，或把母稿适配到小红书时使用。
 triggers: [小红书, 笔记, 种草, 图文]
 platform: xiaohongshu
 roles: [chat, image]

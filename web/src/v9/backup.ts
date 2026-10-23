@@ -8,9 +8,10 @@ import { buildExport, readImport, ExportBlocked, BackupMigrator, sanitizeFlagOve
 import { db, COLLECTIONS, type Collection } from '../local/db';
 import { getVfs, resetVfsForTests } from './vfsBackend';
 import { audit } from './ops';
+import { importLegacyV11, LEGACY_V11_KV } from '../v11/migrate';
 
 const KV_EXCLUDE = /^(secrets|secure\.key|cache:|backup\.snapshot|run:|models$|models_v2_backup)/;
-const KV_KEYS = ['models_v3', 'prefs', 'profile', 'assistants', 'usage', 'schema', 'approvals.remembered', 'memory.dontRemember', 'hot.cache', 'sources.creds.meta'];
+const KV_KEYS = ['models_v3', 'prefs', 'usage', 'schema', 'approvals.remembered', 'memory.dontRemember', 'hot.cache', 'sources.creds.meta'];
 const APP_VERSION = '0.9.0';
 
 /** 1.0：本机数据库读失败时带上是哪一步，界面据此给白话建议（不是“发现密钥”）。 */
@@ -45,6 +46,7 @@ export async function restoreBackup(zipBytes: Uint8Array, o: { conflict?: 'local
   let snapshot = false;
   try { const snap = await exportBackup({ includeMedia: false }); await db.setKV('backup.snapshot', Array.from(snap)); snapshot = true; } catch { /* 空库时没有可快照的内容 */ }
   let nf = 0, nc = 0, nk = 0;
+  const legacy: Record<string, unknown> = {};
   const vfs = await getVfs();
   for (const [p, content] of files) {
     if (p.startsWith('vfs/')) {
@@ -66,10 +68,12 @@ export async function restoreBackup(zipBytes: Uint8Array, o: { conflict?: 'local
       if (KV_EXCLUDE.test(k)) continue;
       let v = JSON.parse(content);
       if (k === 'prefs' && v?.flags) v = { ...v, flags: sanitizeFlagOverrides(v.flags) };
+      if (LEGACY_V11_KV.includes(k)) { legacy[k] = v; nk++; continue; }
       if (k === 'models_v3') v = { ...v, accounts: (v.accounts ?? []).map((a: { hasKey?: boolean; keyTail?: string }) => ({ ...a, hasKey: false, keyTail: undefined })) };
       await db.setKV(k, v); nk++;
     }
   }
+  if (Object.keys(legacy).length) await importLegacyV11(legacy as Parameters<typeof importLegacyV11>[0]);
   await audit({ kind: 'restore', actor: 'user', summary: `恢复备份（${manifest.appVersion}，${manifest.exportedAt.slice(0, 10)}）：文件 ${nf}、集合 ${nc}、设置 ${nk}；Key 需要重新填写`, outcome: 'ok' });
   return { manifest, errors: [], restored: { files: nf, collections: nc, kv: nk }, snapshot };
 }

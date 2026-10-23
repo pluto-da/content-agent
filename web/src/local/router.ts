@@ -7,6 +7,8 @@ import { generateDraft, reviseDraft } from './generate';
 import { fetchHot, type HotEntry, type SourceResult } from './hot';
 import { getModels, getPrefs, log, saveModels, setPrefs, type ModelsState } from './store';
 import { KNOWN_APPS } from '../data/platforms';
+import { getProfile } from '../agent/store';
+import { importLegacyV11 } from '../v11/migrate';
 
 export class LocalError extends Error {
   constructor(public code: string, message: string, public advice = '', public status = 400) { super(message); }
@@ -113,9 +115,8 @@ on('GET', /^\/api\/backup\/export$/, async (_m, _b, q) => {
   const data: Record<string, unknown> = { format: 'content-agent-local-backup', version: 2, exportedAt: new Date().toISOString(), includesKeys: withKeys };
   for (const c of ['drafts', 'topics', 'apps', 'metrics', 'conversations', 'messages', 'tasks'] as const) data[c] = await db.all(c);
   if (withInbox) data.inbox = await db.all('inbox');
-  data.profile = (await db.getKV('profile')) ?? null;
+  data.profile = await getProfile();
   data.prefs = await getPrefs();
-  data.assistants = (await db.getKV('assistants')) ?? {};
   // 默认不含密钥：只保留服务商、地址与模型名
   data.models = { ...models, providers: models.providers.map((p) => ({ ...p, apiKey: withKeys ? p.apiKey : '' })) };
   await setPrefs({ backupHinted: true });
@@ -131,8 +132,8 @@ on('POST', /^\/api\/backup\/import$/, async (_m, b) => {
     for (const r of b[c]) { await db.insert(c, r); n++; }
   }
   if (b.prefs) await setPrefs(b.prefs);
-  if (b.assistants) await db.setKV('assistants', b.assistants);
-  if (b.profile) await db.setKV('profile', b.profile);
+  // 1.1.0：旧写作助手覆盖与画像走迁移（技能修订 / user/profile.md），不直接写回 kv
+  if (b.assistants || b.profile) await importLegacyV11({ assistants: b.assistants as never, profile: b.profile as never });
   if (b.models) {
     const cur = await getModels();
     const incoming = b.models as ModelsState;

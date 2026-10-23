@@ -1,6 +1,6 @@
 ---
 name: zhihu-answer
-description: 把选题改写成知乎回答（先给结论、结构化、引用来源）
+description: 发到知乎回答时怎么写：先给结论、结构化、引用来源
 platform: zhihu_answer
 tools: [llm.chat, compliance.check, clipboard.copy, handoff.deeplink]
 models: [llm]

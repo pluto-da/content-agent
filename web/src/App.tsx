@@ -18,6 +18,7 @@ import { Workbench, shellLayoutOf } from './shell/Workbench';
 import { CENTERS } from './data/platforms';
 import { useLocalApps } from './format';
 import { getModels, getPrefs } from './local/store';
+import { migrateV11 } from './v11/migrate';
 import type { Theme } from './state';
 
 // 页面级懒加载：首页随主包，其余按需加载（首屏轻量，借鉴 NextChat）。
@@ -137,6 +138,8 @@ export function App() {
     if (!prefersReducedMotion()) { root.classList.add('theme-switching'); setTimeout(() => root.classList.remove('theme-switching'), 240); }
     root.dataset.theme = theme;
   }, [theme]);
+  // 1.1.0：一次性迁移（写作助手覆盖 → 技能修订、画像 → user/profile.md），幂等，失败不阻断启动
+  useEffect(() => { void migrateV11().catch(() => {}); }, []);
   useEffect(() => { localStorage.setItem('ca.lang', lang); document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en'; }, [lang]);
 
   // 旧 hash 兼容：0.7.0 六页、0.5.0、#settings/*、0.2.x 地址替换为 0.8.0 地址（不新增历史记录）。
@@ -200,7 +203,7 @@ export function App() {
         <ErrorBoundary key={route.sub}>
           <Suspense fallback={<div className="page"><Loading show lines={5} /></div>}>
             <div key={`${route.sub}/${route.id ?? ''}`} className="anim-page">
-            <Me sub={route.sub} id={route.id} go={go} lay={lay} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />
+            <Me sub={route.sub} id={route.id} query={route.query} go={go} lay={lay} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />
             </div>
           </Suspense>
         </ErrorBoundary>

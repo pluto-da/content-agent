@@ -1,6 +1,6 @@
 ---
 name: xianyu-listing
-description: 生成闲鱼商品文案与买家沟通话术（只生成，由用户手动粘贴）
+description: 发到闲鱼时怎么写：商品文案与买家沟通话术（只生成，由用户手动粘贴）
 platform: xianyu
 tools: [llm.chat, compliance.check, clipboard.copy]
 models: [llm]

@@ -1,6 +1,6 @@
 ---
 name: xiaohongshu-note
-description: 把选题改写成小红书图文笔记，并生成配图提示词
+description: 发到小红书时怎么写：图文笔记与配图提示词
 platform: xiaohongshu
 tools: [llm.chat, compliance.check, clipboard.copy, handoff.deeplink]
 models: [llm, image]

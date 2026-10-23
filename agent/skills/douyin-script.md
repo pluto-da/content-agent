@@ -1,6 +1,6 @@
 ---
 name: douyin-script
-description: 把选题改写成抖音口播脚本，并生成配音与字幕
+description: 发到抖音时怎么写：口播脚本、配音与字幕要点
 platform: douyin_script
 tools: [llm.chat, compliance.check, clipboard.copy, handoff.deeplink]
 models: [llm, tts, asr]

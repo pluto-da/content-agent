@@ -2,7 +2,7 @@
 import { db, emitStoreChange } from './db';
 import type { ProviderConfig } from './llm';
 import { presetOf } from '../data/providers';
-import { addModelEntry, emptyModelsV3, findSecrets, legacyVendor, ModelsMigrator, normalizeModelName, removeModelEntry, type LegacyProvider, type ModelsStateV2, type ModelsStateV3, type ProviderAccount } from '@content-agent/shared';
+import { resolveModel, addModelEntry, emptyModelsV3, findSecrets, legacyVendor, ModelsMigrator, normalizeModelName, removeModelEntry, type LegacyProvider, type ModelsStateV2, type ModelsStateV3, type ProviderAccount } from '@content-agent/shared';
 import { deleteSecret, getSecret, setSecret } from './secrets';
 
 export interface ModelsState {
@@ -21,8 +21,10 @@ export const EMPTY_MODELS: Readonly<ModelsState> = { providers: [], defaultProvi
 export async function getModels(): Promise<ModelsState> {
   const v3 = await getModelsV3();
   const providers: ProviderConfig[] = [];
+  // 1.1.0：默认对话模型只从 resolveModel 取（主模型 / 按任务指定 / 同服务商 / 其他），不再读 roles.chat.primary
+  const picked = resolveModel(v3, 'turn', 'chat');
   for (const a of v3.accounts) {
-    const chat = a.models.find((e) => e.roles.includes('chat')) ?? a.models.find((e) => e.roles.some((r) => r === 'reason' || r === 'fast'));
+    const chat = (picked?.target.accountId === a.id ? a.models.find((e) => e.id === picked.target.modelEntryId) : undefined) ?? a.models.find((e) => e.roles.includes('chat')) ?? a.models.find((e) => e.roles.some((r) => r === 'reason' || r === 'fast'));
     if (!chat && !a.extra?.v2) continue;
     const p = chat?.lastProbe;
     providers.push({
@@ -32,7 +34,7 @@ export async function getModels(): Promise<ModelsState> {
     });
   }
   const chat = v3.roles.chat;
-  return { providers, defaultProvider: chat.primary?.accountId ?? null, advanced: { thinking: v3.advanced?.thinking ?? 'off', temperature: v3.advanced?.temperature ?? null, fallbackProvider: chat.fallback?.accountId ?? null } };
+  return { providers, defaultProvider: picked?.target.accountId ?? null, advanced: { thinking: v3.advanced?.thinking ?? 'off', temperature: v3.advanced?.temperature ?? null, fallbackProvider: chat.fallback?.accountId ?? null } };
 }
 export const MODELS_CHANGED = 'ca:models-changed';
 export async function saveModels(m: ModelsState): Promise<void> {
@@ -58,7 +60,9 @@ export async function saveModels(m: ModelsState): Promise<void> {
     if (e && p.check) { e.lastProbe = { ok: p.check.ok, at: p.check.at, ms: p.check.ms, reason: p.check.reason, requestedModel: e.model, respondedModel: p.check.model }; e.status = p.check.ok ? 'ok' : 'failed'; }
   }
   const target = (id: string | null | undefined) => { const a = v3.accounts.find((x) => x.id === id); const e = a?.models.find((x) => x.roles.includes('chat')); return a && e ? { accountId: a.id, modelEntryId: e.id, model: e.model } : undefined; };
-  v3.roles.chat = { ...v3.roles.chat, primary: target(m.defaultProvider), fallback: m.advanced.fallbackProvider && m.advanced.fallbackProvider !== m.defaultProvider ? target(m.advanced.fallbackProvider) : undefined };
+  v3.main = target(m.defaultProvider);
+  if (v3.roles.chat.primary && !v3.roles.chat.primary.overrideSecretRef && !v3.roles.chat.primary.overrideBaseURL) delete v3.roles.chat.primary;
+  v3.roles.chat = { ...v3.roles.chat, fallback: m.advanced.fallbackProvider && m.advanced.fallbackProvider !== m.defaultProvider ? target(m.advanced.fallbackProvider) : undefined };
   v3.advanced = { ...(v3.advanced ?? {}), thinking: m.advanced.thinking, temperature: m.advanced.temperature };
   await saveModelsV3(v3);
   // 0.8.1：通知所有已挂载的页面（Agent 面板常驻不卸载）重新读取模型配置
@@ -71,7 +75,15 @@ let migrating: Promise<void> | null = null;
 export async function migrateModelsIfNeeded(): Promise<void> {
   return (migrating ??= (async () => {
     const have = await db.getKV<ModelsStateV3>('models_v3');
-    if (have?.schemaVersion === 3) return;
+    if (have?.schemaVersion === 4) return;
+    if (have?.schemaVersion === 3) {
+      // 1.1.0：v3 → v4（主模型 + 按任务指定）；迁移前快照存 models_v3_pre_v4，可一键回滚（rollbackModelsV4）
+      await db.setKV('models_v3_pre_v4', have);
+      await db.setKV('models_v3', ModelsMigrator.migrate<ModelsStateV3>(have).doc);
+      const sch = (await db.getKV<Record<string, number>>('schema')) ?? {};
+      await db.setKV('schema', { ...sch, models: 4 });
+      return;
+    }
     const old = await db.getKV<ModelsStateV2 & { providers: (LegacyProvider & { apiKey?: string })[] }>('models');
     const v3 = old ? ModelsMigrator.migrate<ModelsStateV3 & { legacy?: unknown }>({ ...old, schemaVersion: 2 }).doc : emptyModelsV3();
     for (const a of v3.accounts) a.extra = { ...(a.extra ?? {}), v2: '1', ...(old?.providers.find((p) => p.id === a.id)?.custom ? { custom: '1' } : {}) };
@@ -80,8 +92,16 @@ export async function migrateModelsIfNeeded(): Promise<void> {
     await db.setKV('models_v3', v3);
     if (old) { await db.setKV('models_v2_backup', { ...old, providers: old.providers.map((p) => ({ ...p, apiKey: undefined })) }); await db.setKV('models', { ...old, providers: old.providers.map((p) => ({ ...p, apiKey: '' })), migratedTo: 3 }); }
     const sch = (await db.getKV<Record<string, number>>('schema')) ?? {};
-    await db.setKV('schema', { ...sch, db: 3, models: 3 });
+    await db.setKV('schema', { ...sch, db: 3, models: 4 });
   })().finally(() => { migrating = null; }));
+}
+/** 1.1.0：回滚模型配置到迁移前（v3 快照）；没有快照时用 v4→v3 降级。回滚后下次读取会再次迁移，除非调用方停在旧版本。 */
+export async function rollbackModelsV4(): Promise<boolean> {
+  const snap = await db.getKV<ModelsStateV3>('models_v3_pre_v4');
+  const cur = await db.getKV<ModelsStateV3>('models_v3');
+  if (!snap && !cur) return false;
+  await db.setKV('models_v3', snap ?? ModelsMigrator.migrate<ModelsStateV3>(cur, 3).doc);
+  return true;
 }
 export async function getModelsV3(): Promise<ModelsStateV3> {
   await migrateModelsIfNeeded();
@@ -147,14 +167,6 @@ export function newProviderConfig(id: string): ProviderConfig {
   return { id, label: p?.label ?? (id.startsWith('custom-') ? '自定义服务' : id), protocol: p?.protocol ?? 'openai', baseURL: p?.baseURL ?? '', apiKey: '', model: p?.models[0] ?? '', ...(id.startsWith('custom-') ? { custom: true } : {}) };
 }
 
-/* ---------- 写作助手覆盖 ---------- */
-export interface AssistantOverride { body?: string; providerId?: string | null; model?: string | null }
-export async function getAssistantOverrides(): Promise<Record<string, AssistantOverride>> { return (await db.getKV<Record<string, AssistantOverride>>('assistants')) ?? {}; }
-export async function setAssistantOverride(platform: string, o: AssistantOverride | null): Promise<void> {
-  const all = await getAssistantOverrides();
-  if (o) all[platform] = o; else delete all[platform];
-  await db.setKV('assistants', all);
-}
 
 /* ---------- 偏好 ---------- */
 export interface Prefs {

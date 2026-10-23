@@ -235,8 +235,9 @@ describe('B5（Mock）多步热点任务：hot_fetch → hot_analyze → draft_w
   it('参数不合格 → 带错误修复一次；同一工具同参数连续两次即停止；userOnly 工具被拒绝', async () => {
     await setup(); stubSources();
     const m = mockModel([
-      () => ({ toolCalls: [{ id: 'a', name: 'draft_write', arguments: '{"topic":"x"}' }] }),
-      () => ({ content: '```json\n{"tool":"draft_write","args":{"topic":"x"}}\n```' }), // 修复仍缺 platform
+      // 1.1.0：draft_write 的 platform 改为可选（不填 = 自由创作），参数不合格的例子改用 draft_revise 缺 instruction
+      () => ({ toolCalls: [{ id: 'a', name: 'draft_revise', arguments: '{"draftId":1}' }] }),
+      () => ({ content: '```json\n{"tool":"draft_revise","args":{"draftId":1}}\n```' }), // 修复仍缺 instruction
       () => ({ toolCalls: [{ id: 'b', name: 'publish_mark', arguments: '{"draftId":1}' }] }),
       () => ({ toolCalls: [{ id: 'c', name: 'inbox_list', arguments: '{}' }] }),
       () => ({ toolCalls: [{ id: 'd', name: 'inbox_list', arguments: '{}' }] }),

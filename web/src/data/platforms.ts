@@ -39,9 +39,15 @@ export const WRITE_PLATFORMS: WritePlatform[] = [
   { id: 'x_post', label: 'X 帖子', short: 'X', center: 'x', skill: 'x-post' },
 ];
 
-export const writePlatform = (id: string) => WRITE_PLATFORMS.find((p) => p.id === id) ?? WRITE_PLATFORMS[0]!;
+/** 1.1.0：自由创作 = 默认写作方式，不预设平台格式；写完（或用户明确指定时）再按平台技能“适配”。 */
+export const FREE_WRITE: WritePlatform = { id: 'free', label: '自由创作', short: '自由创作', center: '', skill: 'free-writing' };
+/** 写作页 / 输入框的选项：自由创作在最前，其后是可选的平台适配。 */
+export const WRITE_TARGETS: WritePlatform[] = [FREE_WRITE, ...WRITE_PLATFORMS];
+export const isFree = (id: string | undefined | null): boolean => !id || id === 'free';
+export const writePlatform = (id: string) => (id === 'free' ? FREE_WRITE : WRITE_PLATFORMS.find((p) => p.id === id) ?? WRITE_PLATFORMS[0]!);
 export const center = (id: string) => CENTERS.find((c) => c.id === id);
-export const centerOfWrite = (id: string) => center(writePlatform(id).center)!;
+/** 自由创作的母稿还没有发布平台：落到第一个平台中心仅用于兜底显示，发布前应先适配。 */
+export const centerOfWrite = (id: string) => center(writePlatform(id).center) ?? CENTERS[0]!;
 /** 某种内容在官方网页版上的发布地址（知乎回答需要具体问题，先进创作中心）。 */
 export const publishUrlOfWrite = (id: string) => writePlatform(id).publishUrl ?? centerOfWrite(id).publishUrl;
 

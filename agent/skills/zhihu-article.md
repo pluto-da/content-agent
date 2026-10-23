@@ -1,6 +1,6 @@
 ---
 name: zhihu-article
-description: 把选题改写成知乎专栏文章（结论先行、层次清晰、引用来源）
+description: 发到知乎专栏时怎么写：结论先行、层次清晰、引用来源
 platform: zhihu_article
 tools: [llm.chat, compliance.check, clipboard.copy, handoff.deeplink]
 models: [llm, image]
