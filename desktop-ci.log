@@ -1,0 +1,118 @@
+total 92356
+drwxr-xr-x 1 runneradmin 197121        0 Oct 23 21:00 .
+drwxr-xr-x 1 runneradmin 197121        0 Oct 23 20:59 ..
+-rw-r--r-- 1 runneradmin 197121     7489 Oct 23 21:00 builder-debug.yml
+-rwxr-xr-x 1 runneradmin 197121 94450483 Oct 23 21:00 content-agent-1.0.0-win-x64-setup.exe
+-rw-r--r-- 1 runneradmin 197121   101418 Oct 23 21:00 content-agent-1.0.0-win-x64-setup.exe.blockmap
+drwxr-xr-x 1 runneradmin 197121        0 Oct 23 20:59 win-unpacked
+[desktop-ci] 安装包：desktop/release/content-agent-1.0.0-win-x64-setup.exe
+[desktop-ci] 已安装：C:\Users\runneradmin\AppData\Local/Programs/content-agent-desktop/content-agent.exe
+LICENSE.electron.txt
+LICENSES.chromium.html
+Uninstall content-agent.exe
+chrome_100_percent.pak
+chrome_200_percent.pak
+content-agent.exe
+d3dcompiler_47.dll
+dxcompiler.dll
+dxil.dll
+ffmpeg.dll
+icudtl.dat
+libEGL.dll
+libGLESv2.dll
+locales
+resources
+resources.pak
+snapshot_blob.bin
+v8_context_snapshot.bin
+vk_swiftshader.dll
+vk_swiftshader_icd.json
+vulkan-1.dll
+INFO: No tasks are running which match the specified criteria.
+[desktop-ci] 冒烟前没有其它实例
+[desktop-ci] 冒烟退出码 0
+INFO: No tasks are running which match the specified criteria.
+[desktop-ci] 卸载程序：C:\Users\runneradmin\AppData\Local/Programs/content-agent-desktop/Uninstall content-agent.exe
+[desktop-ci] 卸载等待 5 s
+[desktop-ci] 卸载完成：C:\Users\runneradmin\AppData\Local/Programs/content-agent-desktop/content-agent.exe 已删除
+{
+  "ok": true,
+  "platform": "win32",
+  "arch": "x64",
+  "electron": "39.8.10",
+  "node": "22.22.1",
+  "appVersion": "1.0.0",
+  "packaged": true,
+  "dataDir": "C:\\Users\\runneradmin\\AppData\\Roaming\\content-agent-desktop\\data",
+  "steps": [
+    {
+      "name": "health",
+      "at": "2026-10-23T21:01:18.760Z",
+      "health": {
+        "ok": true,
+        "version": "1.0.0"
+      }
+    },
+    {
+      "name": "safeStorage",
+      "at": "2026-10-23T21:01:18.761Z",
+      "available": true,
+      "roundtrip": true,
+      "backend": "os"
+    },
+    {
+      "name": "first-run",
+      "at": "2026-10-23T21:01:25.124Z",
+      "shot": "01-first-run.png",
+      "title": "超级工作台"
+    },
+    {
+      "name": "backup-page",
+      "at": "2026-10-23T21:01:27.968Z",
+      "shot": "02-backup-page.png",
+      "hasExport": true
+    },
+    {
+      "name": "backup-export",
+      "at": "2026-10-23T21:01:29.640Z",
+      "state": "completed",
+      "bytes": 356095,
+      "shot": "03-backup-exported.png",
+      "msg": "已导出（不含任何 Key）"
+    },
+    {
+      "name": "backup-restore",
+      "at": "2026-10-23T21:01:31.026Z",
+      "msg": "已恢复：文件 102、数据集 22、设置 2。Key 需要重新填写",
+      "shot": "04-restored.png"
+    }
+  ],
+  "console": [
+    "error: Connecting to 'blob:http://127.0.0.1:53473/8fd2f052-b630-47ad-b275-9bcbe1c158cd' violates the following Content Security Policy directive: \"connect-src 'self'\". The action has been blocked.",
+    "error: Connecting to 'blob:http://127.0.0.1:53473/8fd2f052-b630-47ad-b275-9bcbe1c158cd' violates the following Content Security Policy directive: \"connect-src 'self' https: http://localhost:* http://127.0.0.1:*\". The action has been blocked.",
+    "error: Fetch API cannot load blob:http://127.0.0.1:53473/8fd2f052-b630-47ad-b275-9bcbe1c158cd. Refused to connect because it violates the document's Content Security Policy.",
+    "error: Uncaught (in promise) TypeError: Failed to fetch"
+  ],
+  "pageErrors": [
+    {
+      "name": "TypeError",
+      "message": "Failed to fetch",
+      "stack": "TypeError: Failed to fetch\n    at HTMLAnchorElement.click (<anonymous>:1:223)\n    at Wm (http://127.0.0.1:53473/assets/index-BXXrAZa5.js:70:14569)\n    at f (http://127.0.0.1:53473/assets/me-B1k7moAI.js:2:17992)",
+      "at": "2026-10-23T21:01:28.011Z"
+    }
+  ],
+  "idbLargeProbe": {
+    "1000": "ok",
+    "100000": "ok",
+    "1000000": "ok"
+  }
+}total 92269
+drwxr-xr-x 1 runneradmin 197121        0 Oct 23 21:01 .
+drwxr-xr-x 1 runneradmin 197121        0 Oct 23 20:56 ..
+-rw-r--r-- 1 runneradmin 197121     6347 Oct 23 21:00 build.log
+-rwxr-xr-x 1 runneradmin 197121 47185920 Oct 23 21:01 content-agent-1.0.0-win-x64-setup.exe.part-aa
+-rw-r--r-- 1 runneradmin 197121 47185920 Oct 23 21:01 content-agent-1.0.0-win-x64-setup.exe.part-ab
+-rw-r--r-- 1 runneradmin 197121    78643 Oct 23 21:01 content-agent-1.0.0-win-x64-setup.exe.part-ac
+-rw-r--r-- 1 runneradmin 197121      104 Oct 23 21:01 content-agent-1.0.0-win-x64-setup.exe.sha256
+-rw-r--r-- 1 runneradmin 197121     3920 Oct 23 21:01 desktop-ci.log
+drwxr-xr-x 1 runneradmin 197121        0 Oct 23 21:01 smoke
