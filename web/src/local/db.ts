@@ -140,7 +140,7 @@ function idb(factory: IDBFactory): Backend {
     async clear(c) { await tx(c, 'readwrite', (s) => s.clear()); },
     getKV: <T,>(k: string) => tx<T | undefined>('kv', 'readonly', (s) => s.get(k) as IDBRequest<T | undefined>),
     async setKV(k, v) { await tx('kv', 'readwrite', (s) => s.put(v, k)); },
-    // 1.0：VFS 大文件分片存（单条值 < 64 KB，不触发 Chromium 的“大值转 Blob 文件”存储；Windows 桌面上该路径报 UnknownError: Internal error.）
+    // 1.0：VFS 大文件分片存（单条值 < 64 KB，不走 Chromium 的“大值转 Blob 文件”存储）。防御性措施：Windows 导出 Internal error. 的根因是两个实例共用 userData（见 desktop/main.cjs 单实例锁），冒烟探针显示 Windows 上 1 MB 大值读写正常
     kget: <T,>(c: Keyed, k: string) => txMulti<T | undefined>(c, 'readonly', (s, done) => {
       const r = s.get(k);
       r.onsuccess = () => {

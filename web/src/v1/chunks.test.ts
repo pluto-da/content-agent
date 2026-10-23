@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { splitChunks, assembleAll, CHUNK_CHARS } from '../local/db';
 
-describe('1.0 VFS 大值分片（Windows 桌面 IndexedDB 大值路径 UnknownError 的修复）', () => {
+describe('1.0 VFS 大值分片（防御性：单条值 < 64 KB）', () => {
   it('小文件不分片，原样存', () => {
     const v = { path: 'a.md', content: 'x'.repeat(10) };
     expect(splitChunks('a.md', v)).toEqual({ head: v, chunks: [] });

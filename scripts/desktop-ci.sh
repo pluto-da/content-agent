@@ -26,8 +26,9 @@ if [ "$OS" = win ]; then
     CA_SMOKE_DIR="$(cygpath -w "$SMOKE" 2>/dev/null || echo "$SMOKE")" tmo 200 "$EXE"; log "冒烟退出码 $?"
     sleep 3; tasklist //FI "IMAGENAME eq content-agent.exe" 2>&1 | tee -a "$OUT/desktop-ci.log"; taskkill //F //IM content-agent.exe >/dev/null 2>&1 && log "冒烟后仍有残留进程，已结束" || true
     UN=$(find "$INST" -maxdepth 1 -iname 'Uninstall*.exe' | head -1); log "卸载程序：$UN"
-    "$UN" /S; sleep 15
-    if [ -e "$EXE" ]; then log "卸载后 exe 仍存在"; R=1; else log "卸载完成：$EXE 已删除"; echo '{"uninstalled":true}' > "$SMOKE/uninstall.json"; fi
+    # NSIS 卸载程序会先把自己复制到临时目录再异步执行，立即返回：轮询最多 120 s 等 exe 被删
+    "$UN" /S; W=0; while [ -e "$EXE" ] && [ $W -lt 120 ]; do sleep 5; W=$((W+5)); done; log "卸载等待 ${W} s"
+    if [ -e "$EXE" ]; then log "卸载后 exe 仍存在"; ls -la "$INST" 2>&1 | tee -a "$OUT/desktop-ci.log"; tasklist 2>&1 | grep -i -E "content-agent|Un_|Uninstall|au_" | tee -a "$OUT/desktop-ci.log"; R=1; else log "卸载完成：$EXE 已删除"; echo '{"uninstalled":true}' > "$SMOKE/uninstall.json"; fi
   fi
 else
   DMG=$(ls desktop/release/*.dmg | head -1); log "安装包：$DMG"
