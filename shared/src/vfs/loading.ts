@@ -43,7 +43,7 @@ function shape(path: string, body: string): string {
 /**
  * 组装稳定前缀。files：路径 → 原文（缺失的必载文件由调用方用内置默认补上）。totalBudget：总字符预算（按 chat 模型上下文换算）。
  */
-export function assemblePrefix(files: Record<string, string | undefined>, o: { totalBudget?: number; includeSubagents?: boolean } = {}): AssembledPrefix {
+export function assemblePrefix(files: Record<string, string | undefined>, o: { totalBudget?: number; includeSubagents?: boolean; team?: string } = {}): AssembledPrefix {
   const table = parseLoadingTable(files['SYSTEM.md'] ?? '');
   const warnings: string[] = [];
   if (!table.length) warnings.push('SYSTEM.md 的加载顺序表解析失败，按默认顺序加载');
@@ -67,6 +67,13 @@ export function assemblePrefix(files: Record<string, string | undefined>, o: { t
     const c = cut(body, e.budget, e.path);
     parts.push({ path: e.path, chars: [...c.text].length, budget: e.budget, truncated: c.truncated, content: c.text });
   }
+  // 1.2.0：超级 Agent 指挥职责（非核心文件 super/SUPER.md，代码侧追加；AGENTS.md 的引用改动见 proposals-v1.2 P1）
+  if (files['super/SUPER.md'] !== undefined && !parts.some((p) => p.path === 'super/SUPER.md')) {
+    const c = cut(BODY_ONLY(files['super/SUPER.md']!), 3000, 'super/SUPER.md');
+    const at = parts.findIndex((p) => p.path === 'AGENTS.md');
+    parts.splice(at < 0 ? parts.length : at + 1, 0, { path: 'super/SUPER.md', chars: [...c.text].length, budget: 3000, truncated: c.truncated, note: '超级 Agent 指挥职责', content: c.text });
+  }
+  if (o.team) { const t = cut(o.team, 1500, 'agents/'); const at = parts.findIndex((p) => p.path === 'super/SUPER.md'); parts.splice(at < 0 ? parts.length : at + 1, 0, { path: 'agents/', chars: [...t.text].length, budget: 1500, truncated: t.truncated, note: '我的团队（已启用子 Agent）', content: t.text }); }
   // 总预算：依次压缩 MEMORY → USER → EVOLUTION → 技能目录 → SOUL 第二三部分；SOUL 第一部分永不截
   const total = () => parts.reduce((s, p) => s + p.chars, 0);
   if (o.totalBudget && total() > o.totalBudget) {
