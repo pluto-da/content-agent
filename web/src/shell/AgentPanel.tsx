@@ -9,14 +9,13 @@ import { Drawer, DrawerContent, DrawerItem } from '../components/ui/drawer';
 import type { Layout } from '../nav';
 import { presetOf } from '../data/providers';
 import { center } from '../data/platforms';
-import { checkState, configuredProviders, getPrefs, resolveProvider } from '../local/store';
+import { checkState, configuredProviders, resolveProvider } from '../local/store';
 import { useModels } from '../local/useModels';
 import { useStoreChange, useStoreValue } from '../local/useStore';
 import { SkeletonLines } from '../ui';
 import type { ProviderConfig } from '../local/llm';
-import { runTurn, type AgentEvent } from '../agent/loop';
+import type { AgentEvent } from '../agent/events';
 import { runTurnV9 } from '../v9/engine';
-import { flagOn } from '@content-agent/shared';
 import { ConfirmCard, ToolCard, type CardActions } from '../agent/cards';
 import { addInbox, bus, createConversation, deleteConversation, deleteInbox, listConversations, listInbox, listMessages, updateConversation, type CardData, type Conversation, type InboxItem, type StoredMsg } from '../agent/store';
 import { toolByName } from '../agent/tools';
@@ -115,9 +114,8 @@ export function useAgent() {
       if (!id) { const c = await createConversation(); id = c.id; setCid(id); setMsgs([]); }
       abort.current = new AbortController();
       if (pick) await updateConversation(id, { model: `${cfg.label} · ${cfg.model}` });
-      const pf = await getPrefs();
-      const turn = flagOn('agent.runtime.v9', pf.flags ?? {}) ? runTurnV9 : runTurn;
-      await turn({ conversationId: id, text: t, cfg, signal: abort.current.signal, ...(at?.length ? { override: Object.fromEntries(at.map((p) => [p.role, p.target])), overrideLabels: at.map(pickLabel) } : {}), onEvent: (e) => { onEvent(e); if (e.type === 'done') { setMsgs((m) => m.map((x) => ({ ...x, meta: { ...(x.meta ?? {}), streaming: false }, stopped: e.stopped && x.meta?.streaming ? true : x.stopped }))); if (e.error && cfgState !== 'ok') setNotice(`发送失败：${e.error}。这个模型还没测试通过，可到“我的 → 模型”点“测试连接”看具体原因`); void refreshConvs(); } } });
+      // 0.11.0：0.8 循环已删除，agent.runtime.v9 开关到期，一律走 v9 运行时（ADR-005 重审）
+      await runTurnV9({ conversationId: id, text: t, cfg, signal: abort.current.signal, ...(at?.length ? { override: Object.fromEntries(at.map((p) => [p.role, p.target])), overrideLabels: at.map(pickLabel) } : {}), onEvent: (e) => { onEvent(e); if (e.type === 'done') { setMsgs((m) => m.map((x) => ({ ...x, meta: { ...(x.meta ?? {}), streaming: false }, stopped: e.stopped && x.meta?.streaming ? true : x.stopped }))); if (e.error && cfgState !== 'ok') setNotice(`发送失败：${e.error}。这个模型还没测试通过，可到“我的 → 模型”点“测试连接”看具体原因`); void refreshConvs(); } } });
     } catch (e) {
       setNotice(`发送失败：${e instanceof Error ? e.message : String(e)}。可以再发一次，或到“我的 → 模型”检查设置`);
     } finally {

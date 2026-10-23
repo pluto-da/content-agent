@@ -10,7 +10,8 @@ import { EnvHttpProxyAgent, fetch as ufetch } from 'undici';
 import { resetLocalDb, db } from './local/db';
 import { saveModels, EMPTY_MODELS, setPrefs } from './local/store';
 import type { ProviderConfig } from './local/llm';
-import { runTurn, type AgentEvent, type TraceStep } from './agent/loop';
+import type { AgentEvent, TraceStep } from './agent/events';
+import { runTurnV9 as runTurn } from './v9/engine';
 import { createConversation, listMessages } from './agent/store';
 
 const RUN = process.env.CA_REAL_MIMO === '1';

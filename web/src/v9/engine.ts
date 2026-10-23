@@ -1,7 +1,7 @@
 /**
  * 0.9.0 Agent 运行时的本机接线（ADR-005）：shared AgentRuntime + IndexedDB 存储 + VFS 系统文件 + 0.8 工具（包装）+ 0.9 多模态工具 + 统一能力层。
  * 对外暴露与 0.8 runTurn 相同的事件接口（message / delta / card / confirm / done / mode），AgentPanel 不用改交互；
- * 特性开关 agent.runtime.v9 关闭时退回 0.8 循环（应急）。
+ * 0.11.0：agent.runtime.v9 开关已到期移除，0.8 循环已删除，这是唯一的对话运行时（ADR-005 重审）。
  */
 import { syncNativeSchedule } from './reminders';
 import { type RoleRequest,
@@ -10,13 +10,14 @@ import { type RoleRequest,
   type RunStore, type RunRecord, type ToolCallRecord, type LockStore, type LockRecord, type ModelPort, type ModelTurn, type ToolServices, type ChatMessage, type ToolSpec as V9Tool, type MemoryEntry, type RevenueRecord, type Proposal, type CardSpec, type PendingItem,
 } from '@content-agent/shared';
 import { db, type Row } from '../local/db';
-import { getModels, getModelsV3, getPrefs, resolveProvider } from '../local/store';
+import { getModels, getModelsV3, getPrefs, resolveProvider, upsertProvider } from '../local/store';
 import { costOf, ModelError, type ProviderConfig } from '../local/llm';
 import { chatAgent, ToolsUnsupportedError, type AgentMsg } from '../agent/model';
 import { TOOLS, ToolError, type ToolSpec as OldTool } from '../agent/tools';
-import { addMessage, getProfile, listMessages, profileText, updateMessage, type CardData, type StoredMsg } from '../agent/store';
-import type { AgentEvent, TurnOpts } from '../agent/loop';
+import { addMessage, addTaskStep, finishTask, getProfile, listMessages, profileText, startTask, updateMessage, type CardData, type StoredMsg } from '../agent/store';
+import type { AgentEvent, TraceStep, TurnOpts } from '../agent/events';
 import { center } from '../data/platforms';
+import { jsonModeRules } from '../agent/prompts';
 import { getVfs, vfsFiles } from './vfsBackend';
 import { call, estimate, isRoleConfigured, poll, saveMedia, getMedia, flags } from './models';
 import { audit, recordUsage } from './ops';
@@ -81,7 +82,9 @@ function wrapOld(t: OldTool): V9Tool {
   };
 }
 let pick: { providerId?: string | null; model?: string | null } | undefined;
-async function currentCfg(): Promise<ProviderConfig | null> { return resolveProvider(await getModels(), pick); }
+// 0.11.0：本轮调用方给的 cfg 优先（与 0.8 runTurn 一致：会话内切换模型立即生效），没有时按 pick 从已保存的模型里解析
+let turnCfg: ProviderConfig | null = null;
+async function currentCfg(): Promise<ProviderConfig | null> { return turnCfg ?? resolveProvider(await getModels(), pick); }
 
 /* ---------------- 工具服务（本机实现） ---------------- */
 const services: ToolServices = {
@@ -186,19 +189,21 @@ async function systemPrompt(userText: string, jsonTools?: { name: string; descri
     profile ? `\n## 账号画像（用户本人一个账号）\n${profile}` : '',
     prefs.platforms.length ? `\n## 用户放进工作台的平台\n${prefs.platforms.map((p) => center(p)?.label ?? p).join('、')}` : '',
     `\n## 现在\n北京时间 ${now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })}`,
-    jsonTools ? `\n## 工具调用（兼容模式）\n需要工具时只输出一个代码块：\n\`\`\`json\n{"tool":"工具名","args":{...}}\n\`\`\`\n可用工具：\n${jsonTools.map((t) => `- ${t.name}：${t.description} 参数：${JSON.stringify(t.parameters)}`).join('\n')}` : '',
+    jsonTools ? `\n## 工具调用（兼容模式）\n${jsonModeRules(jsonTools)}` : '',
   ].join('');
   return { text: pre.text + tail, semiotics: sem.loaded, skill: sk?.name ?? null };
 }
 
 /* ---------------- 对话模型端口（流式 → 界面） ---------------- */
 export const ROUTED_PURPOSES: string[] = ['compress', 'plan', 'repair', 'judge'];
-function modelPort(ui: { onEvent: (e: AgentEvent) => void; conversationId: number; ctx: { streamId: number | null }; runId: () => string; call?: typeof chatAgent }): ModelPort {
+function modelPort(ui: { onEvent: (e: AgentEvent) => void; conversationId: number; ctx: { streamId: number | null }; runId: () => string; call?: typeof chatAgent; trace?: TraceStep[]; jsonTools?: () => { name: string; description: string; parameters: unknown }[] }): ModelPort {
   return async (i): Promise<ModelTurn> => {
     const cfg = await currentCfg();
     if (!cfg) return { ok: false, error: { kind: 'role_not_configured', reason: '还没接文本对话模型', advice: '到“我的 → 模型”接一个文本模型', retriable: false, actions: ['configure'] } };
-    const msgs: AgentMsg[] = i.messages.map((m) => ({ role: m.role, content: typeof m.content === 'string' ? m.content : m.content.map((p) => (p.type === 'text' ? p.text : '')).join(''), ...(m.tool_calls ? { tool_calls: m.tool_calls } : {}), ...(m.tool_call_id ? { tool_call_id: m.tool_call_id } : {}) }));
+    let msgs: AgentMsg[] = i.messages.map((m) => ({ role: m.role, content: typeof m.content === 'string' ? m.content : m.content.map((p) => (p.type === 'text' ? p.text : '')).join(''), ...(m.tool_calls ? { tool_calls: m.tool_calls } : {}), ...(m.tool_call_id ? { tool_call_id: m.tool_call_id } : {}) }));
     const visible = i.purpose === 'turn' || i.purpose === 'summary';
+    // 0.11.0：运行中途从原生工具切到 JSON 指令模式时，系统提示里补上 JSON 指令规则（之前只在开局按 toolMode 生成，切换后模型不知道格式）
+    if (i.purpose === 'turn' && i.mode === 'json' && ui.jsonTools && msgs[0]?.role === 'system' && !msgs[0].content.includes('JSON 指令')) msgs = [{ ...msgs[0], content: `${msgs[0].content}\n\n## 工具调用（兼容模式）\n${jsonModeRules(ui.jsonTools())}` }, ...msgs.slice(1)];
     // 0.10.0 按任务路由：压缩 / 规划 / 参数修复 / 判官这类后台调用，若在“我的 → 模型 → 高级：按任务路由”给 chat 指定了模型，就走统一能力层的那个模型；失败时回到对话模型
     if (!visible && ROUTED_PURPOSES.includes(i.purpose)) {
       const tt = (await getModelsV3()).roles.chat?.tasks?.[i.purpose];
@@ -209,9 +214,16 @@ function modelPort(ui: { onEvent: (e: AgentEvent) => void; conversationId: numbe
     }
     if (visible && !ui.ctx.streamId) { const row = await addMessage({ conversationId: ui.conversationId, role: 'assistant', content: '', model: `${cfg.label} · ${cfg.model}`, meta: { streaming: true, v9: true, runId: ui.runId() } }); ui.ctx.streamId = row.id; ui.onEvent({ type: 'message', msg: row }); }
     const sid = ui.ctx.streamId;
+    let acc = '';
+    const t0 = Date.now();
     try {
-      const reply = await (ui.call ?? chatAgent)(cfg, msgs, { tools: i.tools as never, stream: visible, signal: i.signal, maxTokens: i.purpose === 'compress' || i.purpose === 'repair' ? 1500 : 4096, thinking: false, onDelta: (d) => { if (visible && sid) ui.onEvent({ type: 'delta', id: sid, content: d.content, reasoning: d.reasoning }); } });
+      const reply = await (ui.call ?? chatAgent)(cfg, msgs, { tools: i.tools as never, stream: visible, signal: i.signal, maxTokens: i.purpose === 'compress' || i.purpose === 'repair' ? 1500 : 4096, thinking: false, onDelta: (d) => { acc += d.content; if (visible && sid) ui.onEvent({ type: 'delta', id: sid, content: d.content, reasoning: d.reasoning }); } });
       const cost = costOf(cfg.id, cfg.model, reply.usage);
+      // 0.11.0：0.8 循环删除后，trace（B5）与 toolMode 记忆由 v9 接线负责
+      ui.trace?.push({ kind: 'model', ms: reply.ms ?? Date.now() - t0, usage: { input: reply.usage.input ?? 0, output: reply.usage.output ?? 0, ...(reply.usage.cached != null ? { cached: reply.usage.cached } : {}) }, streamed: reply.streamed, chunks: reply.chunks, content: reply.content.slice(0, 400), mode: i.mode ?? 'native' });
+      if (i.tools && cfg.toolMode === undefined && i.mode !== 'json') { await upsertProvider({ ...cfg, toolMode: 'native' }).catch(() => {}); turnCfg = turnCfg ? { ...turnCfg, toolMode: 'native' } : null; }
+      // 消息标注“服务 · 实际返回的模型名”
+      if (visible && sid && reply.model && reply.model !== cfg.model) await updateMessage(sid, { model: `${cfg.label} · ${reply.model}` });
       await recordUsage({ at: new Date().toISOString(), role: 'chat', vendor: cfg.id, model: cfg.model, requestedModel: cfg.model, respondedModel: reply.model, usage: reply.usage, cost, ms: reply.ms, ok: true, runId: ui.runId(), conversationId: ui.conversationId });
       if (visible && sid && reply.toolCalls.some((t) => t.name)) {
         // 这一轮是“调用工具”：把模型顺带说的话留在这条消息里，下一轮另起一条
@@ -221,8 +233,13 @@ function modelPort(ui: { onEvent: (e: AgentEvent) => void; conversationId: numbe
       }
       return { ok: true, text: reply.content, toolCalls: reply.toolCalls.filter((t) => t.name), reasoning: reply.reasoning, cost, model: cfg.model, respondedModel: reply.model };
     } catch (e) {
-      if ((e as Error)?.name === 'AbortError') return { ok: false, error: callError('aborted') };
-      if (e instanceof ToolsUnsupportedError) { ui.onEvent({ type: 'mode', toolMode: 'json' }); return { ok: false, error: callError('tools_unsupported') }; }
+      if ((e as Error)?.name === 'AbortError') {
+        // 停止：已收到的内容保留并标注“已停止”
+        if (visible && sid) { await updateMessage(sid, { content: acc, stopped: true, meta: { streaming: false, v9: true, runId: ui.runId() } }); ui.onEvent({ type: 'message', msg: { ...(await msgById(sid))! } }); ui.ctx.streamId = null; }
+        return { ok: false, error: callError('aborted') };
+      }
+      if (e instanceof ToolsUnsupportedError) { await upsertProvider({ ...cfg, toolMode: 'json' }).catch(() => {}); turnCfg = turnCfg ? { ...turnCfg, toolMode: 'json' } : null; ui.trace?.push({ kind: 'model', ms: Date.now() - t0, error: 'tools_unsupported', mode: 'native' }); ui.onEvent({ type: 'mode', toolMode: 'json' }); return { ok: false, error: callError('tools_unsupported') }; }
+      ui.trace?.push({ kind: 'model', ms: Date.now() - t0, error: String((e as Error)?.message ?? e).slice(0, 200) });
       const me = e instanceof ModelError ? e : null;
       await recordUsage({ at: new Date().toISOString(), role: 'chat', vendor: cfg.id, model: cfg.model, requestedModel: cfg.model, usage: {}, cost: 0, ms: 0, ok: false, errorKind: me?.kind ?? 'unknown', runId: ui.runId() });
       const kind = me?.kind === 'key' ? 'key_invalid' : me?.kind === 'quota' ? 'quota' : me?.kind === 'timeout' ? 'timeout' : me?.kind === 'network' ? 'network' : me?.kind === 'cors' ? 'cors' : me?.kind === 'model' ? 'model_not_found' : 'server';
@@ -235,6 +252,7 @@ function modelPort(ui: { onEvent: (e: AgentEvent) => void; conversationId: numbe
 let current: AgentRuntime | null = null;
 export async function runTurnV9(o: TurnOpts & { pick?: { providerId?: string | null; model?: string | null }; override?: Record<string, { accountId: string; modelEntryId: string; model: string }>; overrideLabels?: string[] }): Promise<void> {
   pick = o.pick ?? { providerId: o.cfg.id, model: o.cfg.model };
+  turnCfg = o.cfg ?? null;
   await refreshSnapshots();
   const f = await flags();
   const userMsg = await addMessage({ conversationId: o.conversationId, role: 'user', content: o.text, ...(o.overrideLabels?.length ? { meta: { atOverride: o.overrideLabels } } : {}) });
@@ -244,12 +262,14 @@ export async function runTurnV9(o: TurnOpts & { pick?: { providerId?: string | n
   const store = runStore((m) => o.onEvent({ type: 'message', msg: m }), ctx);
   const ref: { current: AgentRuntime | null } = { current: null };
   const tools = buildTools(ref);
+  const taskSteps: { name: string; tool: string; status: 'done' | 'failed'; summary: string }[] = [];
+  const flushTask = async (status: 'done' | 'stopped' | 'failed') => { if (!taskSteps.length) return; const t = await startTask(o.conversationId, o.text); for (const st of taskSteps) await addTaskStep(t.id, st); await finishTask(t.id, status); };
   const vfs = await getVfs();
   const limits = readLimits(JSON.parse((await vfs.text('config/limits.json')) ?? '{}'));
   const prefsAny = (await getPrefs()) as unknown as { spend?: { perCallConfirmYuan: number; perDayConfirmYuan: number } };
   if (prefsAny.spend) limits.budget = { ...limits.budget, ...prefsAny.spend };
   const rt = new AgentRuntime({
-    model: modelPort({ onEvent: o.onEvent, conversationId: o.conversationId, ctx, runId: () => runId, call: o.call }),
+    model: modelPort({ onEvent: o.onEvent, conversationId: o.conversationId, ctx, runId: () => runId, call: o.call, trace: o.trace, jsonTools: () => tools.list().filter((t) => !t.userOnly).map((t) => ({ name: t.name, description: t.description, parameters: t.inputSchema })) }),
     tools, store, locks, limits, mode: o.cfg.toolMode === 'json' ? 'json' : 'native',
     flags: { planner: flagOn('agent.planner', f), subtasks: flagOn('agent.subtasks', f) },
     contextWindow: 64000,
@@ -260,6 +280,12 @@ export async function runTurnV9(o: TurnOpts & { pick?: { providerId?: string | n
     emit: (e) => {
       if (e.type === 'state' && !runId) runId = e.runId;
       if (e.type === 'tool' && e.status === 'running') void (async () => { const row = await addMessage({ conversationId: o.conversationId, role: 'assistant', content: '', cards: [{ type: 'tool', tool: e.tool, status: 'running' }], meta: { runId: e.runId, v9: true } }); ctx.cardMsgs.set(`${e.runId}:${e.stepId}`, row.id); o.onEvent({ type: 'message', msg: row }); })();
+      if (e.type === 'tool' && (e.status === 'ok' || e.status === 'failed')) {
+        const out = e.output;
+        o.trace?.push({ kind: 'tool', name: e.tool, args: e.args, ms: e.ms ?? 0, ...(out?.ok ? { result: out.result } : { error: out && !out.ok ? out.error.reason : '失败' }) });
+        // 0.8 任务检查点（tasks 表）继续写，task_resume 工具在 v9 上照常可用
+        taskSteps.push({ name: e.tool, tool: e.tool, status: e.status === 'ok' ? 'done' : 'failed', summary: (out?.ok ? JSON.stringify(out.result ?? null) : out && !out.ok ? out.error.reason : '').slice(0, 200) });
+      }
       if (e.type === 'tool' && (e.status === 'ok' || e.status === 'failed')) void audit({ kind: 'tool_call', actor: 'agent', summary: `${e.tool}：${e.status === 'ok' ? '成功' : `失败（${e.output && !e.output.ok ? e.output.error.reason : ''}）`}`, tool: e.tool, runId: e.runId, conversationId: o.conversationId, cost: e.output?.cost ?? undefined, outcome: e.status === 'ok' ? 'ok' : 'failed' });
       if (e.type === 'correction') void (async () => { const row = await addMessage({ conversationId: o.conversationId, role: 'assistant', content: e.text, meta: { correction: true, v9: true } }); o.onEvent({ type: 'message', msg: row }); })();
     },
@@ -280,8 +306,10 @@ export async function runTurnV9(o: TurnOpts & { pick?: { providerId?: string | n
     if (r.status !== 'ran') { o.onEvent({ type: 'done' }); return; }
     const run = r.run;
     await audit({ kind: 'run_state', actor: 'system', summary: `运行结束：${run.state}${run.error ? `（${run.error.reason}）` : ''}，工具 ${run.toolCallCount} 次`, runId: run.id, conversationId: o.conversationId, outcome: run.state === 'done' ? 'ok' : run.state === 'cancelled' ? 'denied' : 'failed' });
+    await flushTask(run.state === 'done' ? 'done' : run.state === 'cancelled' ? 'stopped' : 'failed').catch(() => {});
     o.onEvent({ type: 'done', stopped: run.state === 'cancelled', error: run.state === 'failed' ? run.error?.reason : undefined });
   } catch (e) {
+    await flushTask('failed').catch(() => {});
     o.onEvent({ type: 'done', error: (e as Error)?.message ?? String(e) });
   } finally {
     clearInterval(hb);

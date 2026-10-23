@@ -7,7 +7,7 @@ import { getModels, getModelsV3, saveModels, saveModelsV3, EMPTY_MODELS, setPref
 import { getSecret } from './local/secrets';
 import type { ProviderConfig } from './local/llm';
 import type { AgentMsg, AgentReply } from './agent/model';
-import type { AgentEvent } from './agent/loop';
+import type { AgentEvent } from './agent/events';
 import { createConversation, listMessages } from './agent/store';
 import { runTurnV9 } from './v9/engine';
 import { getVfs, resetVfsForTests, vfsFiles } from './v9/vfsBackend';

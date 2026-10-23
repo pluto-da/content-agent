@@ -77,6 +77,7 @@ function requiredExif(t: Tiff, dims?: { w: number; h: number }): Entry[] {
   const out: Entry[] = [
     { tag: 0x9000, type: 7, count: 4, raw: ascii('0232') },
     { tag: 0x9101, type: 7, count: 4, raw: Uint8Array.of(1, 2, 3, 0) },
+    { tag: 0xa000, type: 7, count: 4, raw: ascii('0100') },   // FlashpixVersion（0.11.0：exiftool 12.x -validate 要求）
     { tag: 0xa001, type: 3, count: 1, raw: short(1) },
   ];
   if (dims) out.push({ tag: 0xa002, type: 4, count: 1, raw: t.w32(dims.w) }, { tag: 0xa003, type: 4, count: 1, raw: t.w32(dims.h) });
@@ -106,13 +107,21 @@ function tiffWithUserComment(tiffIn: Uint8Array | null, text: string, dims?: { w
   if (!tiffIn) {
     const t = new Tiff(ascii('II*\0'));
     const uc = concat(ascii('UNICODE\0'), utf16(text, true));
-    // 布局：头 8 | IFD0（ExifIFD 指针 + YCbCrPositioning）| ExifIFD（必需字段 + UserComment）| UserComment
+    // 布局：头 8 | IFD0（X/YResolution + ResolutionUnit + ExifIFD 指针 + YCbCrPositioning）| ExifIFD（必需字段 + UserComment）| UserComment | 2 个 RATIONAL
+    // 0.11.0：补 IFD0 的 X/YResolution、ResolutionUnit（JPEG EXIF 规范必需；exiftool 12.x -validate 会告警）
     const req = requiredExif(t, dims);
-    const ifd0Len = 2 + 2 * 12 + 4, exifLen = 2 + (req.length + 1) * 12 + 4;
+    const ifd0Len = 2 + 5 * 12 + 4, exifLen = 2 + (req.length + 1) * 12 + 4;
     const exifOff = 8 + ifd0Len, ucOff = exifOff + exifLen;
-    const ifd0 = t.encIfd([{ tag: TAG_EXIF, type: 4, count: 1, raw: t.w32(exifOff) }, { tag: 0x0213, type: 3, count: 1, raw: concat(t.w16(1), new Uint8Array(2)) }], 0);
+    const ucPadded = uc.length % 2 ? concat(uc, new Uint8Array(1)) : uc;
+    const ratOff = ucOff + ucPadded.length;
+    const rat = concat(t.w32(72), t.w32(1), t.w32(72), t.w32(1));
+    const sh = (n: number) => concat(t.w16(n), new Uint8Array(2));
+    const ifd0 = t.encIfd([
+      { tag: 0x011a, type: 5, count: 1, raw: t.w32(ratOff) }, { tag: 0x011b, type: 5, count: 1, raw: t.w32(ratOff + 8) }, { tag: 0x0128, type: 3, count: 1, raw: sh(2) },
+      { tag: TAG_EXIF, type: 4, count: 1, raw: t.w32(exifOff) }, { tag: 0x0213, type: 3, count: 1, raw: sh(1) },
+    ], 0);
     const exif = t.encIfd([...req, { tag: TAG_UC, type: 7, count: uc.length, raw: t.w32(ucOff) }], 0);
-    return { tiff: concat(ascii('II*\0'), t.w32(8), ifd0, exif, uc), preserved: false };
+    return { tiff: concat(ascii('II*\0'), t.w32(8), ifd0, exif, ucPadded, rat), preserved: false };
   }
   const t = new Tiff(tiffIn.slice());
   const ifd0Off = t.u32(4);

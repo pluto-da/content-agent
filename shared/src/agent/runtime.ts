@@ -46,7 +46,7 @@ export interface RunStore {
 export type RuntimeEvent =
   | { type: 'state'; runId: string; state: RunState; label?: string }
   | { type: 'message'; runId: string; role: 'assistant' | 'card'; content: string; card?: CardSpec }
-  | { type: 'tool'; runId: string; stepId: string; tool: string; status: 'running' | 'ok' | 'failed' | 'skipped' | 'reused'; output?: ToolOutput }
+  | { type: 'tool'; runId: string; stepId: string; tool: string; status: 'running' | 'ok' | 'failed' | 'skipped' | 'reused'; output?: ToolOutput; args?: unknown; ms?: number }
   | { type: 'pending'; runId: string; pending: PendingItem }
   | { type: 'queued'; conversationId: number; n: number }
   | { type: 'correction'; runId: string; text: string };
@@ -424,7 +424,7 @@ export class AgentRuntime {
     const r: ToolCallRecord = { ...(rec ?? { idemKey: sha256(`${run.id}|${stepId}|${tool}|x`), runId: run.id, stepId, tool, args, startedAt: this.now() }), status: out.ok ? 'ok' : 'failed', output: out, endedAt: this.now(), cost: out.cost ?? null };
     await this.p.store.saveToolCall(r);
     this.noteOutcome(run, tool, out);
-    this.p.emit?.({ type: 'tool', runId: run.id, stepId, tool, status: out.ok ? 'ok' : 'failed', output: out });
+    this.p.emit?.({ type: 'tool', runId: run.id, stepId, tool, status: out.ok ? 'ok' : 'failed', output: out, args, ms: rec ? tsMs(r.endedAt) - tsMs(rec.startedAt) : 0 });
     if (out.card) await this.p.store.appendMessage({ conversationId: run.conversationId, role: 'card', content: tool, runId: run.id, card: out.card, meta: { stepId, ok: out.ok } });
     else if (!out.ok) await this.p.store.appendMessage({ conversationId: run.conversationId, role: 'card', content: tool, runId: run.id, meta: { stepId, ok: false }, card: { type: out.error.kind === 'role_not_configured' ? 'not_configured' : 'tool_error', data: { tool, reason: out.error.reason, advice: out.error.advice, actions: out.error.actions } } });
     return out;
@@ -495,3 +495,4 @@ export function memoryRunStore(): RunStore & { runs: Map<string, RunRecord>; cal
     async history(c) { return messages.filter((m) => m.conversationId === c && (m.role === 'user' || m.role === 'assistant')).map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })); },
   };
 }
+const tsMs = (x: unknown): number => (typeof x === 'number' ? x : Date.parse(String(x ?? '')) || 0);

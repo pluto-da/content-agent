@@ -11,7 +11,7 @@ import { resetSecureKey } from '../local/secure';
 import { getModelsV3, saveModelsV3, saveModels, setPrefs, EMPTY_MODELS } from '../local/store';
 import type { ProviderConfig } from '../local/llm';
 import type { AgentMsg, AgentReply } from '../agent/model';
-import type { AgentEvent } from '../agent/loop';
+import type { AgentEvent } from '../agent/events';
 import { createConversation, listMessages } from '../agent/store';
 import { runTurnV9 } from '../v9/engine';
 import { resetVfsForTests } from '../v9/vfsBackend';

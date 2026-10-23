@@ -10,7 +10,8 @@ import { resetLocalDb, db } from './local/db';
 import { saveModels, EMPTY_MODELS, getModels, setPrefs } from './local/store';
 import type { ProviderConfig } from './local/llm';
 import { EXTERNAL_WRITE_TOOLS, TOOLS, TOOL_DEFS, toolByName, runChecks } from './agent/tools';
-import { runTurn, historyToMessages, type AgentEvent, type TraceStep } from './agent/loop';
+import { historyToMessages, type AgentEvent, type TraceStep } from './agent/events';
+import { runTurnV9 as runTurn } from './v9/engine';
 import { ToolsUnsupportedError, type AgentMsg, type AgentReply, buildRequest } from './agent/model';
 import { buildAgentSystem, AGENT_CANNOT } from './agent/prompts';
 import { addInbox, applyProfilePatch, createConversation, deleteConversation, EMPTY_PROFILE, getProfile, listConversations, listInbox, listMessages, updateConversation, lastUnfinishedTask } from './agent/store';
@@ -163,7 +164,8 @@ function stubSources() {
 }
 async function setup() {
   await saveModels({ ...EMPTY_MODELS, providers: [mimo], defaultProvider: 'mimo' });
-  await setPrefs({ platforms: ['xiaohongshu', 'douyin'], onboarded: true });
+  // 0.11.0：0.8 循环已删除，这些 0.8 回归用例改在 v9 运行时上跑；脚本按“每轮只决定下一步”编排，对应 v9 的逐步模式（agent.planner 关）
+  await setPrefs({ platforms: ['xiaohongshu', 'douyin'], onboarded: true, flags: { 'agent.planner': false } } as never);
 }
 const draftJson = JSON.stringify({ title: '小米新机值不值得买', body: '先说结论：值得。\n'.repeat(10), tags: ['数码', '小米'], image_prompts: ['手机'] });
 
@@ -199,7 +201,8 @@ describe('B5（Mock）多步热点任务：hot_fetch → hot_analyze → draft_w
     expect(cards.map((x) => x.type)).toEqual(['hot', 'analysis', 'draft']);
     expect(cards[1]!.data.usedModel).toBe(true);
     expect(cards[1]!.data.clusters[0].perPlatform.xiaohongshu.titles).toHaveLength(3);
-    expect(msgs.filter((x) => x.role === 'tool').length).toBe(3);
+    // v9：工具结果存在运行记录（toolcalls 表），不再写 role=tool 的会话消息
+    expect((await db.all('toolcalls')).filter((x) => x.status === 'ok').map((x) => x.tool)).toEqual(['hot_fetch', 'hot_analyze', 'draft_write']);
     expect(m.calls[0]!.tools).toBe(true);
     expect(JSON.stringify(trace)).not.toContain('sk-test-9876');
     expect(events.some((e) => e.type === 'delta')).toBe(true);
@@ -243,10 +246,12 @@ describe('B5（Mock）多步热点任务：hot_fetch → hot_analyze → draft_w
     const trace: TraceStep[] = [];
     await runTurn({ conversationId: c.id, text: '试试', cfg: mimo, onEvent: () => {}, call: m.fn as never, trace });
     const t = trace.filter((x) => x.kind === 'tool');
-    expect(t[0]!.error).toContain('参数修复后仍不合格');
+    expect(t[0]!.error).toContain('参数有问题');
     expect(t[1]!.error).toContain('只能由你在卡片上点击触发');
     expect(t[2]!.error).toBeUndefined();
-    expect(t[3]!.error).toContain('连续调用两次');
+    // v9：重复调用在执行前就被拦下（不再执行第二次），运行以“连续调用两次，已停下”结束
+    expect(t).toHaveLength(3);
+    expect((await listMessages(c.id)).some((x) => x.content.includes('连续调用两次'))).toBe(true);
   }, 30000);
 
   it('B10：L2 出确认卡；拒绝 → 不写入；“记住此类”后不再询问', async () => {
@@ -275,8 +280,9 @@ describe('B5（Mock）多步热点任务：hot_fetch → hot_analyze → draft_w
     const c = await createConversation();
     const ev: AgentEvent[] = [];
     await runTurn({ conversationId: c.id, text: '热点', cfg: mimo, signal: ctl.signal, call: fn as never, onEvent: (e) => ev.push(e) });
-    const last = (await listMessages(c.id)).at(-1)!;
-    expect(last).toMatchObject({ content: '我先拉', stopped: true });
+    // v9：已收到的部分保留在原消息并标“已停止”，运行时另起一条“已停止”说明
+    const all = await listMessages(c.id);
+    expect(all.find((x) => x.content === '我先拉')).toMatchObject({ content: '我先拉', stopped: true });
     expect(ev.at(-1)).toMatchObject({ type: 'done', stopped: true });
   });
 });
