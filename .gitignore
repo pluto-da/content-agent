@@ -12,3 +12,4 @@ mobile/android/
 mobile/ios/
 out/
 !web/src/data/
+!agent/v9/defaults/data/
