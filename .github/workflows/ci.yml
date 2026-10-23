@@ -7,14 +7,29 @@ jobs:
   # 0.9.0：严格校验（任何一步失败即失败）——类型、lint、三套单测、评测（回放）、VFS 自检、密钥扫描、逐项验收报告
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm ci
-      - name: external tools for AIGC checks (exiftool / ffprobe, distro packages)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq libimage-exiftool-perl ffmpeg >/dev/null || echo "exiftool/ffmpeg 未装上：AIGC 外部校验将跳过，accept:v10 记为部分"
+      # 0.11.0：run 39938123873 在这一步卡住 8 分钟以上（apt 锁 / man-db 触发器，被手动取消）。
+      # 改为：非交互 + 关闭 man-db 触发器 + 不装推荐包 + 每条命令 timeout + 步骤 timeout-minutes + continue-on-error；
+      # 装不上时 AIGC 外部校验自动跳过，accept:v10 对应项记“部分”，不阻断。
+      - name: external tools for AIGC checks (exiftool / ffprobe, distro packages, bounded)
+        timeout-minutes: 6
+        continue-on-error: true
+        env: { DEBIAN_FRONTEND: noninteractive }
+        run: |
+          sudo rm -f /var/lib/man-db/auto-update || true
+          echo 'man-db man-db/auto-update boolean false' | sudo debconf-set-selections || true
+          ok=1
+          timeout 150 sudo -E apt-get -o DPkg::Lock::Timeout=45 -o Acquire::Retries=2 update -qq || ok=0
+          [ "$ok" = 1 ] && { timeout 200 sudo -E apt-get -o DPkg::Lock::Timeout=45 install -y -qq --no-install-recommends libimage-exiftool-perl ffmpeg >/tmp/apt.log 2>&1 || ok=0; }
+          command -v exiftool && exiftool -ver || echo "exiftool 未装上"
+          command -v ffprobe && ffprobe -version | head -1 || echo "ffprobe 未装上"
+          [ "$ok" = 1 ] || { tail -20 /tmp/apt.log 2>/dev/null; echo "外部工具未装全：AIGC 外部校验将跳过，accept:v10 记为部分"; }
       - name: typecheck
         run: npm run typecheck
       - name: lint
@@ -64,6 +79,7 @@ jobs:
   # 旧的一键检查（含覆盖率与依赖审计），保留为参考，不阻断
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -75,6 +91,7 @@ jobs:
   # 产物与构建日志推到 apk-build 分支（取回方式：git clone --branch apk-build）。
   android-debug-apk:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     permissions:
       contents: write
     steps:
