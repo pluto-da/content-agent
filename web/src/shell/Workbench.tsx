@@ -174,7 +174,7 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
 
   const sidebar = (
     <Sidebar
-      items={items} active={activeId === 'patrol' ? 'agent' : route.space === 'me' ? 'me' : route.space === 'command' ? 'command' : activeId} badges={badges} badgeOff={prefs?.badgeOff ?? []}
+      items={items} active={activeId === 'patrol' ? 'agent' : route.space === 'me' ? 'me' : route.space === 'command' || route.space === 'group' ? 'command' : activeId} badges={badges} badgeOff={prefs?.badgeOff ?? []}
       variant={sideVariant} onSelect={select} onAdd={() => { setPhoneSide(false); setAddOpen(true); }}
       onReorder={async (ids) => { await setPrefs({ platformOrder: ids }); reloadPrefs(); }} onMenu={(id, act) => void menu(id, act)}
       onToggleWide={lay === 'desktop' ? () => setWide((w) => { localStorage.setItem('ca.v8.sideWide', w ? '0' : '1'); return !w; }) : undefined}
@@ -224,7 +224,7 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
   const phoneTop = isPhone && (
     <header className="flex shrink-0 items-center gap-1 border-b border-line bg-canvas px-1 safe-top" style={{ height: 'calc(48px + var(--sa-top))' }} data-testid="phone-top">
       <button type="button" aria-label={tr('ui.open_platform_sidebar')} data-testid="open-side" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => setPhoneSide(true)}><Icon name="menu" size={20} /></button>
-      <h1 className="min-w-0 flex-1 truncate text-center text-[16px]">{route.space === 'me' ? tr('ui.me') : route.space === 'command' ? tr('ui.v12_command') : route.space === 'p' ? target?.label ?? '' : a.convs.find((c) => c.id === a.cid)?.title ?? tr('ui.super_workbench')}</h1>
+      <h1 className="min-w-0 flex-1 truncate text-center text-[16px]">{route.space === 'me' ? tr('ui.me') : route.space === 'command' ? tr('ui.v12_command') : route.space === 'group' ? tr('ui.v13_group') : route.space === 'p' ? target?.label ?? '' : a.convs.find((c) => c.id === a.cid)?.title ?? tr('ui.super_workbench')}</h1>
       {header}
     </header>
   );
@@ -238,7 +238,7 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
         {phoneTop}
         <div className="flex min-h-0 flex-1">
           {prefs?.agentDock === 'left' && sidePanel}
-          {route.space === 'p' ? browser : (route.space === 'me' || route.space === 'command') && meContent ? meContent : agentFull}
+          {route.space === 'p' ? browser : (route.space === 'me' || route.space === 'command' || route.space === 'group') && meContent ? meContent : agentFull}
           {prefs?.agentDock !== 'left' && sidePanel}
         </div>
       </div>

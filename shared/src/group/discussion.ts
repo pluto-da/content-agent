@@ -182,3 +182,21 @@ export const mockSpeaker: Speaker = async (r) => {
     default: return { text: `决议：${r.topic}——先按共识试行两周，由董事长确认后执行；对外发布由你本人完成。待办：数据中心两周后出复盘`, cost: 0.001 };
   }
 };
+
+/** 真实模型发言的提示词（web 与 MiMo 实测共用）：只给本阶段可见的内容；独立陈述阶段看不到任何他方发言。 */
+export function speakPrompt(r: SpeakReq): { system: string; user: string; maxTokens: number } {
+  const who = r.party.name;
+  const rules = '规则：结论先行、坦诚清晰、不堆砌、不包装；不超过 200 字；数据论点必须写来源（如“来源：我的 CSV 导出”），没有来源就写“推测”；不得建议自动发布、自动互动、刷量、抓取私有数据。';
+  const vis = r.visible.length ? `\n\n已有发言：\n${r.visible.slice(-12).map((s) => `[${s.id}·${PHASE_TEXT[s.phase]}] ${s.from}：${s.text}`).join('\n')}` : '';
+  const notes = r.chairmanNotes.length ? `\n\n董事长意见（最高优先）：${r.chairmanNotes.join('；')}` : '';
+  const view = 'view' in r.party && r.party.view ? `你的视角：${r.party.view}。` : '';
+  const task: Record<Phase, string> = {
+    independent: '独立陈述：给出你的立场、证据、风险、建议（你看不到其他人的发言）。',
+    revise: '修正：根据质询修正或坚持你的立场，必须给出新的论据，不要重复。',
+    question: `质询：对「${r.target?.name ?? ''}」的方案提出一个具体质疑（指出漏洞、缺证据处或风险），一句话结论先行。`,
+    answer: `回应：逐条回应「${r.target?.name ?? ''}」的质疑：${r.question?.text ?? ''}`,
+    synthesis: '综合：作为秘书，按三行输出——“共识：…”“分歧：…”“待验证：…”，最后一行“待办：<负责部门><事项>”。',
+    resolution: '决议：作为主持人给出决议（一句话），并写“待办：…”；超出权限的写“呈董事长批准”；对外发布一律由董事长本人完成。',
+  };
+  return { system: `你是 AI 虚拟集团里的「${who}」。${view}${rules}${r.rewrite ? `\n${r.rewrite}` : ''}`, user: `议题：${r.topic}\n\n会前文档：\n${r.doc.slice(0, 1200)}${vis}${notes}\n\n本轮任务（第 ${r.round} 轮）：${task[r.phase]}`, maxTokens: r.tier === 'main' ? 500 : 260 };
+}

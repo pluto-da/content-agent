@@ -27,6 +27,7 @@ import { startSuperScheduler } from './v12/store';
 // 页面级懒加载：首页随主包，其余按需加载（首屏轻量，借鉴 NextChat）。
 const Me = lazy(() => import('./pages/me').then((m) => ({ default: m.Me })));
 const CommandPage = lazy(() => import('./v12/CommandPage').then((m) => ({ default: m.CommandPage })));
+const GroupPage = lazy(() => import('./v13/GroupPage').then((m) => ({ default: m.GroupPage })));
 const Onboarding = lazy(() => import('./pages/onboarding').then((m) => ({ default: m.Onboarding })));
 
 export { NAV } from './nav';
@@ -227,6 +228,23 @@ export function App() {
         <ErrorBoundary key="command">
           <Suspense fallback={<div className="page"><Loading show lines={5} /></div>}>
             <div className="anim-page"><CommandPage tab={route.query?.tab} go={go} /></div>
+          </Suspense>
+        </ErrorBoundary>
+      </main>
+    </div>
+  ) : route.space === 'group' ? (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="app-top sticky top-0 z-20 flex shrink-0 items-center gap-2 bg-canvas px-2 py-2 sm:px-6" style={{ minHeight: isPhone ? 48 : 64 }} data-testid="topbar">
+        <div className="min-w-0 flex-1">
+          <h1 className={isPhone ? 'truncate text-[18px]' : 'truncate text-[20px]'}>{t('ui.v13_group')}</h1>
+          {!isPhone && <p className="m-0 line-clamp-2 text-[13px] text-muted">{t('ui.v13_group_desc')}</p>}
+        </div>
+        {!isPhone && tools}
+      </header>
+      <main id="main" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto pb-[calc(24px+var(--sa-bottom))] outline-none">
+        <ErrorBoundary key="group">
+          <Suspense fallback={<div className="page"><Loading show lines={5} /></div>}>
+            <div className="anim-page"><GroupPage tab={route.query?.tab} go={go} /></div>
           </Suspense>
         </ErrorBoundary>
       </main>

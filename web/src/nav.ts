@@ -19,6 +19,8 @@ export const AGENT_NAV: NavItem[] = [
 ];
 /** 1.2.0：指挥台（独立空间，不进“我的”）。 */
 export const COMMAND_NAV: NavItem = { id: 'command', label: '指挥', icon: 'team', desc: '我的团队、任务板、工作流、审批收件箱、目标、连接（平台 / 数据源 / 外部工具）', keywords: '指挥台 超级agent 子agent 团队 team 任务板 board 工作流 workflow 审批 inbox 目标 goal mcp a2a 外部工具 数据源 自定义平台 暂停' };
+/** 1.3.0：统领（集团模式；从“指挥”页与指挥条进入，不增加侧栏与“我的”入口）。 */
+export const GROUP_NAV: NavItem = { id: 'group', label: '统领', icon: 'team', desc: '集团模式：组织图、临时会话、会议室、公文、目标、制度库、驾驶舱', keywords: '集团 集团模式 统领 组织 部门 事业部 委员会 拉群 会话 会议 会议室 开会 纪要 公文 请示 okr 制度 doa 赛马 灰度 复盘 政委 驾驶舱 conglomerate group' };
 export const ME_NAV: NavItem = { id: 'me', label: '我的', icon: 'user', desc: '模型、平台与软件、Agent、花钱、记录、数据、设置', keywords: '设置 settings 偏好 prefs 工作台' };
 
 /** “我的”分组列表（也是命令面板目的地）。1.1.0：22 项收敛为 12 项，每个概念一个设置入口（scripts/single-source-check.mjs 守护）。 */
@@ -59,4 +61,4 @@ export const MAIN_NAV: NavItem[] = AGENT_NAV;
 export const SIDEBAR_ITEMS: NavItem[] = [AGENT_NAV[0]!, COMMAND_NAV, ME_NAV];
 export const BOTTOM_ITEMS: NavItem[] = SIDEBAR_ITEMS;
 /** 命令面板全部目的地（平台由 App 运行时追加）。 */
-export const NAV: NavItem[] = [...AGENT_NAV, COMMAND_NAV, ME_NAV, ...ME_GROUPS.flatMap((g) => g.items), ...ME_ALIASES];
+export const NAV: NavItem[] = [...AGENT_NAV, COMMAND_NAV, GROUP_NAV, ME_NAV, ...ME_GROUPS.flatMap((g) => g.items), ...ME_ALIASES];

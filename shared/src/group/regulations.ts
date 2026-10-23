@@ -193,7 +193,7 @@ Key 与隐私永不进入文档、公文、会话；写入前扫描，命中即�
 /** 02-doa.md 的完整文本 = DOA front matter + 正文。 */
 export function regulationText(r: Regulation): string { return r.id === 'doa' ? DOA_FRONT + r.body : r.body; }
 export const REGULATION_FILES: Record<string, string> = Object.fromEntries(REGULATIONS.map((r) => [r.path, regulationText(r)]));
-export const REGULATION_INDEX = `${REG_DIR}/README.md`;
+export const REGULATION_INDEX = `${REG_DIR}/REGULATIONS.md`;
 export const REGULATION_INDEX_TEXT = `# 制度库\n\n> ${GROUP_SOURCE_NOTE}\n\n${REGULATIONS.map((r) => `${r.no}. [${r.title}](${r.path.slice(REG_DIR.length + 1)})${r.highRisk ? '（高风险：改动只以修订建议存在，需你确认）' : ''}`).join('\n')}\n`;
 
 /** 条款引用：“第N条”或“制度id#N”。 */

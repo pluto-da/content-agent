@@ -28,6 +28,7 @@ import { CAPS, coverage, displayModel } from '@content-agent/shared';
 import { tr } from '../i18n';
 import { CommandBar } from '../v12/CommandBar';
 import { handleMention, isPausedNow } from '../v12/store';
+import { handleGroupCommand } from '../v13/store';
 
 const Write = lazy(() => import('../pages/write').then((m) => ({ default: m.Write })));
 
@@ -121,6 +122,7 @@ export function useAgent() {
       abort.current = new AbortController();
       if (pick) await updateConversation(id, { model: `${cfg.label} · ${cfg.model}` });
       // 1.2.0：@子Agent 名 → 直接交给该子 Agent（回复写明交给了谁、花了多少、结果在哪）
+      if (await handleGroupCommand(id, t).catch(() => false)) { setMsgs(await listMessages(id)); void refreshConvs(); return; }
       if (t.startsWith('@') && await handleMention(id, t)) { setMsgs(await listMessages(id)); void refreshConvs(); return; }
       // 0.11.0：0.8 循环已删除，agent.runtime.v9 开关到期，一律走 v9 运行时（ADR-005 重审）
       await runTurnV9({ conversationId: id, text: t, cfg, signal: abort.current.signal, ...(at?.length ? { override: Object.fromEntries(at.map((p) => [p.role, p.target])), overrideLabels: at.map(pickLabel) } : {}), onEvent: (e) => { onEvent(e); if (e.type === 'done') { setMsgs((m) => m.map((x) => ({ ...x, meta: { ...(x.meta ?? {}), streaming: false }, stopped: e.stopped && x.meta?.streaming ? true : x.stopped }))); if (e.error && cfgState !== 'ok') setNotice(`发送失败：${e.error}。这个模型还没测试通过，可到“我的 → 模型”点“测试连接”看具体原因`); void refreshConvs(); } } });
