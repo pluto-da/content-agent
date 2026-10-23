@@ -15,3 +15,4 @@ out/
 !agent/v9/defaults/data/
 desktop/stage/
 mobile/ios-build/
+!docs/release/

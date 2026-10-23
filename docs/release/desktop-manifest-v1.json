@@ -1,0 +1,174 @@
+{
+ "win": {
+  "run": "39960746183",
+  "commit": "desktop win 39960746183 76664243b3bce0c7a4b2732ff2763788704e1acb",
+  "installer": "content-agent-1.0.0-win-x64-setup.exe",
+  "installerBytes": 94432263,
+  "sha256ok": true,
+  "smoke": {
+   "ok": true,
+   "platform": "win32",
+   "arch": "x64",
+   "electron": "39.8.10",
+   "node": "22.22.1",
+   "appVersion": "1.0.0",
+   "packaged": true,
+   "dataDir": "C:\\Users\\runneradmin\\AppData\\Roaming\\content-agent-desktop\\data",
+   "steps": [
+    {
+     "name": "health",
+     "at": "2026-10-23T13:27:04.332Z",
+     "health": {
+      "ok": true,
+      "version": "1.0.0"
+     }
+    },
+    {
+     "name": "safeStorage",
+     "at": "2026-10-23T13:27:04.332Z",
+     "available": true,
+     "roundtrip": true,
+     "backend": "os"
+    },
+    {
+     "name": "first-run",
+     "at": "2026-10-23T13:27:10.676Z",
+     "shot": "01-first-run.png",
+     "title": "超级工作台"
+    },
+    {
+     "name": "backup-page",
+     "at": "2026-10-23T13:27:13.521Z",
+     "shot": "02-backup-page.png",
+     "hasExport": true
+    },
+    {
+     "name": "backup-export",
+     "at": "2026-10-23T13:27:15.741Z",
+     "state": "completed",
+     "bytes": 353838,
+     "shot": "03-backup-exported.png",
+     "msg": "已导出（不含任何 Key）"
+    },
+    {
+     "name": "backup-restore",
+     "at": "2026-10-23T13:27:17.144Z",
+     "msg": "已恢复：文件 101、数据集 22、设置 2。Key 需要重新填写",
+     "shot": "04-restored.png"
+    }
+   ],
+   "console": [
+    "error: Connecting to 'blob:http://127.0.0.1:56157/1bc65841-b2b0-4ee2-a9a0-4f970b31687c' violates the following Content Security Policy directive: \"connect-src 'self'\". The action has been blocked.",
+    "error: Connecting to 'blob:http://127.0.0.1:56157/1bc65841-b2b0-4ee2-a9a0-4f970b31687c' violates the following Content Security Policy directive: \"connect-src 'self' https: http://localhost:* http://127.0.0.1:*\". The action has been blocked.",
+    "error: Fetch API cannot load blob:http://127.0.0.1:56157/1bc65841-b2b0-4ee2-a9a0-4f970b31687c. Refused to connect because it violates the document's Content Security Policy.",
+    "error: Uncaught (in promise) TypeError: Failed to fetch"
+   ],
+   "pageErrors": [
+    {
+     "name": "TypeError",
+     "message": "Failed to fetch",
+     "stack": "TypeError: Failed to fetch\n    at HTMLAnchorElement.click (<anonymous>:1:223)\n    at Lh (http://127.0.0.1:56157/assets/index-D6yjXfgc.js:79:9012)\n    at g (http://127.0.0.1:56157/assets/me-BtBmYiP0.js:4:18442)",
+     "at": "2026-10-23T13:27:14.259Z"
+    }
+   ],
+   "idbLargeProbe": {
+    "1000": "ok",
+    "100000": "ok",
+    "1000000": "ok"
+   }
+  },
+  "uninstalled": true,
+  "shots": [
+   "01-first-run.png",
+   "02-backup-page.png",
+   "03-backup-exported.png",
+   "04-restored.png"
+  ]
+ },
+ "mac": {
+  "run": "39960746183",
+  "commit": "desktop mac 39960746183 76664243b3bce0c7a4b2732ff2763788704e1acb",
+  "installer": "content-agent-1.0.0-mac-arm64.dmg",
+  "installerBytes": 112025572,
+  "sha256ok": true,
+  "smoke": {
+   "ok": true,
+   "platform": "darwin",
+   "arch": "arm64",
+   "electron": "39.8.10",
+   "node": "22.22.1",
+   "appVersion": "1.0.0",
+   "packaged": true,
+   "dataDir": "/Users/runner/Library/Application Support/content-agent-desktop/data",
+   "steps": [
+    {
+     "name": "health",
+     "at": "2026-10-23T13:24:07.631Z",
+     "health": {
+      "ok": true,
+      "version": "1.0.0"
+     }
+    },
+    {
+     "name": "safeStorage",
+     "at": "2026-10-23T13:24:07.642Z",
+     "available": true,
+     "roundtrip": true,
+     "backend": "os"
+    },
+    {
+     "name": "first-run",
+     "at": "2026-10-23T13:24:14.414Z",
+     "shot": "01-first-run.png",
+     "title": "超级工作台"
+    },
+    {
+     "name": "backup-page",
+     "at": "2026-10-23T13:24:17.618Z",
+     "shot": "02-backup-page.png",
+     "hasExport": true
+    },
+    {
+     "name": "backup-export",
+     "at": "2026-10-23T13:24:19.539Z",
+     "state": "completed",
+     "bytes": 353838,
+     "shot": "03-backup-exported.png",
+     "msg": "已导出（不含任何 Key）"
+    },
+    {
+     "name": "backup-restore",
+     "at": "2026-10-23T13:24:20.497Z",
+     "msg": "已恢复：文件 101、数据集 22、设置 2。Key 需要重新填写",
+     "shot": "04-restored.png"
+    }
+   ],
+   "console": [
+    "error: Connecting to 'blob:http://127.0.0.1:49203/65373f03-1a9a-431a-9472-ff71eb94581a' violates the following Content Security Policy directive: \"connect-src 'self'\". The action has been blocked.",
+    "error: Connecting to 'blob:http://127.0.0.1:49203/65373f03-1a9a-431a-9472-ff71eb94581a' violates the following Content Security Policy directive: \"connect-src 'self' https: http://localhost:* http://127.0.0.1:*\". The action has been blocked.",
+    "error: Fetch API cannot load blob:http://127.0.0.1:49203/65373f03-1a9a-431a-9472-ff71eb94581a. Refused to connect because it violates the document's Content Security Policy.",
+    "error: Uncaught (in promise) TypeError: Failed to fetch"
+   ],
+   "pageErrors": [
+    {
+     "name": "TypeError",
+     "message": "Failed to fetch",
+     "stack": "TypeError: Failed to fetch\n    at HTMLAnchorElement.click (<anonymous>:1:223)\n    at Lh (http://127.0.0.1:49203/assets/index-B_HrOw3O.js:79:9012)\n    at g (http://127.0.0.1:49203/assets/me-wcvDoc9n.js:4:18442)",
+     "at": "2026-10-23T13:24:18.139Z"
+    }
+   ],
+   "idbLargeProbe": {
+    "1000": "ok",
+    "100000": "ok",
+    "1000000": "ok"
+   }
+  },
+  "uninstalled": true,
+  "shots": [
+   "01-first-run.png",
+   "02-backup-page.png",
+   "03-backup-exported.png",
+   "04-restored.png"
+  ]
+ }
+}

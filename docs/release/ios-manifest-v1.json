@@ -1,0 +1,10 @@
+{
+ "xcodebuild": 0,
+ "app": "App.app",
+ "version": "1.0.0",
+ "build": "10000",
+ "swiftFilesCompiled": 18,
+ "commit": "ios simulator 39960746183 76664243b3bce0c7a4b2732ff2763788704e1acb",
+ "run": "39960746183",
+ "screenshot": true
+}
