@@ -65,7 +65,7 @@ describe('A9 / B3 导航（0.8.0：首页即 Agent，平台在侧栏）', () => 
   });
   it('“我的”是分组列表，包含模型、平台与软件、数据源、账号画像、规则、通用、备份、日志、连接服务器、重新开始引导', () => {
     // 0.9.0 改写断言（deviations-v9 T1）：新增 Agent 组（设定 / 记忆 / 技能 / 收益 / 成长记录 / 提醒）与运维项（花钱与实验、运行状态、审计）
-    expect(ME_GROUPS.flatMap((g) => g.items.map((i) => i.id))).toEqual(['me/models', 'me/platforms', 'me/sources', 'me/profile', 'me/agent', 'me/files', 'me/memory', 'me/skills', 'me/revenue', 'me/growth', 'me/reminders', 'me/prefs', 'me/settings', 'me/status', 'me/audit', 'me/backup', 'me/logs', 'me/server', 'onboarding']);
+    expect(ME_GROUPS.flatMap((g) => g.items.map((i) => i.id))).toEqual(['me/models', 'me/platforms', 'me/sources', 'me/profile', 'me/agent', 'me/files', 'me/memory', 'me/skills', 'me/revenue', 'me/growth', 'me/reminders', 'me/prefs', 'me/settings', 'me/status', 'me/audit', 'me/backup', 'me/storage', 'me/logs', 'me/server', 'onboarding']);
   });
   it('命令面板别名：旧名称都能搜到新位置', () => {
     const find = (q: string) => NAV.filter((n) => `${n.label}${n.desc}${n.keywords ?? ''}`.toLowerCase().includes(q)).map((n) => n.id);

@@ -18,6 +18,7 @@ import { RevenuePage, GrowthPage } from './me/v9/revenue';
 import { StatusPage, AuditPage, SettingsV9Page, RemindersPage, BackupV9Page } from './me/v9/ops';
 import { SourcesPage } from './me/sources';
 import { ProfilePage } from './me/profile';
+import { StoragePage } from '../v1/StoragePage';
 import { KEEP_ALIVE_MAX, KEEP_ALIVE_MIN } from '../browser/pool';
 import { ModelPicker, type Pick } from '../components/ModelPicker';
 import { useAddApp } from '../components/addAppContext';
@@ -41,6 +42,7 @@ export function Me({ sub, id, go, lay, theme, setTheme, lang, setLang }: { sub: 
     case 'agent': return <AgentSub go={go} />;
     case 'prefs': return <PrefsSub theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />;
     case 'backup': return <BackupV9Page />;
+    case 'storage': return <StoragePage />;
     case 'logs': return <LogsSub />;
     case 'server': return <ServerSub />;
     default: return <MeIndex go={go} />;

@@ -1,5 +1,6 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { startReminderScheduler } from './v9/reminders';
+import { startCleanupTask } from './v9/media/store';
 import { ReminderBanner } from './v10/ReminderBanner';
 import { apiMode } from './api';
 import { LangContext, translate, type Lang } from './i18n';
@@ -168,6 +169,8 @@ export function App() {
   useEffect(() => { document.title = '超级工作台'; }, []);
   // 0.9.0 本机提醒：App 打开期间每 30 秒检查一次；只发本机通知，不执行任何动作（ADR-009）
   useEffect(() => (import.meta.env.MODE === 'test' ? undefined : startReminderScheduler()), []);
+  // 1.0 存储治理：媒体配额检查（启动 15 秒后、之后每 6 小时；默认只提醒，打开自动清理才删）
+  useEffect(() => (import.meta.env.MODE === 'test' ? undefined : startCleanupTask()), []);
 
   const dark = theme === 'dark' || (theme === 'system' && systemDark());
   const isPhone = lay === 'phone';

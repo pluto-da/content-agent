@@ -2,7 +2,8 @@
 import { callRole, pollJob, listModels, probeEntry, statusFromProbes, configuredRoles, findEntry, estimateCost, priceOf, flagOn, type CallDeps, type RoleId, type RoleRequest, type RoleTarget, type MediaOut, type Parsed, type ModelsStateV3, type ProviderAccount, type ModelEntry } from '@content-agent/shared';
 import { getModelsV3, saveModelsV3, getPrefs } from '../local/store';
 import { getSecret } from '../local/secrets';
-import { db } from '../local/db';
+import { db, type Row } from '../local/db';
+import { noteMediaSaved } from './media/store';
 import { webTransport, isWeb, online } from './transport';
 import { health, recordUsage, audit } from './ops';
 import { labelExplicit, labelImplicit } from './aigc';
@@ -53,6 +54,7 @@ export async function saveMedia(items: MediaOut[], meta: { role: RoleId; model: 
     const row = await db.insert('media', { kind, mime, dataUrl, model: meta.model, prompt: meta.prompt.slice(0, 200), role: meta.role, aiLabel: { explicit, implicit, ...(implicitReason ? { reason: implicitReason } : {}) }, sourceUrl: b64 ? undefined : it.url, note });
     out.push(row as unknown as MediaRow);
   }
+  await noteMediaSaved(out as unknown as Row[]).catch(() => {});
   return out;
 }
 export async function getMedia(id: string | number): Promise<MediaRow | null> {

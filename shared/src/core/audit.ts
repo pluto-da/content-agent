@@ -4,7 +4,7 @@
  */
 import { redactDeep } from './redact.js';
 
-export type AuditKind = 'tool_call' | 'approval' | 'spend' | 'system_file_change' | 'memory_change' | 'export' | 'import' | 'backup' | 'restore' | 'migration' | 'key_change' | 'run_state' | 'error' | 'flag_change' | 'setting_change';
+export type AuditKind = 'tool_call' | 'approval' | 'spend' | 'system_file_change' | 'memory_change' | 'export' | 'import' | 'backup' | 'restore' | 'migration' | 'key_change' | 'run_state' | 'error' | 'flag_change' | 'setting_change' | 'storage';
 export interface AuditEvent {
   id?: number; at: string; kind: AuditKind; actor: 'user' | 'agent' | 'system';
   summary: string;                  // 一句白话
@@ -34,5 +34,5 @@ export function auditToCsv(list: AuditEvent[]): string {
 }
 export const AUDIT_KIND_LABEL: Record<AuditKind, string> = {
   tool_call: '工具调用', approval: '审批', spend: '花费', system_file_change: '系统文件改动', memory_change: '记忆改动', export: '导出', import: '导入',
-  backup: '备份', restore: '恢复', migration: '迁移', key_change: 'Key 变更', run_state: '运行状态', error: '错误', flag_change: '实验开关', setting_change: '设置',
+  backup: '备份', restore: '恢复', migration: '迁移', key_change: 'Key 变更', run_state: '运行状态', error: '错误', flag_change: '实验开关', setting_change: '设置', storage: '存储清理',
 };

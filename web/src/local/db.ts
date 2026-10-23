@@ -20,6 +20,10 @@ export type Keyed = (typeof KEYED)[number];
 
 interface Backend {
   all(c: Collection): Promise<Row[]>;
+  /** 1.0：按主键取一条（不再整表读取；媒体表可达 1 GB）。 */
+  one(c: Collection, id: number): Promise<Row | undefined>;
+  /** 1.0：逐条遍历（游标），每次只有一条在内存里；fn 返回 false 提前结束。 */
+  scan(c: Collection, fn: (r: Row) => boolean | void): Promise<void>;
   put(c: Collection, row: Omit<Row, 'id'> & { id?: number }): Promise<Row>;
   del(c: Collection, id: number): Promise<void>;
   clear(c: Collection): Promise<void>;
@@ -38,6 +42,8 @@ function memory(): Backend {
   const col = (c: string) => { if (!data.has(c)) data.set(c, new Map()); return data.get(c)!; };
   return {
     async all(c) { return [...col(c).values()].map((r) => structuredClone(r)); },
+    async one(c, id) { const r = col(c).get(id); return r ? structuredClone(r) : undefined; },
+    async scan(c, fn) { for (const r of [...col(c).values()]) if (fn(structuredClone(r)) === false) break; },
     async put(c, row) { const id = row.id ?? ++seq; if (id > seq) seq = id; const r = { ...structuredClone(row), id } as Row; col(c).set(id, r); return structuredClone(r); },
     async del(c, id) { col(c).delete(id); },
     async clear(c) { col(c).clear(); },
@@ -75,6 +81,17 @@ function idb(factory: IDBFactory): Backend {
   };
   return {
     all: (c) => tx<Row[]>(c, 'readonly', (s) => s.getAll() as IDBRequest<Row[]>),
+    one: (c, id) => tx<Row | undefined>(c, 'readonly', (s) => s.get(id) as IDBRequest<Row | undefined>),
+    async scan(c, fn) {
+      const d = await open();
+      await new Promise<void>((resolve, reject) => {
+        const t = d.transaction(c, 'readonly');
+        const req = t.objectStore(c).openCursor();
+        req.onsuccess = () => { const cur = req.result; if (!cur) return; if (fn(cur.value as Row) === false) return; cur.continue(); };
+        t.oncomplete = () => resolve();
+        t.onerror = () => reject(t.error ?? new Error('本机数据库读取失败'));
+      });
+    },
     async put(c, row) {
       const clean = { ...row } as Record<string, unknown>;
       if (clean.id === undefined) delete clean.id;
@@ -114,7 +131,8 @@ const after = async <T,>(p: Promise<T>, k: StoreKey): Promise<T> => { const r = 
 
 export const db = {
   all: (c: Collection) => be().all(c),
-  async get(c: Collection, id: number): Promise<Row | undefined> { return (await be().all(c)).find((r) => r.id === id); },
+  get: (c: Collection, id: number): Promise<Row | undefined> => be().one(c, id),
+  scan: (c: Collection, fn: (r: Row) => boolean | void) => be().scan(c, fn),
   insert: (c: Collection, row: Record<string, unknown>) => after(be().put(c, { ...row, created_at: row.created_at ?? new Date().toISOString(), updated_at: new Date().toISOString() }), c),
   async update(c: Collection, id: number, patch: Record<string, unknown>): Promise<Row> {
     const cur = await this.get(c, id);

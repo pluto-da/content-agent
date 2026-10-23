@@ -1,0 +1,66 @@
+{
+  "at": "2026-10-23T11:32:27.959Z",
+  "env": {
+    "chromium": "156.0.8078.4",
+    "cpuThrottle": 4,
+    "viewport": "375x812@2x",
+    "note": "沙盒 Chromium headless + CDP CPU 降速模拟，不等于低端真机"
+  },
+  "seeded": {
+    "mb": 1024,
+    "rows": 512,
+    "perRowMB": 2,
+    "incompressible": true,
+    "seedMs": 11026,
+    "estimate": {
+      "usage": 1432033796,
+      "quota": 8948226564
+    }
+  },
+  "firstScreenMs": {
+    "empty": {
+      "runs": [
+        485,
+        451,
+        468
+      ],
+      "median": 468
+    },
+    "gb1_noIndex": {
+      "runs": [
+        522,
+        528,
+        480
+      ],
+      "median": 522
+    },
+    "gb1_withIndex": {
+      "runs": [
+        480,
+        446,
+        492
+      ],
+      "median": 480,
+      "fcp": [
+        472,
+        436,
+        null
+      ]
+    }
+  },
+  "storagePageMs": {
+    "firstWithRebuild": 8515,
+    "warm": [
+      684,
+      622,
+      720
+    ],
+    "median": 684,
+    "shown": "1.00 GB / 1.00 GB"
+  },
+  "pageErrors": 0,
+  "target": {
+    "firstScreenMs": 2000
+  },
+  "pass": true
+}

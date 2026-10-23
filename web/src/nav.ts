@@ -42,6 +42,7 @@ export const ME_GROUPS: { title: string; items: NavItem[] }[] = [
     { id: 'me/status', label: '运行状态', icon: 'activity', desc: '模型健康、延迟、成本、缓存命中、错误率', keywords: '运行状态 status 健康 延迟 成本 用量 usage 缓存 错误率' },
     { id: 'me/audit', label: '审计日志', icon: 'tasks', desc: '工具调用、审批、花费、设定改动；筛选与导出', keywords: '审计 audit 导出 日志 记录' },
     { id: 'me/backup', label: '备份与恢复', icon: 'backup', desc: '一键导出 zip（永不含 Key）/ 恢复（可撤销）', keywords: '备份 backup 导出 导入' },
+    { id: 'me/storage', label: '存储', icon: 'backup', desc: '媒体配额与清理、设定文件版本修剪', keywords: '存储 storage 空间 配额 清理 媒体 版本 修剪 indexeddb' },
     { id: 'me/logs', label: '日志', icon: 'tasks', desc: '最近做了什么、哪里失败', keywords: '日志 logs 任务 tasks' },
     { id: 'me/server', label: '连接自己的服务器', icon: 'server', desc: '可选：配音、配图、视频等重活', keywords: '服务器 server 服务端 地址 口令' },
     { id: 'onboarding', label: '重新开始引导', icon: 'retry', desc: '再走一遍三步引导', keywords: '引导 onboarding 新手' },
