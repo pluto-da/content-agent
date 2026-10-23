@@ -162,13 +162,13 @@ export interface SuperState {
   pausedItems: string[];                     // 单项暂停：子 Agent / 工作流 / 外部工具 id
   approvals: ApprovalItem[];
   goals: Goal[]; dataPoints: DataPoint[];
-  tasks: Record<string, unknown>[];
+  tasks: import('./agents.js').BoardTask[];
   spendByAgent: Record<string, { month: string; yuan: number }>;
   dataSources: Record<string, unknown>[];
   mcpServers: Record<string, unknown>[];
   a2aAgents: Record<string, unknown>[];
   a2aServer: { enabled: boolean; skills: string[] };
-  stats: Record<string, Record<string, number>>;
+  stats: Record<string, import('./agents.js').AgentStats>;
 }
 export function emptySuperState(): SuperState {
   return { schemaVersion: 1, paused: false, concurrency: 3, pausedItems: [], approvals: [], goals: [], dataPoints: [], tasks: [], spendByAgent: {}, dataSources: [], mcpServers: [], a2aAgents: [], a2aServer: { enabled: false, skills: [] }, stats: {} };

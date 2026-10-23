@@ -47,6 +47,8 @@ export function checkName(path: string): string | null {
   const dir = parts.at(-2)?.replace(/^\./, '');
   if (dir && file.replace(/\.md$/, '') === dir.toUpperCase()) return null;
   if (file === 'SKILL.md' || path === 'semiotics/PRINCIPLES.md') return null;
+  // 1.2.0：子 Agent 与自定义平台的入口文件（agents/<id>/AGENT.md、platforms/<id>/PLATFORM.md）
+  if ((file === 'AGENT.md' && /^agents\/[a-z][a-z0-9-]{1,39}\/AGENT\.md$/.test(path)) || (file === 'PLATFORM.md' && /^platforms\/[a-z][a-z0-9_-]{1,39}\/PLATFORM\.md$/.test(path))) return null;
   const cjkOk = /^memory\/(people|topics)\//.test(path);
   if (!cjkOk && !/^[a-z0-9.][a-z0-9._-]*$/.test(file) && !/^L-\d{8}-[a-z0-9-]+\.md$/.test(file) && !/^P-\d{8}-[a-z0-9-]+\.md$/.test(file) && !/^v\d+\.md$/.test(file) && !/^\d{4}-\d{2}-\d{2}(-\d+)?\.md$/.test(file)) return `文件名需小写连字符：${file}`;
   return null;
