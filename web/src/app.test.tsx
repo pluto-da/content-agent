@@ -64,7 +64,7 @@ describe('A12 / B14 路由重定向', () => {
 /* ---------------- A9 导航为 5 个动作项 + 我的 ---------------- */
 describe('A9 / B3 导航（0.8.0：首页即 Agent，平台在侧栏）', () => {
   it('侧栏底部固定 Agent / 我的；Agent 入口含草稿、待发布、素材箱等', () => {
-    expect(SIDEBAR_ITEMS.map((n) => n.id)).toEqual(['agent', 'me']);
+    expect(SIDEBAR_ITEMS.map((n) => n.id)).toEqual(['agent', 'command', 'me']);
     expect(AGENT_NAV.map((n) => n.label)).toEqual(['Agent', '看热点', '草稿', '待发布', '数据复盘', '素材箱']);
   });
   it('“我的”是分组列表，包含模型、平台与软件、数据源、账号画像、规则、通用、备份、日志、连接服务器、重新开始引导', () => {

@@ -3,10 +3,12 @@
  * 0.7.0 的六页（home / topics / write / publish / results）、0.5.0 的 8 个名词页、0.3.x 设置中心（#settings/*）与 0.2.x 平级页面
  * 先映射到 0.6.0 位置，再经 V7_MAP 映射到 0.8.0 位置（全部 replaceState 重定向）。
  */
-export type Space = 'agent' | 'p' | 'me' | 'onboarding';
+export type Space = 'agent' | 'p' | 'me' | 'onboarding' | 'command';
 export interface Route { space: Space; sub: string; id: string | null; query?: Record<string, string> }
 
-export const SPACES: Space[] = ['agent', 'p', 'me', 'onboarding'];
+export const SPACES: Space[] = ['agent', 'p', 'me', 'onboarding', 'command'];
+/** 1.2.0：指挥台的标签（#command?tab=…）。 */
+export const COMMAND_TABS = ['team', 'board', 'workflows', 'inbox', 'goals', 'connect'] as const;
 /** 1.1.0：“我的”12 个入口对应的子页（status 只保留 #me/status/cards 卡片样例页）。 */
 export const ME_SUBS = ['models', 'platforms', 'profile', 'files', 'memory', 'growth', 'reminders', 'spend', 'records', 'data', 'prefs', 'server', 'status'] as const;
 /** 1.1.0：旧“我的”子页 → 新位置（旧链接、旧书签、命令面板旧词都能到达）。 */
@@ -79,7 +81,7 @@ export function normalize(target: string): string {
   const head = path.split('/')[0]!;
   // 0.5.0 的 #agent/files、#agent/improve（Agent 系统文件页）→ 我的 → 写作助手与规则；裸 #agent 在 0.8.0 起是首页
   if (head === 'agent' && /^agent\/(files|improve)$/.test(path)) return 'me/memory?tab=skills';
-  if (head === 'agent' || head === 'p' || head === 'onboarding') return raw;
+  if (head === 'agent' || head === 'p' || head === 'onboarding' || head === 'command') return raw;
   if (head === 'me') {
     const [, sub = '', id] = path.split('/');
     if (sub in ME_REDIRECTS && !(sub === 'status' && id === 'cards')) return ME_REDIRECTS[sub]!;
@@ -112,6 +114,7 @@ export function parseHash(hash: string): Route {
     case 'p': return sub && /^[a-z0-9_-]+$/i.test(sub) ? { space: 'p', sub, id: null } : { space: 'agent', sub: '', id: null };
     case 'me': { const r: Route = { space: 'me', sub: (ME_SUBS as readonly string[]).includes(sub) ? sub : '', id: sub === 'models' ? id : sub === 'status' && id === 'cards' ? id : null }; if (query) r.query = query; return r; }
     case 'onboarding': return { space: 'onboarding', sub: '', id: null };
+    case 'command': { const r: Route = { space: 'command', sub: '', id: null }; if (query?.tab && (COMMAND_TABS as readonly string[]).includes(query.tab)) r.query = { tab: query.tab }; return r; }
     default: {
       const s = (AGENT_SUBS as readonly string[]).includes(sub) ? sub : '';
       const r: Route = { space: 'agent', sub: s, id: s === 'drafts' && id && /^\d+$/.test(id) ? id : null };

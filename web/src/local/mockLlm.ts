@@ -76,6 +76,12 @@ export function mockChatCompletion(bodyText: string): Record<string, unknown> {
     let note = '已完成。';
     try { const j = JSON.parse(last) as { draftId?: number; title?: string; motherId?: number; adapted?: unknown[] }; note = (j as { copied?: boolean }).copied !== undefined ? '文案已复制、发布页已打开：粘贴 → 检查 → 由你本人点击发布。' : (j as { saved?: boolean }).saved ? '数据已记下，可以在“成长”里看趋势。' : j.adapted ? `已把草稿 #${j.motherId} 适配成 ${j.adapted.length} 篇，母稿保留不变。` : j.draftId ? `草稿 #${j.draftId}「${j.title ?? ''}」写好了，在“草稿”里审一下；要发到哪个平台告诉我，我按那个平台适配。` : note; } catch { /* 原样总结 */ }
     message = { role: 'assistant', content: `（模拟）${note}` };
+  } else if (/## 交接契约/.test(sys)) {
+    // 1.2.0：子 Agent 交接契约（模拟服务商）：按目标给一段确定性结果，花费 0
+    const name = /你是子 Agent「([^」]+)」/.exec(sys)?.[1] ?? '子 Agent';
+    let goal: string; try { goal = String((JSON.parse(u.split('\n\n')[0]!) as { goal?: string }).goal ?? ''); } catch { goal = u; }
+    const head = goal.split('\n')[0]!.slice(0, 60);
+    message = { role: 'assistant', content: JSON.stringify({ summary: `（模拟）${name}已完成：${head}`, artifacts: [`${name}的产出：${head}`], cost: 0, evidence: ['模拟服务商（不联网）'], open_questions: [], failures: [] }) };
   } else if (req.response_format || /JSON|json/.test(sys) || /请输出 JSON/.test(u)) {
     const src = msgs.filter((m) => m.role === 'user').map(textOf).find((x) => /选题标题：/.test(x)) ?? u;
     message = { role: 'assistant', content: draftJson(src) };

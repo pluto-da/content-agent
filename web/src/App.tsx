@@ -21,9 +21,12 @@ import { useLocalApps } from './format';
 import { getModels, getPrefs } from './local/store';
 import { migrateV11 } from './v11/migrate';
 import type { Theme } from './state';
+import { migrateV12 } from './v12/migrate';
+import { startSuperScheduler } from './v12/store';
 
 // 页面级懒加载：首页随主包，其余按需加载（首屏轻量，借鉴 NextChat）。
 const Me = lazy(() => import('./pages/me').then((m) => ({ default: m.Me })));
+const CommandPage = lazy(() => import('./v12/CommandPage').then((m) => ({ default: m.CommandPage })));
 const Onboarding = lazy(() => import('./pages/onboarding').then((m) => ({ default: m.Onboarding })));
 
 export { NAV } from './nav';
@@ -140,7 +143,9 @@ export function App() {
     root.dataset.theme = theme;
   }, [theme]);
   // 1.1.0：一次性迁移（写作助手覆盖 → 技能修订、画像 → user/profile.md），幂等，失败不阻断启动
-  useEffect(() => { void migrateV11().catch(() => {}); }, []);
+  useEffect(() => { void migrateV11().catch(() => {}).then(() => migrateV12()).catch(() => {}); }, []);
+  // 1.2.0：App 打开期间执行到期的定时工作流（关闭时不执行，只靠本机提醒通知）
+  useEffect(() => (import.meta.env.MODE === 'test' ? undefined : startSuperScheduler()), []);
   useEffect(() => { localStorage.setItem('ca.lang', lang); document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en'; setLocale(lang === 'zh' ? 'zh-CN' : 'en'); document.title = translate(lang, 'ui.super_workbench'); }, [lang]);
 
   // 旧 hash 兼容：0.7.0 六页、0.5.0、#settings/*、0.2.x 地址替换为 0.8.0 地址（不新增历史记录）。
@@ -205,6 +210,23 @@ export function App() {
             <div key={`${route.sub}/${route.id ?? ''}`} className="anim-page">
             <Me sub={route.sub} id={route.id} query={route.query} go={go} lay={lay} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />
             </div>
+          </Suspense>
+        </ErrorBoundary>
+      </main>
+    </div>
+  ) : route.space === 'command' ? (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="app-top sticky top-0 z-20 flex shrink-0 items-center gap-2 bg-canvas px-2 py-2 sm:px-6" style={{ minHeight: isPhone ? 48 : 64 }} data-testid="topbar">
+        <div className="min-w-0 flex-1">
+          <h1 className={isPhone ? 'truncate text-[18px]' : 'truncate text-[20px]'}>{t('ui.v12_command')}</h1>
+          {!isPhone && <p className="m-0 line-clamp-2 text-[13px] text-muted">{t('ui.v12_command_desc')}</p>}
+        </div>
+        {!isPhone && tools}
+      </header>
+      <main id="main" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto pb-[calc(24px+var(--sa-bottom))] outline-none">
+        <ErrorBoundary key="command">
+          <Suspense fallback={<div className="page"><Loading show lines={5} /></div>}>
+            <div className="anim-page"><CommandPage tab={route.query?.tab} go={go} /></div>
           </Suspense>
         </ErrorBoundary>
       </main>

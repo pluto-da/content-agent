@@ -169,9 +169,11 @@ export interface SuperState {
   a2aAgents: import('./a2a.js').A2AAgentRef[];
   a2aServer: { enabled: boolean; skills: string[] };
   stats: Record<string, import('./agents.js').AgentStats>;
+  wfRuns: Record<string, import('./workflows.js').WfRunState>;
+  wfLastRun: Record<string, string>;
 }
 export function emptySuperState(): SuperState {
-  return { schemaVersion: 1, paused: false, concurrency: 3, pausedItems: [], approvals: [], goals: [], dataPoints: [], tasks: [], spendByAgent: {}, dataSources: [], mcpServers: [], a2aAgents: [], a2aServer: { enabled: false, skills: [] }, stats: {} };
+  return { schemaVersion: 1, paused: false, concurrency: 3, pausedItems: [], approvals: [], goals: [], dataPoints: [], tasks: [], spendByAgent: {}, dataSources: [], mcpServers: [], a2aAgents: [], a2aServer: { enabled: false, skills: [] }, stats: {}, wfRuns: {}, wfLastRun: {} };
 }
 export const clampConcurrency = (n: unknown): number => (typeof n === 'number' && Number.isFinite(n) ? Math.min(5, Math.max(1, Math.round(n))) : 3);
 /** 读 config/super.json：缺字段补默认、并发夹紧到 1–5；解析失败给空状态（不抛）。 */

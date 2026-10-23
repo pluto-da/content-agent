@@ -4,10 +4,12 @@ import {
   Coins, Command, Cpu, Ellipsis, ExternalLink, FileCode2, Flame, Inbox, Info, Kanban, Lightbulb, LayoutList, ListChecks, Menu, Monitor, Moon,
   PanelLeft, PenLine, Plus, Puzzle, RefreshCw, Search, Send, Settings, Shield, Sparkles, Sun, Upload, WifiOff, X, CalendarCheck, KeyRound, DatabaseBackup, SlidersHorizontal, Eye, Smartphone, LayoutGrid, RotateCcw, PanelLeftClose, House, UserRound, Server, Mic, Copy, Trash2, Pencil, ChevronDown, CircleAlert, Loader2, Wand2,
   Bot, Globe, PanelRight, ChevronLeft, Square, GripVertical, Pin, RotateCw, Lock, ArrowUp, Share2, History, MessageSquarePlus, Paperclip, Compass, ChevronUp,
+  Pause, UsersRound,
   type LucideIcon,
 } from 'lucide-react';
 
 const MAP: Record<string, LucideIcon> = {
+  pause: Pause, team: UsersRound,
   today: CalendarCheck, inspire: Lightbulb, create: PenLine, analytics: ChartColumn, settings: Settings,
   overview: CalendarCheck, hot: Flame, library: BookOpen, topics: Sparkles, review: CircleCheck, creator: Monitor, agent: FileCode2,
   improve: RefreshCw, plugins: Puzzle, tasks: ListChecks, menu: Menu, close: X, sun: Sun, moon: Moon, search: Search, bell: Bell,

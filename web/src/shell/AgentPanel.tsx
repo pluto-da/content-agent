@@ -26,6 +26,8 @@ import { AtChips, AtMenu, atQuery, pickLabel, type AtPick } from '../v10/AtMenu'
 import { useModelsV3 } from '../pages/me/v9/common';
 import { CAPS, coverage, displayModel } from '@content-agent/shared';
 import { tr } from '../i18n';
+import { CommandBar } from '../v12/CommandBar';
+import { handleMention, isPausedNow } from '../v12/store';
 
 const Write = lazy(() => import('../pages/write').then((m) => ({ default: m.Write })));
 
@@ -107,6 +109,7 @@ export function useAgent() {
   const send = useCallback(async (text: string, at?: AtPick[]) => {
     const t = text.trim();
     if (!t || running || runningRef.current) return;
+    if (isPausedNow()) { setNotice(tr('ui.v12_paused_send_blocked')); return; }
     if (!cfg) { setNotice(models?.providers.length ? '模型还没填 Key：到“我的 → 模型”填好 Key 再发' : '先连接一个模型，Agent 才能工作'); return; }
     // 0.8.1：运行状态用 ref 兜底；任何一步抛错都要复位“停止”按钮并用白话说明，不能卡在运行中或静默失败
     runningRef.current = true;
@@ -117,6 +120,8 @@ export function useAgent() {
       if (!id) { const c = await createConversation(); id = c.id; setCid(id); setMsgs([]); }
       abort.current = new AbortController();
       if (pick) await updateConversation(id, { model: `${cfg.label} · ${cfg.model}` });
+      // 1.2.0：@子Agent 名 → 直接交给该子 Agent（回复写明交给了谁、花了多少、结果在哪）
+      if (t.startsWith('@') && await handleMention(id, t)) { setMsgs(await listMessages(id)); void refreshConvs(); return; }
       // 0.11.0：0.8 循环已删除，agent.runtime.v9 开关到期，一律走 v9 运行时（ADR-005 重审）
       await runTurnV9({ conversationId: id, text: t, cfg, signal: abort.current.signal, ...(at?.length ? { override: Object.fromEntries(at.map((p) => [p.role, p.target])), overrideLabels: at.map(pickLabel) } : {}), onEvent: (e) => { onEvent(e); if (e.type === 'done') { setMsgs((m) => m.map((x) => ({ ...x, meta: { ...(x.meta ?? {}), streaming: false }, stopped: e.stopped && x.meta?.streaming ? true : x.stopped }))); if (e.error && cfgState !== 'ok') setNotice(`发送失败：${e.error}。这个模型还没测试通过，可到“我的 → 模型”点“测试连接”看具体原因`); void refreshConvs(); } } });
     } catch (e) {
@@ -133,6 +138,8 @@ export function useAgent() {
     if (first && cfg && !running) { sessionStorage.removeItem('ca.firstAsk'); void send(first); }
   }, [cfg, running, send]);
   const stop = useCallback(() => abort.current?.abort(), []);
+  // 1.2.0：全部暂停 → 立即停止当前对话运行
+  useEffect(() => { const on = () => abort.current?.abort(); window.addEventListener('ca:pause-all', on); return () => window.removeEventListener('ca:pause-all', on); }, []);
   const userTool = useCallback(async (name: string, args: Record<string, unknown>) => {
     const spec = toolByName(name);
     if (!spec) return null;
@@ -314,6 +321,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
       )}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {header}
+        {variant === 'full' && <CommandBar go={go} />}
         {tabs}
         <div className="min-h-0 flex-1 overflow-y-auto" data-testid="agent-scroll"><div key={tab} className="anim-page">{body}</div></div>
         {tab === 'chat' && input}

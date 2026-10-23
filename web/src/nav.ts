@@ -17,6 +17,8 @@ export const AGENT_NAV: NavItem[] = [
   { id: 'agent?ask=metrics', label: '数据复盘', icon: 'analytics', desc: '录入数据，看趋势与复盘建议', keywords: '看效果 results 复盘 analytics 数据 csv' },
   { id: 'agent/inbox', label: '素材箱', icon: 'inbox', desc: '你“发给 Agent”或分享进来的内容', keywords: '素材 inbox 分享 发给agent' },
 ];
+/** 1.2.0：指挥台（独立空间，不进“我的”）。 */
+export const COMMAND_NAV: NavItem = { id: 'command', label: '指挥', icon: 'team', desc: '我的团队、任务板、工作流、审批收件箱、目标、连接（平台 / 数据源 / 外部工具）', keywords: '指挥台 超级agent 子agent 团队 team 任务板 board 工作流 workflow 审批 inbox 目标 goal mcp a2a 外部工具 数据源 自定义平台 暂停' };
 export const ME_NAV: NavItem = { id: 'me', label: '我的', icon: 'user', desc: '模型、平台与软件、Agent、花钱、记录、数据、设置', keywords: '设置 settings 偏好 prefs 工作台' };
 
 /** “我的”分组列表（也是命令面板目的地）。1.1.0：22 项收敛为 12 项，每个概念一个设置入口（scripts/single-source-check.mjs 守护）。 */
@@ -54,7 +56,7 @@ export const ME_ALIASES: NavItem[] = [
 
 /** 兼容旧代码：主线 = Agent 相关入口；侧栏底部固定 Agent / 我的。 */
 export const MAIN_NAV: NavItem[] = AGENT_NAV;
-export const SIDEBAR_ITEMS: NavItem[] = [AGENT_NAV[0]!, ME_NAV];
+export const SIDEBAR_ITEMS: NavItem[] = [AGENT_NAV[0]!, COMMAND_NAV, ME_NAV];
 export const BOTTOM_ITEMS: NavItem[] = SIDEBAR_ITEMS;
 /** 命令面板全部目的地（平台由 App 运行时追加）。 */
-export const NAV: NavItem[] = [...AGENT_NAV, ME_NAV, ...ME_GROUPS.flatMap((g) => g.items), ...ME_ALIASES];
+export const NAV: NavItem[] = [...AGENT_NAV, COMMAND_NAV, ME_NAV, ...ME_GROUPS.flatMap((g) => g.items), ...ME_ALIASES];

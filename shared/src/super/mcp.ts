@@ -101,7 +101,7 @@ export class McpClient {
   private unwrap(r: Rpc | null): Record<string, unknown> { if (!r) return {}; if (r.error) throw new McpError(r.error.code, r.error.message); return r.result ?? {}; }
   /** 选版本：先 server/discover（2026-07-28）；不支持就回退 2025-11-25 的 initialize 握手。 */
   async connect(signal?: AbortSignal): Promise<McpVersion> {
-    let sup: string[] | null = null;
+    let sup: string[] | null;
     try {
       const res = this.unwrap((await this.post('server/discover', {}, { version: MCP_LATEST, signal })).rpc);
       sup = (res.supportedVersions as string[] | undefined) ?? [];

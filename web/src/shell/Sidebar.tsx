@@ -84,7 +84,7 @@ export function Sidebar(p: SidebarProps) {
     );
   };
 
-  const fixed = (id: 'agent' | 'me', label: string, icon: string) => (
+  const fixed = (id: 'agent' | 'me' | 'command', label: string, icon: string) => (
     <button type="button" data-testid={`side-${id}`} aria-current={p.active === id ? 'page' : undefined} aria-label={label}
       className={cn('relative !flex !min-h-11 !border-0 !font-normal !text-side-fg', wide ? 'w-full !justify-start gap-3 !rounded-[10px] !px-2 !text-[15px]' : 'h-14 w-14 !flex-col !justify-center gap-0.5 !rounded-[10px] !p-0 !text-[11px]', p.active === id ? '!bg-side-active !text-fg' : '!bg-transparent')}
       onClick={() => p.onSelect(id)}>
@@ -116,6 +116,7 @@ export function Sidebar(p: SidebarProps) {
           <span className="grid h-7 w-7 place-items-center rounded-[8px] border border-dashed border-line-strong"><Icon name="plus" size={16} /></span><span className={cn(wide ? 'flex-1 text-left' : 'text-center leading-tight')}>{tr('ui.add_platform')}</span>
         </button>
         {fixed('agent', 'Agent', 'bot')}
+        {fixed('command', tr('ui.v12_command'), 'team')}
         {fixed('me', tr('ui.me'), 'user')}
       </div>
 
