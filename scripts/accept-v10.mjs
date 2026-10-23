@@ -41,6 +41,7 @@ const tools = J(join(out, 'aigc-v10/tools.json'));
 const v9 = J(join(out, 'accept-v9.json'));
 const apk = J(join(out, 'apk-manifest-v10.json')) ?? J(join(root, '../out/apk-manifest-v10.json'));
 const pkg = J(join(root, 'package.json'));
+const semverGte = (a, b) => { const x = String(a ?? '0').split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0); } return true; };
 const device = (steps) => ({ ok: false, device: true, text: `需真机：${steps}` });
 
 const ITEMS = [
@@ -74,7 +75,7 @@ const ITEMS = [
   ['R1', '“高级：按任务路由”页（补 D-ROUTING）', [test('高级：按任务路由', '路由页与运行时'), file('web/src/v10/RoutingPage.tsx')]],
   ['R2', '@ 菜单改版：能力分组、显示名（模型名）· 服务商、胶囊、只影响本轮、消息标注（补 D-AT）', [test('@ 菜单', '@ 菜单单测')]],
   // ⑦ 版本与回归
-  ['V1', '版本 0.10.0 / versionCode 1000', [{ ok: pkg?.version === '0.10.0', text: `package.json ${pkg?.version}` }, grep('mobile/scripts/apply-native.mjs', 'versionCode = x\\*10000', 'versionCode 按版本计算（0.10.0 → 1000）'), apk ? { ok: apk.versionName === '0.10.0' && String(apk.versionCode) === '1000', text: `APK：${apk.versionName} / ${apk.versionCode}` } : { ok: true, text: 'APK 尚未取回（CI 成功后写 out/apk-manifest-v10.json）' }]],
+  ['V1', '版本 0.10.0 / versionCode 1000', [{ ok: semverGte(pkg?.version, '0.10.0'), text: `package.json ${pkg?.version}（0.11.0 起作回归：版本 ≥ 0.10.0 即可）` }, grep('mobile/scripts/apply-native.mjs', 'versionCode = x\\*10000', 'versionCode 按版本计算（0.10.0 → 1000）'), apk ? { ok: apk.versionName === '0.10.0' && String(apk.versionCode) === '1000', text: `APK：${apk.versionName} / ${apk.versionCode}` } : { ok: true, text: 'APK 0.10.0 已在 0.10 交付时核对（回归时不再要求）' }]],
   ['V2', 'accept:v9 回归：失败 0', [v9 ? { ok: (v9.count?.fail ?? v9.counts?.['失败'] ?? 1) === 0, text: `accept-v9：${JSON.stringify(v9.count ?? v9.counts ?? {})}` } : { ok: false, soft: true, text: '先运行 node scripts/accept-v9.mjs' }]],
   ['V3', '硬边界：未新增任何对外写入工具（点赞 / 评论 / 私信 / 关注 / 自动发布）', [{ ok: !/name: '(like|comment|dm|follow|publish_send|auto_publish)[a-z_]*'/.test(txt('shared/src/agent/builtinTools.ts')), text: '内置工具名检查' }, grep('server/src/boundaries.ts', '.', 'boundaries.ts 存在')]],
 ];

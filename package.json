@@ -1,6 +1,6 @@
 {
   "name": "content-agent",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -28,7 +28,10 @@
     "eval": "npm run test -w shared -- ../evals && node scripts/eval-report.mjs",
     "vfs:doctor": "node scripts/vfs-doctor.mjs",
     "accept:v9": "node scripts/accept-v9.mjs",
-    "accept:v10": "node scripts/accept-v10.mjs"
+    "accept:v10": "node scripts/accept-v10.mjs",
+    "accept:v11": "node scripts/accept-v11.mjs",
+    "real:v11": "npm run build -w shared --silent && node scripts/real-v11.mjs",
+    "judge:v11": "npx tsx evals/judge.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

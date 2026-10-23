@@ -28,6 +28,8 @@
 
 ## 0.11「真实联调与质量」——真 Key 跑通 C5 / C6、话术评测、移除旧循环
 
+> **状态（2026-10-23）**：0.11.0 已实现——MiMo 文本 / 推理 / TTS / ASR 真实 trace（evals/real/real-trace-0.11.json）、真实判官（人工抽检待用户）、旧循环移除、混合检索 beta；百炼 / 智谱 / 方舟 / MiniMax 待 Key（design/acceptance-v11.md、design/deviations-v11.md）。
+
 **目标**：让 0.9.0 里“待 Key”的项全部有真实 trace，评测加入真实模型的判官打分。
 
 | 功能 | 具体内容 | 扩展点 / 适配器 | 可测的验收项 |

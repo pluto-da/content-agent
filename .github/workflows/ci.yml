@@ -61,15 +61,22 @@ jobs:
       - name: accept:v10 (ROADMAP 0.10)
         if: always()
         run: node scripts/accept-v10.mjs --strict
+      - name: accept:v11 (ROADMAP 0.11)
+        if: always()
+        run: node scripts/accept-v11.mjs --strict
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: reports-0.10.0
+          name: reports-0.11.0
           path: |
             out/accept-v9.json
             out/accept-v9.md
             out/accept-v10.json
             out/accept-v10.md
+            out/accept-v11.json
+            out/accept-v11.md
+            out/search-v11.json
+            evals/real/
             out/aigc-v10/
             out/eval-report-0.9.0.json
             out/eval-report-0.9.0.md

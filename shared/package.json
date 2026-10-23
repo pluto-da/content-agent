@@ -1,6 +1,6 @@
 {
   "name": "@content-agent/shared",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "type": "module",
   "description": "前后端共用的纯函数：提示词、平台规则、Schema 校验与修复、合规检查、RSS/热榜解析、模型错误白话化",

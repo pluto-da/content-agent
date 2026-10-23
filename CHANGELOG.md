@@ -1,5 +1,14 @@
 # 变更日志
 
+## 0.11.0（2026-10-23）真实联调与质量：MiMo 真跑 C5 / C6、真实判官、移除旧循环、混合检索
+- **MiMo 真实联调**（scripts/real-v11.mjs，走 App 同一套 v9 callRole + MiMo 适配器）：chat 流式首字 1.0 / 1.4 / 1.3 秒（中位 1.3 秒，目标 < 3 秒）；reason 返回思考内容；TTS 生成 24 kHz WAV，ffmpeg 完整解码；ASR 把这段配音转写回来，与原文一致。trace 存 out/real-trace-0.11.json（入库副本 evals/real/），不含 Key。MiMo 配音、转写的能力声明改为“已实测”；价目补上 TTS 限时免费、ASR ¥0.5 / 小时（按 WAV 时长计）。
+- **其他服务商**：百炼、智谱、方舟、MiniMax 没有 Key，未实测，声明保持“按文档”。
+- **行为评测判官**（evals/judge.ts）：BQ-01–BQ-32 由 MiMo 快速模型做判官（temperature 0，JSON）；被测回复由真实模型在 App 系统前缀下生成。对照集一致 64/64、重复判一致 8/8、与规则判官一致 12/14；20% 人工抽检表待你填写。真实模型 4 条不通过（多问、愿意发系统提示词、低落时没给建议），如实记录。
+- **移除 0.8 对话循环**：agent.runtime.v9 开关到期删除，web/src/agent/loop.ts 删除，首页 Agent 只走 v9 运行时；0.8 回归测试全部改在 v9 上通过。顺带修复：中途切到 JSON 指令模式时系统提示补上指令规则；停止时保留已收到的内容；任务检查点继续写（task_resume 可用）；会话内切模型立即生效；消息标注实际返回的模型名。ADR-005 重审。
+- **向量检索转 beta**（我的 → 运行状态 → 花钱与实验功能 → 向量检索，默认关）：记忆与素材检索改为关键词 + 向量混合；没接向量模型时用本机轻量嵌入（不是语义模型，只补近义词和换说法），失败自动退回关键词。30 条样例前 5 命中：混合 0.967、纯关键词 0.767。
+- **CI**：外部工具安装加超时与降级（run 39938123873 卡在 apt，已取消）；各作业 timeout-minutes；修复 Ubuntu exiftool 12.76 对新建 EXIF 的 4 条校验告警（补 X/YResolution、ResolutionUnit、FlashpixVersion）；新增 accept:v11。
+- 版本 0.11.0 / Android versionCode 1100。偏离见 design/deviations-v11.md，逐项验收见 design/acceptance-v11.md。
+
 ## 0.10.0（2026-10-23）装进手机里更稳：Key 硬件绑定、合规标识补全、真机补验准备
 - **Key 硬件绑定**：新原生插件 SecureKeys——AES-256-GCM 主密钥生成在 AndroidKeyStore（StrongBox 可用时优先），WebView 只拿加解密结果；Key 加密后端可插拔（webcrypto / android-keystore / electron-safeStorage）；旧 WebCrypto 密文首次使用时一次性迁移、迁完删除旧密钥，失败回退并明确提示、可重试；重装 / 换机后解不开的 Key 在“账号与 Key”列出并提示重填；可选“需解锁手机后 5 分钟内可用”。
 - **诊断**（我的 → 运行状态 → 诊断）：Key 存储（当前后端、isInsideSecureHardware、安全级别、StrongBox、迁移状态）、上传与下载 trace 与自检、通知权限；卡片预览（演示数据）。
