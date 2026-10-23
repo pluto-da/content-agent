@@ -164,7 +164,7 @@ export interface SuperState {
   goals: Goal[]; dataPoints: DataPoint[];
   tasks: import('./agents.js').BoardTask[];
   spendByAgent: Record<string, { month: string; yuan: number }>;
-  dataSources: Record<string, unknown>[];
+  dataSources: import('./sources.js').DataSource[];
   mcpServers: Record<string, unknown>[];
   a2aAgents: Record<string, unknown>[];
   a2aServer: { enabled: boolean; skills: string[] };
