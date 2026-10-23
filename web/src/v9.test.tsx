@@ -47,12 +47,13 @@ describe('Key 安全存储与模型配置迁移（ADR-003 / ADR-004）', () => {
     expect(m.defaultProvider).toBe('mimo');
     for (const k of ['models', 'models_v3', 'models_v2_backup', 'secrets']) expect(JSON.stringify(await db.getKV(k))).not.toContain(mimo.apiKey);
     expect(await getSecret('secret:mimo')).toBe(mimo.apiKey);
-    expect((await db.getKV<Record<string, number>>('schema'))!.models).toBe(3);
+    expect((await db.getKV<Record<string, number>>('schema'))!.models).toBe(4);   // 1.1.0：v2 → v3 → v4 一次走完
+    expect((await getModelsV3()).main!.model).toBe('mimo-v2.6-flash');
   });
   it('saveModels（0.8 接口）写入 v3：账号 Key 共用；删除账号同时删 Key', async () => {
     await saveModels({ ...EMPTY_MODELS, providers: [mimo], defaultProvider: 'mimo' });
     const v3 = await getModelsV3();
-    expect(v3.roles.chat.primary!.model).toBe('mimo-v2.6-flash');
+    expect(v3.main!.model).toBe('mimo-v2.6-flash');   // 1.1.0：默认服务商 = 主模型
     expect(v3.accounts[0]!.hasKey).toBe(true);
     expect(JSON.stringify(v3)).not.toContain(mimo.apiKey);
     await saveModels({ ...EMPTY_MODELS, providers: [], defaultProvider: null });

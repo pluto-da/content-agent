@@ -40,21 +40,33 @@ const typeIn = (el: HTMLElement, v: string) => fireEvent.change(el, { target: { 
 describe('导航与路由', () => {
   it('“我的”新增 Agent 组与运维项；#me/<新子页> 可直达', () => {
     expect(ME_GROUPS.map((g) => g.title)).toEqual(['工作', 'Agent', '通用']);
-    for (const s of ['files', 'memory', 'skills', 'revenue', 'growth', 'reminders', 'status', 'audit', 'settings']) expect(parseHash(`#me/${s}`).sub).toBe(s);
+    for (const s of ['files', 'memory', 'growth', 'reminders', 'spend', 'records', 'data']) expect(parseHash(`#me/${s}`).sub).toBe(s);
+    // 1.1.0：旧子页重定向到合并后的位置
+    expect(parseHash('#me/skills')).toMatchObject({ sub: 'memory', query: { tab: 'skills' } });
+    expect(parseHash('#me/revenue')).toMatchObject({ sub: 'growth', query: { tab: 'revenue' } });
+    expect(parseHash('#me/audit').sub).toBe('records'); expect(parseHash('#me/settings').sub).toBe('spend'); expect(parseHash('#me/storage').sub).toBe('data');
     expect(parseHash('#me/models/image')).toEqual({ space: 'me', sub: 'models', id: 'image' });
   });
 });
 
-describe('C2 我的 → 模型：11 角色 5 组', () => {
-  it('分组、顺序、状态与“已接 N / 11 类”', async () => {
-    render(<RolesPage id={null} go={go} lay="phone" />);
-    expect((await screen.findByTestId('roles-count')).textContent).toContain('0 / 11');
-    const groups = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(groups.slice(0, 5)).toEqual(['文字', '看与画', '声音', '视频', '检索']);
-    for (const r of ROLE_IDS) expect(screen.getByTestId(`role-${r}`).textContent).toContain('未接');
+describe('C2 → 1.1.0 D3 / D4 我的 → 模型：主模型卡 + 能力覆盖一览（不再有 11 行“未接”）', () => {
+  it('未配置时只有一个主按钮；接入多能力模型后覆盖一览自动点亮', async () => {
+    const { container } = render(<RolesPage id={null} go={go} lay="phone" />);
+    await screen.findByTestId('connect-first');
+    expect(container.querySelectorAll('button.primary').length).toBe(1);
+    expect(container.textContent).not.toMatch(/未接|深度推理|快速小模型|角色/);
+    cleanup();
     await act(async () => { await mockRoles(['chat', 'image', 'tts']); });
-    await waitFor(() => expect(screen.getByTestId('roles-count').textContent).toContain('3 / 11'));
-    expect(screen.getByTestId('role-image').textContent).toContain('mock-image');
+    const s = await getModelsV3(); const r = addModelEntry(s.accounts[0]!, { model: 'mock-omni', roles: ['chat', 'reason', 'vision'] }); if (r.ok) s.main = { accountId: 'mock', modelEntryId: r.entry.id, model: 'mock-omni' }; await saveModelsV3(s);
+    const v = render(<RolesPage id={null} go={go} lay="phone" />);
+    await screen.findByTestId('main-card');
+    expect(screen.getByTestId('main-name').textContent).toContain('mock-omni');
+    for (const c of ['chat', 'think', 'vision', 'image', 'tts']) await waitFor(() => expect(screen.getByTestId(`cap-${c}`).getAttribute('data-on')).toBe('1'));
+    for (const c of ['imageEdit', 'asr', 'video']) expect(screen.getByTestId(`cap-${c}`).getAttribute('data-on')).toBe('0');
+    expect(screen.getByTestId('cap-image').textContent).toContain('mock-image');
+    expect(v.container.textContent).not.toMatch(/深度推理|快速小模型|角色/);
+    fireEvent.click(screen.getByTestId('cap-video'));
+    expect(go).toHaveBeenCalledWith('me/models/connect?cap=video');
   });
 });
 
@@ -99,12 +111,12 @@ describe('C3 / C41 / C43 账号与 Key、模型名手填原样发送、错误白
     render(<RolesPage id="acc-ds" go={go} lay="phone" />);
     await screen.findByTestId('account-detail');
     const add = async (name: string, roles: RoleId[]) => {
-      for (const r of ROLE_IDS) { const box = screen.getByTestId(`new-role-${r}`) as HTMLInputElement; if (box.checked !== roles.includes(r)) fireEvent.click(box); }
+      for (const r of ROLE_IDS.filter((x) => x !== 'fast')) { const box = screen.getByTestId(`new-role-${r}`) as HTMLInputElement; if (box.checked !== roles.includes(r)) fireEvent.click(box); }
       typeIn(screen.getByTestId('model-name'), name);
       await act(async () => { fireEvent.click(screen.getByTestId('add-model')); });
     };
-    await add('qwen-a', ['chat']); await add('qwen-b', ['fast']); await add('qwen-c', ['vision', 'reason']);
-    await waitFor(async () => expect((await getModelsV3()).accounts[0]!.models.map((m) => [m.model, m.roles.join()])).toEqual([['qwen-a', 'chat'], ['qwen-b', 'fast'], ['qwen-c', 'reason,vision']]));
+    await add('qwen-a', ['chat']); await add('qwen-b', ['tts']); await add('qwen-c', ['vision', 'reason']);
+    await waitFor(async () => expect((await getModelsV3()).accounts[0]!.models.map((m) => [m.model, m.roles.join()])).toEqual([['qwen-a', 'chat'], ['qwen-b', 'tts'], ['qwen-c', 'reason,vision']]));
     await add('qwen3.7-plsu', ['chat']);
     const err = await screen.findByTestId('probe-error-qwen3.7-plsu-chat', {}, { timeout: 4000 });
     expect(err.textContent).toContain('模型名「qwen3.7-plsu」在这家服务里不存在');
@@ -166,17 +178,20 @@ describe('C7 试一试（Mock）：直接调用能力层，共用记账与标识
       cleanup();
     }
   });
-  it('角色页设置：默认 / 备用下拉来自勾选了该能力的模型名，切换后保存；未配置时给出下一步', async () => {
+  it('1.1.0 能力页：未覆盖时给“补一个”；备用模型在“高级”里设置并保存', async () => {
     render(<RolesPage id="video" go={go} lay="phone" />);
-    expect((await screen.findByTestId('problem')).textContent).toContain('还没有能做这件事的模型名');
+    fireEvent.click(await screen.findByRole('button', { name: '补一个' }));
+    expect(go).toHaveBeenCalledWith('me/models/connect?cap=video');
     cleanup();
     await mockRoles(['chat']);
     const s = await getModelsV3(); const r = addModelEntry(s.accounts[0]!, { model: 'mock-chat-2', roles: ['chat'] }); await saveModelsV3(s);
-    render(<RolesPage id="chat" go={go} lay="phone" />);
-    const sel = await screen.findByTestId('slot-fallback-select');
+    render(<RolesPage id="advanced" go={go} lay="phone" />);
+    const sel = await screen.findByTestId('adv-fallback');
     await act(async () => { fireEvent.change(sel, { target: { value: r.ok ? r.entry.id : '' } }); });
     await waitFor(async () => expect((await getModelsV3()).roles.chat.fallback?.model).toBe('mock-chat-2'));
-    expect(screen.getByTestId('return-chat').getAttribute('href')).toBe('#agent');
+    cleanup();
+    render(<RolesPage id="chat" go={go} lay="phone" />);
+    expect((await screen.findByTestId('return-chat')).getAttribute('href')).toBe('#agent');
   });
 });
 

@@ -27,7 +27,7 @@ export interface TurnOpts {
   /** trace（B5）：记录每步 */
   trace?: TraceStep[];
 }
-export interface TraceStep { kind: 'model' | 'tool'; name?: string; args?: unknown; result?: unknown; ms: number; usage?: { input: number; output: number; cached?: number }; streamed?: boolean; firstTokenMs?: number; chunks?: number; content?: string; error?: string; mode?: string }
+export interface TraceStep { kind: 'model' | 'tool'; name?: string; args?: unknown; result?: unknown; ms: number; usage?: { input: number; output: number; cached?: number }; streamed?: boolean; firstTokenMs?: number; chunks?: number; content?: string; error?: string; mode?: string; thinking?: boolean }
 
 /** 历史 → 模型消息；较早轮次压缩为一段摘要（本机拼接，不调用模型）。 */
 export function historyToMessages(msgs: StoredMsg[], keep = LIMITS.historyMessages): AgentMsg[] {

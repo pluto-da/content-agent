@@ -4,9 +4,9 @@
  */
 import { useMemo, useState } from 'react';
 import {
-  ROLE_GROUPS, ROLE_IDS, ADAPTERS, adapterOf, roleDef, roleLabel, isRoleId, configuredRoles, candidatesFor, displayModel, findEntry, bindRole, addModelEntry, referencesOf,
-  removeModelEntry, markAgainstList, MODEL_NAME_MESSAGES, PROBES, VERIFIED_LABEL, mergeDecl,
-  type RoleId, type ModelsStateV3, type ModelEntry, type ProviderAccount, type ProbeResult, type CallResult,
+  ADAPTERS, adapterOf, roleDef, isRoleId, displayModel, findEntry, addModelEntry, referencesOf, CAPS, RETRIEVAL_CAPS, resolveModel, inferRoles,
+  removeModelEntry, markAgainstList, MODEL_NAME_MESSAGES, VERIFIED_LABEL, mergeDecl,
+  type RoleId, type ModelsStateV3, type ModelEntry, type ProviderAccount, type CallResult,
 } from '@content-agent/shared';
 import { useT } from '../../../i18n';
 import type { Layout } from '../../../nav';
@@ -18,10 +18,9 @@ import { addInbox } from '../../../agent/store';
 import { db } from '../../../local/db';
 import { GroupList, ListRow, Problem, StatusDot, Busy, useToast } from '../../../ui';
 import { ModelsPage } from '../models';
-import { RoutingPage } from '../../../v10/RoutingPage';
+import { ModelsIndex, ConnectWizard } from '../../../v11/ModelsHub';
 import { useAsync, useModelsV3, SegTabs, BackBar, Section, Note, pct } from './common';
 
-const ROLE_ICON: Record<RoleId, string> = { chat: 'bot', reason: 'compass', fast: 'activity', vision: 'eye', image: 'wand', imageEdit: 'edit', tts: 'mic', asr: 'list', video: 'creator', embed: 'search', rerank: 'kanban' };
 type Tone = 'ok' | 'warn' | 'bad' | 'neutral';
 export function entryTone(e: ModelEntry | undefined, role?: RoleId): Tone {
   if (!e) return 'neutral';
@@ -29,149 +28,37 @@ export function entryTone(e: ModelEntry | undefined, role?: RoleId): Tone {
   if (p) return p.ok ? 'ok' : p.kind === 'needs_confirm' ? 'warn' : 'bad';
   return e.status === 'ok' ? 'ok' : ['failed', 'not_found', 'not_enabled'].includes(e.status) ? 'bad' : 'warn';
 }
-const TONE_TEXT: Record<Tone, string> = { ok: '已实测', warn: '未实测', bad: '最近测试失败', neutral: '未接' };
+const TONE_TEXT: Record<Tone, string> = { ok: '已实测', warn: '未实测', bad: '最近测试失败', neutral: '未测试' };
 
-export function RolesPage({ id, go, lay }: { id: string | null; go: (to: string) => void; lay: Layout }) {
-  if (!id) return <RolesIndex go={go} />;
+export function RolesPage({ id, go, lay, query }: { id: string | null; go: (to: string) => void; lay: Layout; query?: Record<string, string> }) {
+  if (!id) return <ModelsIndex go={go} />;
   if (id === 'accounts') return <Accounts go={go} />;
-  if (id === 'routing') return <RoutingPage go={go} />;
-  if (id === 'legacy') return <ModelsPage id={null} go={go} lay={lay} />;
+  if (id === 'routing' || id === 'advanced') return <ModelsIndex go={go} openAdvanced />;
+  if (id === 'connect' || id === 'legacy') { const c = query?.cap ?? null; return <ConnectWizard go={go} cap={c && isRoleId(c) ? c : null} />; }
   if (id.startsWith('acc-')) return <AccountDetail accountId={id.slice(4)} go={go} />;
-  if (isRoleId(id)) return <RoleDetail role={id} go={go} />;
+  if (isRoleId(id)) return <CapabilityDetail role={id} go={go} />;
   return <ModelsPage id={id} go={go} lay={lay} />;   // 0.6–0.8 服务商快速连接（#me/models/mimo 等旧链接）
 }
 
-/* ---------------- 一级页：5 组 11 个角色 ---------------- */
-function RolesIndex({ go }: { go: (to: string) => void }) {
+/* ---------------- 某个能力：试一试 | 用量（1.1.0：不再有“默认 / 备用”槽位，选模型统一在主模型与“高级 → 按任务指定”） ---------------- */
+const CHIP_ROLES: RoleId[] = [...CAPS.map((c) => c.role), ...RETRIEVAL_CAPS.map((c) => c.role)];
+const capName = (role: RoleId): string => CAPS.find((c) => c.role === role)?.label ?? RETRIEVAL_CAPS.find((c) => c.role === role)?.label ?? (role === 'fast' ? '短任务（标题、关键词、摘要）' : role);
+function CapabilityDetail({ role, go }: { role: RoleId; go: (to: string) => void }) {
   const { t } = useT();
-  const { data: s, error } = useModelsV3();
-  if (error) return <div className="page page-narrow"><Problem title={t('ui.failed_to_read_model_settings')} advice={error} /></div>;
-  if (!s) return null;
-  const done = configuredRoles(s);
-  return (
-    <div className="page page-narrow" data-testid="roles-index">
-      <p className="m-0 mb-2 text-[15px] text-fg-2" data-testid="roles-count">{t('ui.connected_2')} {done.length} / {ROLE_IDS.length} {t('ui.roles')}</p>
-      {ROLE_GROUPS.map((g) => (
-        <GroupList key={g.id} title={t(g.label)}>
-          {g.roles.map((r) => {
-            const b = s.roles[r]; const f = b.primary ? findEntry(s, b.primary.modelEntryId) : null;
-            const tone: Tone = done.includes(r) ? entryTone(f?.entry, r) : 'neutral';
-            return <ListRow key={r} icon={ROLE_ICON[r]} label={t(roleLabel(r))} hint={f ? `${displayModel(f.entry)} · ${f.account.label}` : t('ui.not_set')} value={<StatusDot tone={tone}>{t(TONE_TEXT[tone])}</StatusDot>} onClick={() => go(`me/models/${r}`)} href={`#me/models/${r}`} testId={`role-${r}`} />;
-          })}
-        </GroupList>
-      ))}
-      <GroupList title={t('ui.more')}>
-        <ListRow icon="key" label={t('ui.accounts_keys')} hint={t('ui.one_key_per_provider_shared')} onClick={() => go('me/models/accounts')} testId="accounts-link" />
-        <ListRow icon="activity" label={t('ui.usage_cost')} hint={t('ui.latency_cost_cache_hits_error')} onClick={() => go('me/status')} />
-        <ListRow icon="kanban" label={t('ui.advanced_per_task_routing')} hint={t('ui.pick_models_for_covers_ocr')} onClick={() => go('me/models/routing')} testId="routing-link" />
-        <ListRow icon="cpu" label={t('ui.quick_connect')} hint={t('ui.6_popular_providers_enter_key')} onClick={() => go('me/models/legacy')} testId="legacy-link" />
-      </GroupList>
-    </div>
-  );
-}
-
-/* ---------------- 角色二级页 ---------------- */
-function RoleDetail({ role, go }: { role: RoleId; go: (to: string) => void }) {
-  const { t } = useT();
-  const [tab, setTab] = useState<'settings' | 'try' | 'usage'>('settings');
+  const [tab, setTab] = useState<'try' | 'usage'>('try');
+  const { data: s } = useModelsV3();
+  const r = s ? resolveModel(s, undefined, role) : null;
+  const f = r && s ? findEntry(s, r.target.modelEntryId) : null;
   return (
     <div className="page page-narrow flex flex-col gap-3" data-testid={`role-detail-${role}`}>
-      <BackBar label={t(roleLabel(role))} onBack={() => go('me/models')} />
+      <BackBar label={t(capName(role))} onBack={() => go('me/models')} />
       <a className="v9-return" href="#agent" data-testid="return-chat">{t('ui.back_to_chat_when_done')} ›</a>
-      <Note>{t(roleDef(role).io)}</Note>
-      <SegTabs value={tab} onChange={setTab} label={t('ui.capability_tabs')} options={[['settings', '设置'], ['try', '试一试'], ['usage', '用量']]} />
-      {tab === 'settings' && <RoleSettings role={role} go={go} />}
+      <Note>{f ? `${displayModel(f.entry)} · ${f.account.label}${r?.thinking ? ` · ${t('ui.deep_thinking')}` : ''}` : t('ui.none_add_one')}</Note>
+      {!f && <button type="button" className="primary self-start" onClick={() => go(`me/models/connect?cap=${role}`)}>{t('ui.add_one')}</button>}
+      <SegTabs value={tab} onChange={setTab} label={t('ui.capability_tabs')} options={[['try', '试一试'], ['usage', '用量']]} />
       {tab === 'try' && <Playground role={role} go={go} />}
       {tab === 'usage' && <RoleUsage role={role} />}
     </div>
-  );
-}
-
-function probeLine(p: ProbeResult | undefined, t: (k: string) => string): string {
-  if (!p) return t('ui.not_tested');
-  if (p.ok) return `${t('ui.test_passed')}${p.ms ? ` · ${(p.ms / 1000).toFixed(1)}s` : ''}${p.respondedModel ? ` · ${t('ui.request')} ${p.requestedModel} → ${t('ui.actual')} ${p.respondedModel}` : ''}`;
-  return `${p.reason ?? t('ui.test_failed')}`;
-}
-
-function RoleSettings({ role, go }: { role: RoleId; go: (to: string) => void }) {
-  const { t } = useT();
-  const { data: s } = useModelsV3();
-  const tails = useAsync(secretTails, ['kv:secrets']).data ?? {};
-  const [busy, setBusy] = useState<string | null>(null);
-  const [toast, show] = useToast();
-  const [ovURL, setOvURL] = useState<string | null>(null);
-  const [ovKey, setOvKey] = useState('');
-  if (!s) return null;
-  const cands = candidatesFor(s, role);
-  const b = s.roles[role];
-  const save = async (n: ModelsStateV3) => { await saveModelsV3(n); };
-  const setSlot = async (slot: 'primary' | 'fallback', entryId: string) => {
-    const cur = await getModelsV3();
-    if (!entryId) { const n = structuredClone(cur); delete n.roles[role][slot]; await save(n); return; }
-    const f = findEntry(cur, entryId); if (!f) return;
-    const keep = cur.roles[role][slot];
-    const n = bindRole(cur, role, slot, f.entry);
-    if (keep?.overrideSecretRef || keep?.overrideBaseURL) Object.assign(n.roles[role][slot]!, { overrideSecretRef: keep.overrideSecretRef, overrideBaseURL: keep.overrideBaseURL });
-    await save(n); show(t('ui.saved'));
-  };
-  const test = async (slot: 'primary' | 'fallback', allowPaid = false) => {
-    const tg = s.roles[role][slot]; if (!tg) return;
-    setBusy(slot);
-    try { const r = await probe(tg.accountId, tg.modelEntryId, { roles: [role], allowPaid }); show(r[0]?.result.ok ? t('ui.test_passed') : (r[0]?.result.reason ?? t('ui.test_failed'))); } finally { setBusy(null); }
-  };
-  const saveOverride = async () => {
-    const cur = await getModelsV3(); const p = cur.roles[role].primary; if (!p) return;
-    const ref = `secret:role:${role}`;
-    if (ovKey.trim()) { await setSecret(ref, ovKey); p.overrideSecretRef = ref; }
-    if (ovURL !== null) p.overrideBaseURL = ovURL.trim() || undefined;
-    await save(cur); setOvKey(''); show(t('ui.saved_a_separate_url_and'));
-  };
-  const clearOverride = async () => { const cur = await getModelsV3(); const p = cur.roles[role].primary; if (!p) return; await deleteSecret(`secret:role:${role}`); delete p.overrideSecretRef; delete p.overrideBaseURL; await save(cur); setOvURL(null); show(t('ui.switched_back_to_the_shared')); };
-  const slotCard = (slot: 'primary' | 'fallback', title: string) => {
-    const tg = b[slot]; const f = tg ? findEntry(s, tg.modelEntryId) : null;
-    const p = f ? (f.entry.probes?.[role] ?? f.entry.lastProbe) : undefined;
-    return (
-      <Section title={t(title)} testId={`slot-${slot}`}>
-        <select aria-label={`${t(title)}${t('ui.models')}`} value={tg?.modelEntryId ?? ''} onChange={(e) => void setSlot(slot, e.target.value)} data-testid={`slot-${slot}-select`}>
-          <option value="">{t('ui.not_set_2')}</option>
-          {cands.map((c) => <option key={c.entry.id} value={c.entry.id}>{c.text}</option>)}
-        </select>
-        {f && <>
-          <Note tone={p?.ok ? 'ok' : p ? 'warn' : 'muted'}>{probeLine(p, t)}</Note>
-          {f.entry.status === 'not_in_list' && <Note tone="warn">{t('ui.may_be_retired_or_renamed_2')}</Note>}
-          {p && !p.ok && p.kind === 'model_not_found' && <div className="flex flex-wrap gap-2"><button type="button" onClick={() => go(`me/models/acc-${f.account.id}`)}>{t('ui.fetch_list')}</button><button type="button" onClick={() => go(`me/models/acc-${f.account.id}`)}>{t('ui.rename_model')}</button></div>}
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => void test(slot)} disabled={!!busy} data-testid={`slot-${slot}-test`}>{busy === slot ? <Busy label={t('ui.testing_2')} /> : t('ui.test')}</button>
-            {p?.kind === 'needs_confirm' && <button type="button" className="primary" onClick={() => void test(slot, true)}>{t('ui.confirm_cost_and_test')}</button>}
-          </div>
-          <Note>{t('ui.test_method')}：{t(PROBES[role].describe)}{PROBES[role].paid ? `（${t('ui.costs_money')}）` : ''}</Note>
-        </>}
-      </Section>
-    );
-  };
-  const supported = s.accounts.map((a) => ({ a, ok: !!adapterOf(a.vendor)?.roles.includes(role) })).sort((x, y) => Number(y.ok) - Number(x.ok));
-  const pri = b.primary;
-  return (
-    <>
-      {toast}
-      {!cands.length && <Problem title={t('ui.no_model_name_can_do')} advice={t('ui.add_a_provider_in_accounts')} action={t('ui.add_3')} onAction={() => go('me/models/accounts')} />}
-      {slotCard('primary', '默认')}
-      {slotCard('fallback', '备用')}
-      <Note>{t('ui.fallback_only_kicks_in_on')}</Note>
-      {pri && (
-        <Section title={t('ui.separate_url_and_key_for')} testId="role-override">
-          <Note>{s.keyPolicy.scope === 'account' ? t('ui.shares_the_account_key_by') : t('ui.currently_set_to_separate_key')}</Note>
-          {pri.overrideSecretRef && <Note tone="ok">{t('ui.using_a_separate_key')} ••••{tails[pri.overrideSecretRef]?.tail ?? ''}</Note>}
-          <label className="field !m-0"><span>{t('ui.url_empty_account_url')}</span><input value={ovURL ?? pri.overrideBaseURL ?? ''} onChange={(e) => setOvURL(e.target.value)} spellCheck={false} placeholder="https://…" /></label>
-          <label className="field !m-0"><span>{t('ui.key_stored_only_in_this')}</span><input type="password" autoComplete="off" value={ovKey} onChange={(e) => setOvKey(e.target.value)} data-testid="override-key" /></label>
-          <div className="flex flex-wrap gap-2"><button type="button" className="primary" onClick={() => void saveOverride()}>{t('ui.save')}</button>{(pri.overrideSecretRef || pri.overrideBaseURL) && <button type="button" onClick={() => void clearOverride()}>{t('ui.use_shared_key')}</button>}</div>
-        </Section>
-      )}
-      <GroupList title={t('ui.providers')}>
-        {supported.map(({ a, ok }) => <ListRow key={a.id} label={a.label} hint={`${ok ? t('ui.supports_this_capability') : t('ui.not_in_the_capability_declaration')} · ${a.models.length} ${t('ui.model_names_2')}`} onClick={() => go(`me/models/acc-${a.id}`)} />)}
-        <ListRow icon="plus" label={t('ui.custom_openai_compatible')} hint={t('ui.any_compatible_endpoint_model_name')} onClick={() => go('me/models/accounts')} testId="add-custom-role" />
-      </GroupList>
-    </>
   );
 }
 
@@ -212,8 +99,8 @@ function Playground({ role, go }: { role: RoleId; go: (to: string) => void }) {
     } finally { setBusy(false); }
   };
   const resultText = res?.ok ? (res.value.type === 'text' ? res.value.text : res.value.type === 'transcript' ? res.value.text : res.value.type === 'vectors' ? `${t('ui.vector_dimensions')} ${res.value.dims} × ${res.value.vectors.length}` : res.value.type === 'ranking' ? res.value.results.map((x) => `#${x.index} ${x.score.toFixed(3)}`).join('  ') : res.value.type === 'job' ? `${t('ui.task_submitted')}：${res.value.jobId}（${res.value.status}）` : '') : '';
-  const toInbox = async () => { await addInbox({ kind: media[0] ? 'image' : 'text', text: resultText || text, image: media[0]?.dataUrl, title: `${t('ui.try_it')} · ${t(roleLabel(role))}`, channel: 'paste' }); show(t('ui.sent_to_agent_asset_box')); };
-  const toDraft = async () => { const d = await db.insert('drafts', { platform: 'xiaohongshu', title: text.slice(0, 20) || t(roleLabel(role)), body: resultText, status: 'pending', images: media.map((m) => m.dataUrl) }); show(t('ui.inserted_into_draft')); go(`agent/drafts/${d.id}`); };
+  const toInbox = async () => { await addInbox({ kind: media[0] ? 'image' : 'text', text: resultText || text, image: media[0]?.dataUrl, title: `${t('ui.try_it')} · ${t(capName(role))}`, channel: 'paste' }); show(t('ui.sent_to_agent_asset_box')); };
+  const toDraft = async () => { const d = await db.insert('drafts', { platform: 'xiaohongshu', title: text.slice(0, 20) || t(capName(role)), body: resultText, status: 'pending', images: media.map((m) => m.dataUrl) }); show(t('ui.inserted_into_draft')); go(`agent/drafts/${d.id}`); };
   return (
     <Section testId="playground">
       {toast}
@@ -309,7 +196,7 @@ function Accounts({ go }: { go: (to: string) => void }) {
 }
 
 /* ---------------- 账号详情：模型名（手填 / 获取列表）、能力勾选、测试 ---------------- */
-const EXAMPLES: Record<string, string> = { mimo: 'mimo-v2.6-flash', dashscope: 'qwen3.7-plus', deepseek: 'deepseek-v4-pro', zhipu: 'glm-4.7-flash', ark: 'ep-2026…', kimi: '点“获取列表”选择', mock: 'Mock/Model:v1.0' };
+const EXAMPLES: Record<string, string> = { mimo: 'mimo-v2.5', dashscope: 'qwen3.7-plus', deepseek: 'deepseek-v4-pro', zhipu: 'glm-4.7-flash', ark: 'ep-2026…', kimi: '点“获取列表”选择', mock: 'Mock/Model:v1.0' };
 function AccountDetail({ accountId, go }: { accountId: string; go: (to: string) => void }) {
   const { t } = useT();
   const { data: s } = useModelsV3();
@@ -317,6 +204,7 @@ function AccountDetail({ accountId, go }: { accountId: string; go: (to: string) 
   const [name, setName] = useState('');
   const [label, setLabel] = useState('');
   const [roles, setRoles] = useState<RoleId[]>(['chat']);
+  const [touched, setTouched] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [listed, setListed] = useState<{ id: string }[] | null>(null);
   const [listErr, setListErr] = useState<string | null>(null);
@@ -330,7 +218,7 @@ function AccountDetail({ accountId, go }: { accountId: string; go: (to: string) 
   if (!a) return <div className="page page-narrow"><Problem title={t('ui.this_provider_has_been_deleted')} action={t('ui.back')} onAction={() => go('me/models/accounts')} /></div>;
   const ad = adapterOf(a.vendor);
   const mutate = async (fn: (acc: ProviderAccount, st: ModelsStateV3) => void | ModelsStateV3) => { const cur = await getModelsV3(); const acc = cur.accounts.find((x) => x.id === accountId)!; const r = fn(acc, cur); await saveModelsV3(r ?? cur); };
-  const runProbe = async (e: ModelEntry, allowPaid = false) => { setBusy(e.id); try { const r = await probe(a.id, e.id, { allowPaid }); const bad = r.find((x) => !x.result.ok && x.result.kind !== 'needs_confirm'); show(bad ? `${t(roleLabel(bad.role))}：${bad.result.reason ?? ''}` : t('ui.test_finished')); } finally { setBusy(null); } };
+  const runProbe = async (e: ModelEntry, allowPaid = false) => { setBusy(e.id); try { const r = await probe(a.id, e.id, { allowPaid }); const bad = r.find((x) => !x.result.ok && x.result.kind !== 'needs_confirm'); show(bad ? `${t(capName(bad.role))}：${bad.result.reason ?? ''}` : t('ui.test_finished')); } finally { setBusy(null); } };
   const addOne = async (model: string, rs: RoleId[], lbl?: string): Promise<ModelEntry | null> => {
     let made: ModelEntry | null = null; let bad: string | null = null;
     await mutate((acc) => { const r = addModelEntry(acc, { model, roles: rs, label: lbl, source: listed?.some((x) => x.id === model) ? 'fetched' : 'manual' }); if (r.ok) made = r.entry; else bad = r.error === 'no_roles' ? t('ui.tick_at_least_one_capability') : t(MODEL_NAME_MESSAGES[r.error]); });
@@ -351,10 +239,10 @@ function AccountDetail({ accountId, go }: { accountId: string; go: (to: string) 
       await mutate((acc) => { markAgainstList(acc, r.models.map((m) => m.id)); acc.listSupport = 'yes'; acc.listFetchedAt = Date.now(); });
     } finally { setBusy(null); }
   };
-  const addPicked = async () => { for (const m of picked) await addOne(m, roles); setPicked([]); show(t('ui.added_the_selected_model_names')); };
+  const addPicked = async () => { for (const m of picked) await addOne(m, inferRoles(a.vendor, m)); setPicked([]); show(t('ui.added_the_selected_model_names')); };
   const delEntry = async (e: ModelEntry) => {
     const refs = referencesOf(s, e.id);
-    if (refs.length && !window.confirm(`${t('ui.this_model_name_is_in')}：${refs.map((r) => `${t(roleLabel(r.role))}·${t(r.slot)}`).join('、')}。${t('ui.these_places_will_become_not')}`)) return;
+    if (refs.length && !window.confirm(`${t('ui.this_model_name_is_in')}：${refs.map((r) => `${t(capName(r.role))}·${t(r.slot)}`).join('、')}。${t('ui.these_places_will_become_not')}`)) return;
     await saveModelsV3(removeModelEntry(await getModelsV3(), e.id));
   };
   const toggleRole = async (e: ModelEntry, r: RoleId) => mutate((acc) => { const x = acc.models.find((m) => m.id === e.id)!; x.roles = x.roles.includes(r) ? x.roles.filter((y) => y !== r) : [...x.roles, r]; if (!x.roles.length) x.roles = [r]; x.updatedAt = Date.now(); });
@@ -379,9 +267,9 @@ function AccountDetail({ accountId, go }: { accountId: string; go: (to: string) 
             return (
               <li key={e.id} className="v9-entry" data-testid={`entry-${e.model}`}>
                 <div className="flex flex-wrap items-center gap-2"><strong className="break-all text-[15px]">{displayModel(e)}</strong><StatusDot tone={tone}>{e.status === 'not_in_list' ? t('ui.may_be_retired_or_renamed') : t(TONE_TEXT[tone])}</StatusDot></div>
-                <div className="mt-1 flex flex-wrap gap-1">{ROLE_IDS.map((r) => <label key={r} className={`v9-chip ${e.roles.includes(r) ? 'on' : ''}`}><input type="checkbox" checked={e.roles.includes(r)} onChange={() => void toggleRole(e, r)} />{t(roleDef(r).short)}{ad && !ad.roles.includes(r) && e.roles.includes(r) ? '?' : ''}</label>)}</div>
+                <div className="mt-1 flex flex-wrap gap-1">{CHIP_ROLES.map((r) => <label key={r} className={`v9-chip ${e.roles.includes(r) ? 'on' : ''}`}><input type="checkbox" checked={e.roles.includes(r)} onChange={() => void toggleRole(e, r)} />{t(capName(r))}{ad && !ad.roles.includes(r) && e.roles.includes(r) ? '?' : ''}</label>)}</div>
                 {Object.entries(e.probes ?? {}).filter(([, p]) => p && !p.ok).map(([r, p]) => (
-                  <div key={r} className="mt-2"><Problem title={`${t(roleLabel(r as RoleId))}：${p!.reason ?? t('ui.test_failed')}`} advice={p!.kind === 'model_not_found' ? t('ui.it_wont_switch_to_another') : undefined} action={p!.kind === 'needs_confirm' ? t('ui.confirm_cost_and_test') : p!.kind === 'model_not_found' ? t('ui.fetch_list') : undefined} onAction={() => (p!.kind === 'needs_confirm' ? void runProbe(e, true) : void doFetch())} secondary={p!.kind === 'model_not_found' ? <button type="button" onClick={() => { setName(e.model); void delEntry(e); }}>{t('ui.rename_model')}</button> : undefined} testId={`probe-error-${e.model}-${r}`} /></div>
+                  <div key={r} className="mt-2"><Problem title={`${t(capName(r as RoleId))}：${p!.reason ?? t('ui.test_failed')}`} advice={p!.kind === 'model_not_found' ? t('ui.it_wont_switch_to_another') : undefined} action={p!.kind === 'needs_confirm' ? t('ui.confirm_cost_and_test') : p!.kind === 'model_not_found' ? t('ui.fetch_list') : undefined} onAction={() => (p!.kind === 'needs_confirm' ? void runProbe(e, true) : void doFetch())} secondary={p!.kind === 'model_not_found' ? <button type="button" onClick={() => { setName(e.model); void delEntry(e); }}>{t('ui.rename_model')}</button> : undefined} testId={`probe-error-${e.model}-${r}`} /></div>
                 ))}
                 {Object.values(e.probes ?? {}).some((p) => p?.respondedModel) && <Note>{t('ui.request')} {e.model} → {t('ui.actual')} {Object.values(e.probes ?? {}).find((p) => p?.respondedModel)?.respondedModel}</Note>}
                 <div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={() => void runProbe(e)} disabled={!!busy} data-testid={`test-${e.model}`}>{busy === e.id ? <Busy label={t('ui.testing_2')} /> : t('ui.test')}</button><button type="button" className="ghost danger" onClick={() => void delEntry(e)}>{t('ui.delete')}</button></div>
@@ -391,12 +279,12 @@ function AccountDetail({ accountId, go }: { accountId: string; go: (to: string) 
         </ul>
       </Section>
       <Section title={t('ui.add_model_name')} testId="add-entry">
-        <label className="field !m-0"><span>{t('ui.model_name_required_sent_as')}</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder={`${t('ui.for_example')} ${EXAMPLES[a.vendor] ?? 'model-name'}`} spellCheck={false} autoCapitalize="off" data-testid="model-name" /></label>
+        <label className="field !m-0"><span>{t('ui.model_name_required_sent_as')}</span><input value={name} onChange={(e) => { setName(e.target.value); if (!touched) setRoles(inferRoles(a.vendor, e.target.value || 'x')); }} placeholder={`${t('ui.for_example')} ${EXAMPLES[a.vendor] ?? 'model-name'}`} spellCheck={false} autoCapitalize="off" data-testid="model-name" /></label>
         <label className="field !m-0"><span>{t('ui.display_name_optional')}</span><input value={label} onChange={(e) => setLabel(e.target.value)} /></label>
         <fieldset className="m-0 border-0 p-0"><legend className="mb-1 text-[13px] font-medium">{t('ui.what_this_model_name_can')}</legend>
-          <div className="flex flex-wrap gap-1">{ROLE_IDS.map((r) => <label key={r} className={`v9-chip ${roles.includes(r) ? 'on' : ''}`}><input type="checkbox" checked={roles.includes(r)} onChange={() => setRoles((x) => (x.includes(r) ? x.filter((y) => y !== r) : [...x, r]))} data-testid={`new-role-${r}`} />{t(roleDef(r).short)}</label>)}</div>
+          <div className="flex flex-wrap gap-1">{CHIP_ROLES.map((r) => <label key={r} className={`v9-chip ${roles.includes(r) ? 'on' : ''}`}><input type="checkbox" checked={roles.includes(r)} onChange={() => { setTouched(true); setRoles((x) => (x.includes(r) ? x.filter((y) => y !== r) : [...x, r])); }} data-testid={`new-role-${r}`} />{t(capName(r))}</label>)}</div>
         </fieldset>
-        {roles.map((r) => { const d = mergeDecl(r, a.vendor, name || 'x', ad?.declare(r, name || 'x')); return d.verified !== 'unverified' ? null : <Note key={r} tone="warn">{t(roleLabel(r))}：{t(VERIFIED_LABEL[d.verified])}{t('ui.use_it_after_the_test')}</Note>; })}
+        {roles.map((r) => { const d = mergeDecl(r, a.vendor, name || 'x', ad?.declare(r, name || 'x')); return d.verified !== 'unverified' ? null : <Note key={r} tone="warn">{t(capName(r))}：{t(VERIFIED_LABEL[d.verified])}{t('ui.use_it_after_the_test')}</Note>; })}
         {err && <Problem title={err} />}
         <div className="flex flex-wrap gap-2"><button type="button" className="primary" onClick={() => void addManual()} data-testid="add-model">{t('ui.add_test')}</button><button type="button" onClick={() => void doFetch()} disabled={busy === 'list'} data-testid="fetch-list">{busy === 'list' ? <Busy label={t('ui.fetching')} /> : t('ui.fetch_list')}</button></div>
         {listErr && <Problem title={listErr} advice={t('ui.saving_still_works_you_can')} testId="list-error" />}

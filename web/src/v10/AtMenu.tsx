@@ -3,7 +3,10 @@
  * 选中后以同样文字的胶囊显示在输入框上方，只影响这一轮（发送后清空），消息气泡上方标注“本轮指定：…”。指定的模型没接好按“未配置”处理，不悄悄换别家。
  */
 import { useMemo } from 'react';
-import { ROLE_GROUPS, candidatesFor, displayModel, roleLabel, type ModelsStateV3, type RoleId, type RoleTarget } from '@content-agent/shared';
+import { CAPS, candidatesFor, displayModel, type ModelsStateV3, type RoleId, type RoleTarget } from '@content-agent/shared';
+
+/** 1.1.0：@ 菜单按用户能力（对话 / 思考 / 看图……）分组，不再出现“深度推理 / 快速小模型”等角色名。 */
+const capLabelOf = (r: RoleId): string => CAPS.find((c) => c.role === r)?.label ?? r;
 import { useT } from '../i18n';
 import { Icon } from '../icons';
 
@@ -18,15 +21,16 @@ export function atOptions(s: ModelsStateV3 | null, q: string): AtOption[] {
   if (!s) return [];
   const k = q.trim().toLowerCase();
   const out: AtOption[] = [];
-  for (const g of ROLE_GROUPS) for (const role of g.roles) for (const c of candidatesFor(s, role)) {
+  for (const cap of CAPS) for (const c of candidatesFor(s, cap.role)) {
+    const role = cap.role;
     const text = `${displayModel(c.entry)} · ${c.account.label}`;
-    const hay = `${roleLabel(role)} ${text} ${c.entry.model}`.toLowerCase();
+    const hay = `${cap.label} ${text} ${c.entry.model}`.toLowerCase();
     if (k && !hay.includes(k)) continue;
-    out.push({ role, group: g.label, target: { accountId: c.account.id, modelEntryId: c.entry.id, model: c.entry.model }, text, hasKey: !!c.account.hasKey || ['mock', 'ollama', 'comfyui'].includes(c.account.vendor) });
+    out.push({ role, group: cap.label, target: { accountId: c.account.id, modelEntryId: c.entry.id, model: c.entry.model }, text, hasKey: !!c.account.hasKey || ['mock', 'ollama', 'comfyui'].includes(c.account.vendor) });
   }
   return out;
 }
-export const pickLabel = (p: AtPick): string => `${roleLabel(p.role)}：${p.text}`;
+export const pickLabel = (p: AtPick): string => `${capLabelOf(p.role)}：${p.text}`;
 
 export function AtMenu({ state, q, onPick, onClose }: { state: ModelsStateV3 | null; q: string; onPick: (p: AtPick) => void; onClose: () => void }) {
   const { t } = useT();
@@ -37,8 +41,8 @@ export function AtMenu({ state, q, onPick, onClose }: { state: ModelsStateV3 | n
       <div className="flex min-h-11 items-center justify-between px-3 text-[13px] text-muted"><span>{t('ui.pick_a_model_for_this')}{q ? ` · “${q}”` : ''}</span><button type="button" className="ghost !min-h-11 !min-w-11 !p-0" aria-label={t('ui.close')} onClick={onClose}><Icon name="close" size={16} /></button></div>
       {!opts.length && <p className="m-0 px-3 pb-3 text-[14px] text-muted" data-testid="at-empty">{state && candidatesFor(state, 'chat').length + roles.length === 0 ? t('ui.no_models_configured_add_one') : t('ui.no_matching_model')}</p>}
       {roles.map((role) => (
-        <div key={role} role="group" aria-label={t(roleLabel(role))}>
-          <div className="px-3 pt-2 pb-1 text-[12px] font-semibold text-muted">{t(roleLabel(role))}</div>
+        <div key={role} role="group" aria-label={t(capLabelOf(role))}>
+          <div className="px-3 pt-2 pb-1 text-[12px] font-semibold text-muted">{t(capLabelOf(role))}</div>
           {opts.filter((o) => o.role === role).map((o) => (
             <button key={`${role}:${o.target.modelEntryId}`} type="button" role="option" aria-selected={false} className="!flex !min-h-11 w-full !justify-start !rounded-[12px] !border-0 !bg-transparent !px-3 !text-left !text-[14px] !font-normal hover:!bg-surface-2" onClick={() => onPick({ role, target: o.target, text: o.text })} data-testid={`at-opt-${role}`}>
               <span className="min-w-0 flex-1 truncate">{o.text}</span>{!o.hasKey && <span className="shrink-0 text-[12px] text-warn">{t('ui.no_key')}</span>}

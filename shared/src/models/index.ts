@@ -6,6 +6,7 @@ export * from './pricing.js';
 export * from './cache.js';
 export * from './health.js';
 export * from './runner.js';
+export * from './unify.js';
 export * from './probe.js';
 export * from './assets.js';
 export { ADAPTERS, adapterOf, mockFailureFor, MockFailure, workflowCheckpoint } from './adapters/index.js';

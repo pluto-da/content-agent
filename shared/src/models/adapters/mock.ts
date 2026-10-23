@@ -51,6 +51,6 @@ const adapter: Adapter = {
   local: (req, ctx) => { const f = mockFailureFor(ctx.target.model); if (f) throw f; return mockLocal(req, ctx.target.model); },
   poll: { build: (id) => ({ method: 'GET', url: `mock://local/job/${id}`, headers: {}, responseType: 'json' }), parse: (_res, ctx) => ({ value: { type: 'job', jobId: 'mock', status: 'succeeded', items: [{ base64: MOCK_PNG_64, mime: 'video/mp4' }] }, usage: { seconds: 5 }, respondedModel: ctx.target.model }) },
   classify: (status, body, ctx) => (status === 404 && /model_not_found/.test(body) ? callError('model_not_found', { model: ctx.target.model, status, detail: body }) : null),
-  listModels: { build: () => ({ method: 'GET', url: 'mock://local/models', headers: {}, responseType: 'json' }), parse: () => [{ id: 'mock-chat' }, { id: 'mock-image' }, { id: 'mock-tts' }] },
+  listModels: { build: () => ({ method: 'GET', url: 'mock://local/models', headers: {}, responseType: 'json' }), parse: () => [{ id: 'mock-omni' }, { id: 'mock-chat' }, { id: 'mock-image' }, { id: 'mock-tts' }] },
 };
 export default adapter;

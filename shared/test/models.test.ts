@@ -107,7 +107,7 @@ describe('导出 / 导入 / 迁移', () => {
   });
   it('迁移 v2→v3 保留旧模型名、命中下线提示；v3→v2 回滚；幂等', () => {
     const v2 = { providers: [{ id: 'deepseek', label: 'DeepSeek', protocol: 'openai' as const, baseURL: 'https://api.deepseek.com', apiKey: 'sk-' + 'D'.repeat(30), model: 'deepseek-chat', check: { ok: true, at: 'x' } }, { id: 'mimo', label: 'MiMo', protocol: 'openai' as const, baseURL: 'https://api.xiaomimimo.com/v1', apiKey: '', model: 'mimo-v2.6-flash' }], defaultProvider: 'deepseek', advanced: { thinking: 'off' as const, temperature: null, fallbackProvider: 'mimo' } };
-    const v3 = ModelsMigrator.migrate<any>(v2).doc;
+    const v3 = ModelsMigrator.migrate<any>(v2, 3).doc;
     expect(v3.schemaVersion).toBe(3);
     expect(v3.accounts[0].models[0]).toMatchObject({ model: 'deepseek-chat', source: 'migrated', roles: ['chat'] });
     expect(v3.roles.chat.primary.model).toBe('deepseek-chat');

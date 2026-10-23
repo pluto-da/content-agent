@@ -11,12 +11,13 @@ import { mergeDecl, guardInput, type CapabilityDecl } from './decl.js';
 import { costOf, priceOf } from './pricing.js';
 import { cacheKey, cacheable } from './cache.js';
 import { HealthTracker } from './health.js';
-import { roleDef, roleLabel, type RoleId } from './roles.js';
+import { roleLabel, type RoleId } from './roles.js';
+import { resolveModel, type Resolved } from './unify.js';
 import { redact } from '../core/redact.js';
 
 export class TransportError extends Error { constructor(msg: string, public flags: { timedOut?: boolean; offline?: boolean; aborted?: boolean } = {}) { super(msg); this.name = flags.aborted ? 'AbortError' : 'TransportError'; } }
 export interface Transport { send(req: HttpRequest, o: { signal?: AbortSignal; timeoutMs: number }): Promise<HttpResponse> }
-export interface UsageRecord { at: string; role: RoleId; vendor: string; model: string; requestedModel: string; respondedModel?: string; usage: Usage; cost: number | null; ms: number; ok: boolean; errorKind?: string; runId?: string; toolCallId?: string; conversationId?: number; fromCache?: boolean; fallback?: boolean }
+export interface UsageRecord { at: string; role: RoleId; vendor: string; model: string; requestedModel: string; respondedModel?: string; usage: Usage; cost: number | null; ms: number; ok: boolean; errorKind?: string; runId?: string; toolCallId?: string; conversationId?: number; fromCache?: boolean; fallback?: boolean; thinking?: boolean }
 export interface CallDeps {
   state: ModelsStateV3;
   getKey(account: ProviderAccount, target: RoleTarget): Promise<string>;
@@ -37,22 +38,9 @@ export type CallResult =
 
 export const DEFAULT_TIMEOUTS: Record<RoleId, number> = { chat: 180000, reason: 240000, fast: 30000, vision: 60000, image: 120000, imageEdit: 120000, tts: 60000, asr: 90000, video: 30000, embed: 30000, rerank: 30000 };
 
-/** 选目标：@ 覆盖 > tasks[task] > 健康路由（默认不健康且有备用 → 先走备用）> 默认；fast/reason 未配置回退 chat。 */
-export function resolveTarget(state: ModelsStateV3, role: RoleId, o: { override?: RoleTarget | null; task?: string; health?: HealthTracker; healthRouting?: boolean } = {}): { role: RoleId; target: RoleTarget; fallback?: RoleTarget; via: 'override' | 'task' | 'primary' | 'fallback-first' | 'role-fallback' } | null {
-  if (o.override) return { role, target: o.override, via: 'override' };
-  const b = state.roles[role];
-  if (b && b.enabled !== false) {
-    const tt = o.task ? b.tasks?.[o.task] : undefined;
-    if (tt && findEntry(state, tt.modelEntryId)) return { role, target: tt, fallback: b.fallback, via: 'task' };
-    if (b.primary && findEntry(state, b.primary.modelEntryId)) {
-      const fb = b.fallback && findEntry(state, b.fallback.modelEntryId) ? b.fallback : undefined;
-      if (o.healthRouting !== false && fb && o.health && !o.health.healthy(`${b.primary.accountId}:${b.primary.model}`)) return { role, target: fb, fallback: b.primary, via: 'fallback-first' };
-      return { role, target: b.primary, fallback: fb, via: 'primary' };
-    }
-  }
-  const fr = roleDef(role).fallbackRole;
-  if (fr) { const r = resolveTarget(state, fr, { ...o, override: null, task: undefined }); if (r) return { ...r, role, via: 'role-fallback' }; }
-  return null;
+/** 选目标（1.1.0）：唯一的选模型链在 unify.ts resolveModel —— 本轮 @ 覆盖 > 按任务指定 > 主模型 > 同服务商 > 其他已接入 > 无。这里只是兼容旧调用名。 */
+export function resolveTarget(state: ModelsStateV3, role: RoleId, o: { override?: RoleTarget | null; task?: string; health?: HealthTracker; healthRouting?: boolean } = {}): Resolved | null {
+  return resolveModel(state, o.task, role, o);
 }
 
 const defaultSleep = (ms: number, signal?: AbortSignal) => new Promise<void>((res, rej) => { const t = setTimeout(res, ms); signal?.addEventListener('abort', () => { clearTimeout(t); rej(new TransportError('已停止', { aborted: true })); }, { once: true }); });
@@ -62,7 +50,7 @@ export async function callRole(role: RoleId, req: RoleRequest, deps: CallDeps, o
   const picked = resolveTarget(deps.state, role, { override: o.override, task: o.task, health: deps.health, healthRouting: deps.healthRouting });
   if (!picked) return { ok: false, error: callError('role_not_configured', { role }), ms: 0 };
   // reason 回退到 chat 时开思考
-  const effReq: RoleRequest = picked.via === 'role-fallback' && role === 'reason' && 'messages' in req ? { ...req, role: 'chat', thinking: true } as RoleRequest : picked.via === 'role-fallback' && role === 'fast' && 'messages' in req ? { ...req, role: 'chat' } as RoleRequest : req;
+  const effReq: RoleRequest = picked.via === 'role-fallback' && role === 'reason' && 'messages' in req && picked.thinking !== false ? { ...req, role: 'chat', thinking: true } as RoleRequest : picked.via === 'role-fallback' && role === 'fast' && 'messages' in req ? { ...req, role: 'chat' } as RoleRequest : req;
   const first = await attempt(picked.target, effReq, deps, o);
   if (first.ok || !picked.fallback || o.noFallback || !first.error.retriable || NEVER_FALLBACK.has(first.error.kind)) return { ...first, ms: Date.now() - started };
   const fbEntry = findEntry(deps.state, picked.fallback.modelEntryId);

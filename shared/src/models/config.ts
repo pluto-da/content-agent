@@ -7,6 +7,7 @@
 import { Migrator } from '../core/migrate.js';
 import { ROLE_IDS, isRoleId, type RoleId } from './roles.js';
 import type { CapabilityDecl } from './decl.js';
+import { upV3toV4, downV4toV3, resolveModel } from './unify.js';
 
 export type ModelStatus = 'untested' | 'ok' | 'not_found' | 'not_enabled' | 'not_in_list' | 'deprecated' | 'failed';
 export interface ProbeResult { ok: boolean; at: string; ms?: number; reason?: string; kind?: string; requestedModel?: string; respondedModel?: string; paid?: boolean; detail?: string }
@@ -33,8 +34,16 @@ export interface Price { unit: 'token' | 'image' | 'second' | 'char' | 'minute' 
 export interface BudgetPolicy { perCallConfirmYuan: number; perDayConfirmYuan: number; videoAlwaysConfirm: true; unknownPriceMediaConfirm: true }
 export interface KeyPolicy { scope: 'account' | 'per-role' }
 export interface ModelsStateV3 {
-  schemaVersion: 3; accounts: ProviderAccount[]; roles: Record<RoleId, RoleBinding>; prices: Record<string, Price>;
+  schemaVersion: 3 | 4; accounts: ProviderAccount[];
+  /** 1.1.0：roles[r].primary / tasks = “高级 → 按任务指定”（能力级 / 任务级）；fallback = 备用模型。没有指定时由 main 自动覆盖（见 unify.ts resolveModel）。 */
+  roles: Record<RoleId, RoleBinding>; prices: Record<string, Price>;
   budget: BudgetPolicy; keyPolicy: KeyPolicy; advanced: { thinking: 'off' | 'on'; temperature: number | null };
+  /** 1.1.0（schemaVersion 4）：主模型 */
+  main?: RoleTarget;
+  /** 1.1.0：省钱档（标题、关键词、摘要等短任务用同服务商更便宜的型号；off = 一律用主模型） */
+  economy?: { mode: 'auto' | 'off' };
+  /** 1.1.0：迁移前的角色绑定快照（降级回 v3 用） */
+  v3Roles?: Record<RoleId, RoleBinding>;
 }
 export const DEFAULT_BUDGET: BudgetPolicy = { perCallConfirmYuan: 1, perDayConfirmYuan: 10, videoAlwaysConfirm: true, unknownPriceMediaConfirm: true };
 
@@ -42,7 +51,7 @@ export function emptyRoles(): Record<RoleId, RoleBinding> {
   return Object.fromEntries(ROLE_IDS.map((r) => [r, { role: r, enabled: true }])) as Record<RoleId, RoleBinding>;
 }
 export function emptyModelsV3(): ModelsStateV3 {
-  return { schemaVersion: 3, accounts: [], roles: emptyRoles(), prices: {}, budget: { ...DEFAULT_BUDGET }, keyPolicy: { scope: 'account' }, advanced: { thinking: 'off', temperature: null } };
+  return { schemaVersion: 4, accounts: [], roles: emptyRoles(), prices: {}, budget: { ...DEFAULT_BUDGET }, keyPolicy: { scope: 'account' }, advanced: { thinking: 'off', temperature: null }, economy: { mode: 'auto' } };
 }
 
 /* ---------------- 模型名输入规则（5.10.2，7 条） ---------------- */
@@ -123,11 +132,11 @@ export function bindRole(state: ModelsStateV3, role: RoleId, slot: 'primary' | '
   s.roles[role] = { ...s.roles[role], [slot]: { accountId: entry.accountId, modelEntryId: entry.id, model: entry.model } };
   return s;
 }
-/** “已接 N / 11 类”：有默认绑定且绑定的条目存在、账号有 Key（或免 Key 的本地类）。 */
+/** 1.1.0：某内部角色“可用” = resolveModel（严格模式：只算真正声明了该能力的模型）能选到，且账号有 Key（或免 Key 的本地类）。 */
 export function configuredRoles(state: ModelsStateV3, noKeyVendors: string[] = ['ollama', 'comfyui', 'mock']): RoleId[] {
   return ROLE_IDS.filter((r) => {
-    const t = state.roles[r]?.primary;
-    if (!t || state.roles[r]?.enabled === false) return false;
+    const t = resolveModel(state, undefined, r, { strict: true })?.target;
+    if (!t) return false;
     const f = findEntry(state, t.modelEntryId);
     return !!f && (f.account.hasKey || noKeyVendors.includes(f.account.vendor) || !!t.overrideSecretRef);
   });
@@ -217,8 +226,9 @@ export function downV3toV2(v3: ModelsStateV3 & { legacy?: ModelsStateV2 }): Mode
     advanced: { thinking: v3.advanced?.thinking ?? 'off', temperature: v3.advanced?.temperature ?? null, fallbackProvider: chat?.fallback?.accountId ?? null },
   };
 }
-export const ModelsMigrator = new Migrator<ModelsStateV3>('模型配置', 3, 2)
-  .add({ from: 2, to: 3, name: 'models v2→v3（按能力角色）', up: (d: ModelsStateV2) => upV2toV3(d), down: (d: ModelsStateV3) => downV3toV2(d) });
+export const ModelsMigrator = new Migrator<ModelsStateV3>('模型配置', 4, 2)
+  .add({ from: 2, to: 3, name: 'models v2→v3（按能力角色）', up: (d: ModelsStateV2) => ({ ...upV2toV3(d), schemaVersion: 3 }), down: (d: ModelsStateV3) => downV3toV2(d) })
+  .add({ from: 3, to: 4, name: 'models v3→v4（主模型 + 按任务指定）', up: (d: ModelsStateV3) => upV3toV4(d), down: (d: ModelsStateV3) => downV4toV3(d) });
 
 /** 是否命中下线记录（数据来自 config/model-deprecations.json）。 */
 export interface Deprecation { model: string; vendorHint?: string; date: string; replacements: string[]; url?: string }

@@ -16,6 +16,7 @@ import { SkeletonLines } from '../ui';
 import type { ProviderConfig } from '../local/llm';
 import type { AgentEvent } from '../agent/events';
 import { runTurnV9 } from '../v9/engine';
+import { ThinkingToggle } from '../v11/ThinkingToggle';
 import { ConfirmCard, ToolCard, type CardActions } from '../agent/cards';
 import { addInbox, bus, createConversation, deleteConversation, deleteInbox, listConversations, listInbox, listMessages, updateConversation, type CardData, type Conversation, type InboxItem, type StoredMsg } from '../agent/store';
 import { toolByName } from '../agent/tools';
@@ -23,7 +24,7 @@ import { computeOverview, type Overview } from '../agent/overview';
 import { overlayManager } from '../browser/browserHost';
 import { AtChips, AtMenu, atQuery, pickLabel, type AtPick } from '../v10/AtMenu';
 import { useModelsV3 } from '../pages/me/v9/common';
-import { ROLE_IDS, findEntry, displayModel, roleLabel, type RoleId } from '@content-agent/shared';
+import { CAPS, coverage, displayModel } from '@content-agent/shared';
 import { tr } from '../i18n';
 
 const Write = lazy(() => import('../pages/write').then((m) => ({ default: m.Write })));
@@ -285,6 +286,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
       <div className="relative flex items-end gap-2">
         {atQ !== null && <AtMenu state={v3} q={atQ} onPick={onAtPick} onClose={() => setAtQ(null)} />}
         <button type="button" aria-label={tr('ui.attachment')} className="!min-h-11 !min-w-11 !rounded-full !p-0" onClick={() => setPlusOpen(true)}><Icon name="plus" size={18} /></button>
+        <ThinkingToggle />
         <textarea value={text} rows={1} placeholder={tr('ui.say_something_to_the_agent_2')} aria-label={tr('ui.say_something_to_the_agent')} data-testid="agent-input"
           className="!min-h-11 max-h-40 min-w-0 flex-1 resize-none !py-2.5 !text-[15px]"
           onChange={(e) => { setText(e.target.value); const q = atQuery(e.target.value, e.target.selectionStart ?? e.target.value.length); setAtQ(q ? q.q : null); }}
@@ -330,12 +332,12 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
               return <DrawerItem key={`${p.id}:${m}`} label={`${presetOf(p.id)?.label ?? p.label} · ${m}`} hint={price && base ? `单价 ×${(price / base).toFixed(price / base >= 10 ? 0 : 1)}${p.toolMode ? ` · 工具调用：${p.toolMode === 'json' ? '兼容模式' : '原生'}` : ''}` : p.toolMode === 'json' ? '工具调用：兼容模式' : undefined} onClick={() => { a.setPick({ providerId: p.id, model: m }); setModelOpen(false); }} />;
             });
           })}
-          {v3 && ROLE_IDS.filter((r) => v3.roles[r]?.primary && findEntry(v3, v3.roles[r]!.primary!.modelEntryId)).length > 0 && (
+          {v3 && (() => { const cov = coverage(v3); const lit = CAPS.filter((c) => cov[c.id]); return lit.length > 0 && (
             <div className="px-3 pt-2 pb-1" data-testid="role-bindings">
               <p className="m-0 text-[12px] font-semibold text-muted">{tr('ui.current_model_per_capability_in')}</p>
-              <ul className="m-0 list-none p-0 text-[13px] text-fg-2">{ROLE_IDS.filter((r) => v3.roles[r]?.primary).map((r: RoleId) => { const f = findEntry(v3, v3.roles[r]!.primary!.modelEntryId); return f ? <li key={r} className="py-0.5">{roleLabel(r)}：{displayModel(f.entry)} · {f.account.label}</li> : null; })}</ul>
+              <ul className="m-0 list-none p-0 text-[13px] text-fg-2">{lit.map((c) => <li key={c.id} className="py-0.5">{tr(c.label)}：{displayModel(cov[c.id]!.entry)} · {cov[c.id]!.account.label}</li>)}</ul>
             </div>
-          )}
+          ); })()}
           <DrawerItem label="管理模型" onClick={() => { setModelOpen(false); go('me/models'); }} />
         </DrawerContent>
       </Drawer>

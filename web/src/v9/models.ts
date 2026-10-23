@@ -1,5 +1,5 @@
 /** 统一能力层的本机接线：配置（v3）+ 安全存储里的 Key + 传输 + 健康 + 记账 + 缓存；媒体结果立即下载入库（结果链接常 1–24 小时失效）。 */
-import { callRole, pollJob, listModels, probeEntry, statusFromProbes, configuredRoles, findEntry, estimateCost, priceOf, flagOn, type CallDeps, type RoleId, type RoleRequest, type RoleTarget, type MediaOut, type Parsed, type ModelsStateV3, type ProviderAccount, type ModelEntry } from '@content-agent/shared';
+import { resolveModel, callRole, pollJob, listModels, probeEntry, statusFromProbes, configuredRoles, findEntry, estimateCost, priceOf, flagOn, type CallDeps, type RoleId, type RoleRequest, type RoleTarget, type MediaOut, type Parsed, type ModelsStateV3, type ProviderAccount, type ModelEntry } from '@content-agent/shared';
 import { getModelsV3, saveModelsV3, getPrefs } from '../local/store';
 import { getSecret } from '../local/secrets';
 import { db, type Row } from '../local/db';
@@ -24,7 +24,7 @@ export async function call(role: RoleId, req: RoleRequest, o: Parameters<typeof 
 export async function poll(target: RoleTarget, jobId: string, signal?: AbortSignal) { return pollJob(target, jobId, await deps(), { signal }); }
 export async function isRoleConfigured(role: RoleId): Promise<boolean> { return configuredRoles(await getModelsV3()).includes(role); }
 export async function estimate(role: RoleId, est: { chars?: number; images?: number; seconds?: number }): Promise<number | null> {
-  const s = await getModelsV3(); const t = s.roles[role]?.primary; const e = t ? findEntry(s, t.modelEntryId) : null;
+  const s = await getModelsV3(); const t = resolveModel(s, undefined, role)?.target; const e = t ? findEntry(s, t.modelEntryId) : null;
   return estimateCost(role, e ? priceOf(e.account.vendor, e.entry.model, s.prices) : undefined, est);
 }
 

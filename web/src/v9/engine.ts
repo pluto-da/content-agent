@@ -6,7 +6,7 @@
 import { syncNativeSchedule } from './reminders';
 import { type RoleRequest,
   AgentRuntime, LockManager, HARD_CONFIRM, BUDGET_CONFIRM, ToolRegistry, callError, createBuiltinTools, assemblePrefix, loadSemiotics, routeSkill, skillMeta, skillsDirectory, readLimits, flagOn, redact, findSecrets,
-  proposeMemory as ruleProposeMemory, autoApplyProposal, searchMemory, forget, computeAttribution, summarize, knownNumbers, validateProposal, proposalFile, bm25Search, hybridSearch, configuredRoles, ROLE_IDS, sha256,
+  resolveModel, proposeMemory as ruleProposeMemory, autoApplyProposal, searchMemory, forget, computeAttribution, summarize, knownNumbers, validateProposal, proposalFile, bm25Search, hybridSearch, configuredRoles, ROLE_IDS, sha256,
   type RunStore, type RunRecord, type ToolCallRecord, type LockStore, type LockRecord, type ModelPort, type ModelTurn, type ToolServices, type ChatMessage, type ToolSpec as V9Tool, type MemoryEntry, type RevenueRecord, type Proposal, type CardSpec, type PendingItem,
 } from '@content-agent/shared';
 import { db, type Row } from '../local/db';
@@ -85,6 +85,8 @@ function wrapOld(t: OldTool): V9Tool {
 let pick: { providerId?: string | null; model?: string | null } | undefined;
 // 0.11.0：本轮调用方给的 cfg 优先（与 0.8 runTurn 一致：会话内切换模型立即生效），没有时按 pick 从已保存的模型里解析
 let turnCfg: ProviderConfig | null = null;
+/** 1.1.0：本轮是否开深度思考（模型配置 advanced.thinking；只作用于用户可见的回合）。 */
+let turnThinking = false;
 async function currentCfg(): Promise<ProviderConfig | null> { return turnCfg ?? resolveProvider(await getModels(), pick); }
 
 /* ---------------- 工具服务（本机实现） ---------------- */
@@ -137,7 +139,7 @@ export const services: ToolServices = {
     return { removed: f.removed.length, verifyHits: f.verifyHits };
   },
   async revenueSummary() { const rev = (await db.all('revenue')) as unknown as RevenueRecord[]; const s = summarize(rev, computeAttribution(rev)); return { total: s.total, count: s.count, text: s.count ? `共 ${s.count} 条收入，合计 ${s.total} 元（来源：你录入或导入的记录）` : '还没有收入数据' }; },
-  async modelsStatus() { const s = await getModelsV3(); const c = configuredRoles(s); return Object.fromEntries(ROLE_IDS.map((r) => [r, { configured: c.includes(r), model: s.roles[r]?.primary?.model }])); },
+  async modelsStatus() { const s = await getModelsV3(); const c = configuredRoles(s); return Object.fromEntries(ROLE_IDS.map((r) => [r, { configured: c.includes(r), model: resolveModel(s, undefined, r)?.target.model }])); },
   async proposeSystemFile(target, after, reason) {
     const v = await getVfs(); const before = (await v.text(target)) ?? '';
     const hist = (await db.all('proposals')) as unknown as Proposal[];
@@ -154,7 +156,7 @@ export const services: ToolServices = {
     await audit({ kind: 'system_file_change', actor: 'agent', summary: r.applied ? `自动采纳（低风险）：${target} → v${r.version}（成长记录可回滚）` : `提议修改 ${target}（${r.decision.why}）`, target, outcome: r.applied ? 'ok' : 'pending', detail: { proposal: p.id, risk: r.decision.risk, auto: r.applied } });
     return { ok: true, id: p.id, auto: r.applied };
   },
-  pollVideo: async (jobId, signal) => { const s = await getModelsV3(); return poll(s.roles.video.primary!, jobId, signal); },
+  pollVideo: async (jobId, signal) => { const s = await getModelsV3(); const t = resolveModel(s, undefined, 'video')?.target; if (!t) throw new Error('还没有能生成视频的模型'); return poll(t, jobId, signal); },
   async search(q, _scope, k) {
     const docs = [...(await db.all('drafts')).map((d) => ({ path: `draft:${d.id}`, text: `${d.title ?? ''} ${d.body ?? ''}` })), ...Object.entries(await vfsFiles()).filter(([p]) => p.startsWith('memory/')).map(([path, text]) => ({ path, text }))];
     // 0.11.0：search.vector（beta）打开时用 BM25 + 向量混合；接了 embed 角色就用它，没接用本机轻量嵌入；向量失败退回关键词并如实标注
@@ -221,8 +223,8 @@ function modelPort(ui: { onEvent: (e: AgentEvent) => void; conversationId: numbe
     if (i.purpose === 'turn' && i.mode === 'json' && ui.jsonTools && msgs[0]?.role === 'system' && !msgs[0].content.includes('JSON 指令')) msgs = [{ ...msgs[0], content: `${msgs[0].content}\n\n## 工具调用（兼容模式）\n${jsonModeRules(ui.jsonTools())}` }, ...msgs.slice(1)];
     // 0.10.0 按任务路由：压缩 / 规划 / 参数修复 / 判官这类后台调用，若在“我的 → 模型 → 高级：按任务路由”给 chat 指定了模型，就走统一能力层的那个模型；失败时回到对话模型
     if (!visible && ROUTED_PURPOSES.includes(i.purpose)) {
-      const tt = (await getModelsV3()).roles.chat?.tasks?.[i.purpose];
-      if (tt) {
+      const tt = resolveModel(await getModelsV3(), i.purpose, 'chat');
+      if (tt?.via === 'task') {
         const r = await call('chat', { role: 'chat', messages: msgs.filter((m) => m.role !== 'tool' && !m.tool_calls).map((m) => ({ role: m.role, content: m.content })), maxTokens: 1500, json: i.mode === 'json' } as RoleRequest, { task: i.purpose, signal: i.signal, runId: ui.runId(), conversationId: ui.conversationId });
         if (r.ok && r.value.type === 'text') return { ok: true, text: r.value.text, toolCalls: [], cost: r.cost, model: r.target.model, respondedModel: r.respondedModel };
       }
@@ -232,14 +234,14 @@ function modelPort(ui: { onEvent: (e: AgentEvent) => void; conversationId: numbe
     let acc = '';
     const t0 = Date.now();
     try {
-      const reply = await (ui.call ?? chatAgent)(cfg, msgs, { tools: i.tools as never, stream: visible, signal: i.signal, maxTokens: i.purpose === 'compress' || i.purpose === 'repair' ? 1500 : 4096, thinking: false, onDelta: (d) => { acc += d.content; if (visible && sid) ui.onEvent({ type: 'delta', id: sid, content: d.content, reasoning: d.reasoning }); } });
+      const reply = await (ui.call ?? chatAgent)(cfg, msgs, { tools: i.tools as never, stream: visible, signal: i.signal, maxTokens: i.purpose === 'compress' || i.purpose === 'repair' ? 1500 : 4096, thinking: visible && turnThinking, onDelta: (d) => { acc += d.content; if (visible && sid) ui.onEvent({ type: 'delta', id: sid, content: d.content, reasoning: d.reasoning }); } });
       const cost = costOf(cfg.id, cfg.model, reply.usage);
       // 0.11.0：0.8 循环删除后，trace（B5）与 toolMode 记忆由 v9 接线负责
-      ui.trace?.push({ kind: 'model', ms: reply.ms ?? Date.now() - t0, usage: { input: reply.usage.input ?? 0, output: reply.usage.output ?? 0, ...(reply.usage.cached != null ? { cached: reply.usage.cached } : {}) }, streamed: reply.streamed, chunks: reply.chunks, content: reply.content.slice(0, 400), mode: i.mode ?? 'native' });
+      ui.trace?.push({ kind: 'model', ms: reply.ms ?? Date.now() - t0, usage: { input: reply.usage.input ?? 0, output: reply.usage.output ?? 0, ...(reply.usage.cached != null ? { cached: reply.usage.cached } : {}) }, streamed: reply.streamed, chunks: reply.chunks, content: reply.content.slice(0, 400), mode: i.mode ?? 'native', thinking: visible && turnThinking });
       if (i.tools && cfg.toolMode === undefined && i.mode !== 'json') { await upsertProvider({ ...cfg, toolMode: 'native' }).catch(() => {}); turnCfg = turnCfg ? { ...turnCfg, toolMode: 'native' } : null; }
       // 消息标注“服务 · 实际返回的模型名”
       if (visible && sid && reply.model && reply.model !== cfg.model) await updateMessage(sid, { model: `${cfg.label} · ${reply.model}` });
-      await recordUsage({ at: new Date().toISOString(), role: 'chat', vendor: cfg.id, model: cfg.model, requestedModel: cfg.model, respondedModel: reply.model, usage: reply.usage, cost, ms: reply.ms, ok: true, runId: ui.runId(), conversationId: ui.conversationId });
+      await recordUsage({ at: new Date().toISOString(), role: visible && turnThinking ? 'reason' : 'chat', thinking: visible && turnThinking, vendor: cfg.id, model: cfg.model, requestedModel: cfg.model, respondedModel: reply.model, usage: reply.usage, cost, ms: reply.ms, ok: true, runId: ui.runId(), conversationId: ui.conversationId });
       if (visible && sid && reply.toolCalls.some((t) => t.name)) {
         // 这一轮是“调用工具”：把模型顺带说的话留在这条消息里，下一轮另起一条
         if (reply.content.trim()) { await updateMessage(sid, { content: reply.content, meta: { streaming: false, v9: true } }); ui.onEvent({ type: 'message', msg: { ...(await msgById(sid))! } }); }
@@ -268,6 +270,7 @@ let current: AgentRuntime | null = null;
 export async function runTurnV9(o: TurnOpts & { pick?: { providerId?: string | null; model?: string | null }; override?: Record<string, { accountId: string; modelEntryId: string; model: string }>; overrideLabels?: string[] }): Promise<void> {
   pick = o.pick ?? { providerId: o.cfg.id, model: o.cfg.model };
   turnCfg = o.cfg ?? null;
+  turnThinking = (await getModelsV3()).advanced?.thinking === 'on';
   await refreshSnapshots();
   const f = await flags();
   const userMsg = await addMessage({ conversationId: o.conversationId, role: 'user', content: o.text, ...(o.overrideLabels?.length ? { meta: { atOverride: o.overrideLabels } } : {}) });
