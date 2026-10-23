@@ -1,0 +1,72 @@
+{
+  "ok": true,
+  "platform": "darwin",
+  "arch": "arm64",
+  "electron": "39.8.10",
+  "node": "22.22.1",
+  "appVersion": "1.0.0",
+  "packaged": true,
+  "dataDir": "/Users/runner/Library/Application Support/content-agent-desktop/data",
+  "steps": [
+    {
+      "name": "health",
+      "at": "2026-10-23T20:58:23.816Z",
+      "health": {
+        "ok": true,
+        "version": "1.0.0"
+      }
+    },
+    {
+      "name": "safeStorage",
+      "at": "2026-10-23T20:58:23.831Z",
+      "available": true,
+      "roundtrip": true,
+      "backend": "os"
+    },
+    {
+      "name": "first-run",
+      "at": "2026-10-23T20:58:30.588Z",
+      "shot": "01-first-run.png",
+      "title": "超级工作台"
+    },
+    {
+      "name": "backup-page",
+      "at": "2026-10-23T20:58:33.515Z",
+      "shot": "02-backup-page.png",
+      "hasExport": true
+    },
+    {
+      "name": "backup-export",
+      "at": "2026-10-23T20:58:35.351Z",
+      "state": "completed",
+      "bytes": 356095,
+      "shot": "03-backup-exported.png",
+      "msg": "已导出（不含任何 Key）"
+    },
+    {
+      "name": "backup-restore",
+      "at": "2026-10-23T20:58:36.293Z",
+      "msg": "已恢复：文件 102、数据集 22、设置 2。Key 需要重新填写",
+      "shot": "04-restored.png"
+    }
+  ],
+  "console": [
+    "error: Connecting to 'blob:http://127.0.0.1:49201/74d3b4f5-d096-4b60-9178-efe40a6ed2d4' violates the following Content Security Policy directive: \"connect-src 'self'\". The action has been blocked.",
+    "error: Connecting to 'blob:http://127.0.0.1:49201/74d3b4f5-d096-4b60-9178-efe40a6ed2d4' violates the following Content Security Policy directive: \"connect-src 'self' https: http://localhost:* http://127.0.0.1:*\". The action has been blocked.",
+    "error: Fetch API cannot load blob:http://127.0.0.1:49201/74d3b4f5-d096-4b60-9178-efe40a6ed2d4. Refused to connect because it violates the document's Content Security Policy.",
+    "error: Uncaught (in promise) TypeError: Failed to fetch"
+  ],
+  "pageErrors": [
+    {
+      "name": "TypeError",
+      "message": "Failed to fetch",
+      "stack": "TypeError: Failed to fetch\n    at HTMLAnchorElement.click (<anonymous>:1:223)\n    at Wm (http://127.0.0.1:49201/assets/index-CxxTAW3o.js:70:14569)\n    at f (http://127.0.0.1:49201/assets/me-DmSbdZVv.js:2:17992)",
+      "at": "2026-10-23T20:58:33.622Z"
+    }
+  ],
+  "idbLargeProbe": {
+    "1000": "ok",
+    "100000": "ok",
+    "1000000": "ok"
+  }
+}

@@ -1,0 +1,102 @@
+total 229624
+drwxr-xr-x   6 runner  staff        192 Oct 23 20:58 .
+drwxr-xr-x  11 runner  staff        352 Oct 23 20:57 ..
+-rw-r--r--   1 runner  staff        962 Oct 23 20:58 builder-debug.yml
+-rw-r--r--@  1 runner  staff  112055795 Oct 23 20:58 content-agent-1.0.0-mac-arm64.dmg
+-rw-r--r--   1 runner  staff     118046 Oct 23 20:58 content-agent-1.0.0-mac-arm64.dmg.blockmap
+drwxr-xr-x   3 runner  staff         96 Oct 23 20:57 mac-arm64
+[desktop-ci] 安装包：desktop/release/content-agent-1.0.0-mac-arm64.dmg
+[desktop-ci] 挂载：/Volumes/content-agent 1.0.0-arm64
+[desktop-ci] 已安装：/Applications/content-agent.app
+Executable=/Applications/content-agent.app/Contents/MacOS/content-agent
+Identifier=Electron
+Format=app bundle with Mach-O thin (arm64)
+CodeDirectory v=20400 size=392 flags=0x20002(adhoc,linker-signed) hashes=9+0 location=embedded
+Signature=adhoc
+Info.plist=not bound
+TeamIdentifier=not set
+Sealed Resources=none
+Internal requirements=none
+[desktop-ci] 冒烟退出码 0
+[desktop-ci] 卸载完成：/Applications/content-agent.app 已删除
+{
+  "ok": true,
+  "platform": "darwin",
+  "arch": "arm64",
+  "electron": "39.8.10",
+  "node": "22.22.1",
+  "appVersion": "1.0.0",
+  "packaged": true,
+  "dataDir": "/Users/runner/Library/Application Support/content-agent-desktop/data",
+  "steps": [
+    {
+      "name": "health",
+      "at": "2026-10-23T20:58:23.816Z",
+      "health": {
+        "ok": true,
+        "version": "1.0.0"
+      }
+    },
+    {
+      "name": "safeStorage",
+      "at": "2026-10-23T20:58:23.831Z",
+      "available": true,
+      "roundtrip": true,
+      "backend": "os"
+    },
+    {
+      "name": "first-run",
+      "at": "2026-10-23T20:58:30.588Z",
+      "shot": "01-first-run.png",
+      "title": "超级工作台"
+    },
+    {
+      "name": "backup-page",
+      "at": "2026-10-23T20:58:33.515Z",
+      "shot": "02-backup-page.png",
+      "hasExport": true
+    },
+    {
+      "name": "backup-export",
+      "at": "2026-10-23T20:58:35.351Z",
+      "state": "completed",
+      "bytes": 356095,
+      "shot": "03-backup-exported.png",
+      "msg": "已导出（不含任何 Key）"
+    },
+    {
+      "name": "backup-restore",
+      "at": "2026-10-23T20:58:36.293Z",
+      "msg": "已恢复：文件 102、数据集 22、设置 2。Key 需要重新填写",
+      "shot": "04-restored.png"
+    }
+  ],
+  "console": [
+    "error: Connecting to 'blob:http://127.0.0.1:49201/74d3b4f5-d096-4b60-9178-efe40a6ed2d4' violates the following Content Security Policy directive: \"connect-src 'self'\". The action has been blocked.",
+    "error: Connecting to 'blob:http://127.0.0.1:49201/74d3b4f5-d096-4b60-9178-efe40a6ed2d4' violates the following Content Security Policy directive: \"connect-src 'self' https: http://localhost:* http://127.0.0.1:*\". The action has been blocked.",
+    "error: Fetch API cannot load blob:http://127.0.0.1:49201/74d3b4f5-d096-4b60-9178-efe40a6ed2d4. Refused to connect because it violates the document's Content Security Policy.",
+    "error: Uncaught (in promise) TypeError: Failed to fetch"
+  ],
+  "pageErrors": [
+    {
+      "name": "TypeError",
+      "message": "Failed to fetch",
+      "stack": "TypeError: Failed to fetch\n    at HTMLAnchorElement.click (<anonymous>:1:223)\n    at Wm (http://127.0.0.1:49201/assets/index-CxxTAW3o.js:70:14569)\n    at f (http://127.0.0.1:49201/assets/me-DmSbdZVv.js:2:17992)",
+      "at": "2026-10-23T20:58:33.622Z"
+    }
+  ],
+  "idbLargeProbe": {
+    "1000": "ok",
+    "100000": "ok",
+    "1000000": "ok"
+  }
+}total 218896
+drwxr-xr-x   9 runner  staff       288 Oct 23 20:58 .
+drwxr-x---+ 41 runner  staff      1312 Oct 23 20:56 ..
+-rw-r--r--   1 runner  staff      5904 Oct 23 20:58 build.log
+-rw-r--r--   1 runner  staff  47185920 Oct 23 20:58 content-agent-1.0.0-mac-arm64.dmg.part-aa
+-rw-r--r--   1 runner  staff  47185920 Oct 23 20:58 content-agent-1.0.0-mac-arm64.dmg.part-ab
+-rw-r--r--   1 runner  staff  17683955 Oct 23 20:58 content-agent-1.0.0-mac-arm64.dmg.part-ac
+-rw-r--r--   1 runner  staff       100 Oct 23 20:58 content-agent-1.0.0-mac-arm64.dmg.sha256
+-rw-r--r--   1 runner  staff      3517 Oct 23 20:58 desktop-ci.log
+drwxr-xr-x   8 runner  staff       256 Oct 23 20:58 smoke
