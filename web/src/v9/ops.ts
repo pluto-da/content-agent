@@ -5,14 +5,20 @@
 import { makeAudit, filterAudit, auditToCsv, auditToJsonl, redact, type AuditEvent as AuditEntry, type AuditFilter, type UsageRecord, HealthTracker } from '@content-agent/shared';
 import { db } from '../local/db';
 import { addUsage } from '../local/store';
+import { checkAlerts } from './spend';
 
 export const health = new HealthTracker();
 export async function recordUsage(r: UsageRecord): Promise<void> {
-  await db.insert('usage_log', { ...r, at: r.at } as unknown as Record<string, unknown>);
+  const row = await db.insert('usage_log', { ...r, at: r.at } as unknown as Record<string, unknown>);
   if (r.ok) await addUsage(r.cost ?? 0, { input: r.usage.input ?? 0, output: r.usage.output ?? 0 });
   health.record(`${r.vendor}:${r.model}`, r.ok);
+  // 1.0：每笔花费（含单价未知）写审计 spend，带 usage 记录 id，可逐笔追溯到角色 / 服务商 / 模型 / 运行
+  if (r.ok && (r.cost === null || r.cost > 0)) {
+    await audit({ kind: 'spend', actor: r.runId ? 'agent' : 'user', summary: `${r.role} · ${r.vendor} · ${r.model}：${r.cost === null ? '单价未知' : `¥${r.cost.toFixed(4)}`}`, cost: r.cost ?? undefined, runId: r.runId, conversationId: r.conversationId, tool: r.toolCallId, target: r.role, outcome: 'ok', detail: { usageId: row.id, vendor: r.vendor, model: r.model, input: r.usage.input ?? 0, output: r.usage.output ?? 0, priced: r.cost !== null } });
+    await checkAlerts((summary, a) => audit({ kind: 'spend', actor: 'system', summary, cost: a.amount, target: a.kind, outcome: 'pending', detail: { alert: a.id } })).catch(() => {});
+  }
   const all = await db.all('usage_log');
-  if (all.length > 5000) for (const x of all.slice(0, all.length - 5000)) await db.del('usage_log', x.id);
+  if (all.length > 20000) for (const x of all.slice(0, all.length - 20000)) await db.del('usage_log', x.id);
 }
 export async function audit(e: Parameters<typeof makeAudit>[0]): Promise<void> {
   await db.insert('audit', makeAudit({ ...e, summary: redact(e.summary) }) as unknown as Record<string, unknown>);

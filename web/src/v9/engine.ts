@@ -5,7 +5,7 @@
  */
 import { syncNativeSchedule } from './reminders';
 import { type RoleRequest,
-  AgentRuntime, LockManager, ToolRegistry, callError, createBuiltinTools, assemblePrefix, loadSemiotics, routeSkill, skillMeta, skillsDirectory, readLimits, flagOn, redact, findSecrets,
+  AgentRuntime, LockManager, HARD_CONFIRM, BUDGET_CONFIRM, ToolRegistry, callError, createBuiltinTools, assemblePrefix, loadSemiotics, routeSkill, skillMeta, skillsDirectory, readLimits, flagOn, redact, findSecrets,
   proposeMemory as ruleProposeMemory, searchMemory, forget, computeAttribution, summarize, knownNumbers, validateProposal, proposalFile, bm25Search, hybridSearch, configuredRoles, ROLE_IDS, sha256,
   type RunStore, type RunRecord, type ToolCallRecord, type LockStore, type LockRecord, type ModelPort, type ModelTurn, type ToolServices, type ChatMessage, type ToolSpec as V9Tool, type MemoryEntry, type RevenueRecord, type Proposal, type CardSpec, type PendingItem,
 } from '@content-agent/shared';
@@ -19,6 +19,7 @@ import type { AgentEvent, TraceStep, TurnOpts } from '../agent/events';
 import { center } from '../data/platforms';
 import { jsonModeRules } from '../agent/prompts';
 import { getVfs, vfsFiles } from './vfsBackend';
+import { guardPort } from './spend';
 import { call, estimate, isRoleConfigured, poll, saveMedia, getMedia, flags } from './models';
 import { audit, recordUsage } from './ops';
 
@@ -281,7 +282,7 @@ export async function runTurnV9(o: TurnOpts & { pick?: { providerId?: string | n
     contextWindow: 64000,
     system: async ({ userText }) => (await systemPrompt(userText, o.cfg.toolMode === 'json' ? tools.list().filter((t) => !t.userOnly).map((t) => ({ name: t.name, description: t.description, parameters: t.inputSchema })) : undefined)).text,
     ask: (p: PendingItem) => new Promise((resolve) => {
-      o.onEvent({ type: 'confirm', tool: p.tool ?? '', label: p.text, args: p.args, resolve: (d) => { void audit({ kind: 'approval', actor: 'user', summary: `${p.text} → ${d === 'deny' ? '拒绝' : d === 'remember' ? '允许并记住此类' : '允许'}`, tool: p.tool, cost: p.estCost ?? undefined, runId, outcome: d === 'deny' ? 'denied' : 'ok' }); resolve({ decision: d }); } });
+      o.onEvent({ type: 'confirm', tool: p.tool ?? '', label: p.text, args: p.args, rememberable: !p.reasons?.some((r) => HARD_CONFIRM.has(r) || BUDGET_CONFIRM.has(r)), spend: !!p.reasons?.some((r) => r.startsWith('spend') || BUDGET_CONFIRM.has(r) || r === 'unknown_price_media'), estCost: p.estCost, resolve: (d) => { void audit({ kind: 'approval', actor: 'user', summary: `${p.text} → ${d === 'deny' ? '拒绝' : d === 'remember' ? '允许并记住此类' : '允许'}`, tool: p.tool, cost: p.estCost ?? undefined, runId, outcome: d === 'deny' ? 'denied' : 'ok' }); resolve({ decision: d }); } });
     }),
     emit: (e) => {
       if (e.type === 'state' && !runId) runId = e.runId;
@@ -296,6 +297,7 @@ export async function runTurnV9(o: TurnOpts & { pick?: { providerId?: string | n
       if (e.type === 'correction') void (async () => { const row = await addMessage({ conversationId: o.conversationId, role: 'assistant', content: e.text, meta: { correction: true, v9: true } }); o.onEvent({ type: 'message', msg: row }); })();
     },
     online: () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false),
+    spendGuard: () => guardPort(),
     spentToday: async () => { const d = new Date().toISOString().slice(0, 10); return (await db.all('usage_log')).filter((r) => String(r.at ?? '').startsWith(d)).reduce((s, r) => s + Number(r.cost ?? 0), 0); },
     remembered: async () => (await db.getKV<{ tool: string; scope: string }[]>('approvals.remembered')) ?? [],
     remember: async (r) => { const l = (await db.getKV<{ tool: string; scope: string }[]>('approvals.remembered')) ?? []; await db.setKV('approvals.remembered', [...l, r]); },

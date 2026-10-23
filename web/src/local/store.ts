@@ -163,7 +163,7 @@ export interface Prefs {
   platformOrder?: string[]; customSites?: { id: string; label: string; url: string }[]; keepAlive?: number;
   bindSessions?: boolean; sessionBindings?: Record<string, string>; badgeOff?: string[]; agentDock?: 'right' | 'left'; newWindow?: 'inplace' | 'system';
   /** 0.9.0（prefs schemaVersion 2）：实验功能开关覆盖、花钱确认阈值（单次 / 当日，元）、Key 共用方式 */
-  schemaVersion?: number; flags?: Record<string, boolean>; spend?: { perCallConfirmYuan: number; perDayConfirmYuan: number }; keyPolicy?: 'account' | 'per-role';
+  schemaVersion?: number; flags?: Record<string, boolean>; spend?: { perCallConfirmYuan: number; perDayConfirmYuan: number; guard?: unknown }; keyPolicy?: 'account' | 'per-role';
 }
 export const DEFAULT_PREFS: Prefs = { platforms: [], onboarded: false, backupHinted: false, hotSources: ['baidu', 'solidot', 'sspai', '36kr'], schemaVersion: 2, flags: {}, spend: { perCallConfirmYuan: 1, perDayConfirmYuan: 10 }, keyPolicy: 'account' };
 export async function getPrefs(): Promise<Prefs> { return { ...DEFAULT_PREFS, ...((await db.getKV<Prefs>('prefs')) ?? {}) }; }

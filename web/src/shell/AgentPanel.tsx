@@ -69,7 +69,7 @@ export function Markdown({ text }: { text: string }) {
 }
 
 /* ---------- 会话状态 ---------- */
-interface Pending { tool: string; label: string; args: unknown; resolve: (d: 'allow' | 'deny' | 'remember') => void }
+interface Pending { tool: string; label: string; args: unknown; rememberable?: boolean; spend?: boolean; estCost?: number | null; resolve: (d: 'allow' | 'deny' | 'remember') => void }
 export function useAgent() {
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [cid, setCid] = useState<number | null>(null);
@@ -97,7 +97,7 @@ export function useAgent() {
     if (e.type === 'message') setMsgs((m) => { const i = m.findIndex((x) => x.id === e.msg.id); if (i >= 0) { const n = [...m]; n[i] = { ...n[i]!, ...e.msg, cards: e.msg.cards ?? n[i]!.cards }; return n; } return [...m, e.msg]; });
     else if (e.type === 'delta') setMsgs((m) => m.map((x) => (x.id === e.id ? { ...x, content: x.content + e.content, reasoning: (x.reasoning ?? '') + e.reasoning, meta: { ...(x.meta ?? {}), streaming: true } } : x)));
     else if (e.type === 'card') setMsgs((m) => m.map((x) => { if (x.id !== e.id) return x; const cards = [...(x.cards ?? [])]; cards[e.index] = e.card; return { ...x, cards }; }));
-    else if (e.type === 'confirm') setConfirm({ tool: e.tool, label: e.label, args: e.args, resolve: e.resolve });
+    else if (e.type === 'confirm') setConfirm({ tool: e.tool, label: e.label, args: e.args, rememberable: e.rememberable, spend: e.spend, estCost: e.estCost, resolve: e.resolve });
     else if (e.type === 'mode') setNotice('这个模型不支持原生工具调用，已自动切换为兼容模式（JSON 指令）');
   }, []);
 
@@ -272,7 +272,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
           )}
         </Fragment>
       ))}
-      {a.confirm && <ConfirmCard label={a.confirm.label} args={a.confirm.args} onDecide={(d) => { a.confirm!.resolve(d); a.setConfirm(null); }} />}
+      {a.confirm && <ConfirmCard label={a.confirm.label} args={a.confirm.args} rememberable={a.confirm.rememberable !== false} spend={a.confirm.spend} estCost={a.confirm.estCost} onDecide={(d) => { a.confirm!.resolve(d); a.setConfirm(null); }} />}
       <div ref={endRef} />
     </div>
   );

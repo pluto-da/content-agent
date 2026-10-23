@@ -7,7 +7,7 @@ import {
   AgentRuntime, LockManager, memoryLockStore, memoryRunStore, createBuiltinTools, callRole, emptyModelsV3, addModelEntry, bindRole, configuredRoles, findEntry,
   Vfs, memoryVfsBackend, initVfs, assemblePrefix, validateProposal, proposalFile, proposeMemory, forget, searchMemory, computeAttribution, summarize, knownNumbers,
   validateRevenue, DEFAULT_LIMITS, readLimits, sha256, estimateCost, priceOf, loadSemiotics, routeSkill, skillMeta,
-  type ModelInput, type ModelTurn, type ModelsStateV3, type RoleId, type ToolServices, type MediaRef, type DraftRef, type MemoryEntry, type RevenueRecord, type Proposal, type RuntimeEvent, type PendingItem, type CallDeps, type Limits,
+  type ModelInput, type ModelTurn, type ModelsStateV3, type RoleId, type ToolServices, type MediaRef, type DraftRef, type MemoryEntry, type RevenueRecord, type Proposal, type RuntimeEvent, type PendingItem, type CallDeps, type Limits, type SpendGuard, type SpendState,
 } from '../shared/src/index.js';
 
 export type ScriptTurn = { purpose?: ModelInput['purpose']; text?: string; tools?: { name: string; args: unknown }[]; error?: ModelTurn extends { ok: false; error: infer E } ? E : never; streamBroken?: boolean; abortAfter?: boolean; check?(i: ModelInput): string | null };
@@ -31,7 +31,7 @@ export class ScriptedModel {
   get used(): number { return this.i; }
 }
 
-export interface HarnessOpts { contextWindow?: number; imageVendor?: string; roles?: Partial<Record<RoleId, string>>; online?: () => boolean; approve?: (p: PendingItem) => 'allow' | 'deny' | 'remember' | 'wait'; limits?: Partial<Limits>; flags?: { planner?: boolean; subtasks?: boolean }; mode?: 'native' | 'json'; spentToday?: number }
+export interface HarnessOpts { contextWindow?: number; imageVendor?: string; roles?: Partial<Record<RoleId, string>>; online?: () => boolean; approve?: (p: PendingItem) => 'allow' | 'deny' | 'remember' | 'wait'; limits?: Partial<Limits>; flags?: { planner?: boolean; subtasks?: boolean }; mode?: 'native' | 'json'; spentToday?: number; spendGuard?: { guard: SpendGuard; state: SpendState } }
 export async function makeHarness(script: ScriptTurn[], o: HarnessOpts = {}, fallback?: (i: ModelInput) => ScriptTurn | null) {
   const vfs = new Vfs(memoryVfsBackend(), () => new Date('2026-10-23T07:33:00Z'));
   await initVfs(vfs);
@@ -101,6 +101,7 @@ export async function makeHarness(script: ScriptTurn[], o: HarnessOpts = {}, fal
     emit: (e) => { events.push(e); },
     online: o.online,
     spentToday: async () => o.spentToday ?? 0,
+    ...(o.spendGuard ? { spendGuard: async () => o.spendGuard! } : {}),
     remembered: async () => remembered,
     remember: async (r) => { remembered.push(r); },
     knownNumbers: async () => knownNumbers(revenue, ctl.attr ?? computeAttribution(revenue)),

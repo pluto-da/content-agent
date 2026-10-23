@@ -12,7 +12,7 @@ export type AgentEvent =
   | { type: 'message'; msg: StoredMsg }
   | { type: 'delta'; id: number; content: string; reasoning: string }
   | { type: 'card'; id: number; index: number; card: CardData }
-  | { type: 'confirm'; tool: string; label: string; args: unknown; resolve: (d: 'allow' | 'deny' | 'remember') => void }
+  | { type: 'confirm'; tool: string; label: string; args: unknown; rememberable?: boolean; spend?: boolean; estCost?: number | null; resolve: (d: 'allow' | 'deny' | 'remember') => void }
   | { type: 'done'; stopped?: boolean; error?: string }
   | { type: 'mode'; toolMode: 'native' | 'json' };
 

@@ -15,6 +15,7 @@ import { GroupList, Problem, useToast, EmptyState, StatusDot, Busy } from '../..
 import { useAsync, Section, Note, download, fmtTime, pct, SegTabs } from './common';
 import { Diagnostics, NotifySection } from '../../../v10/Diagnostics';
 import { CardGallery } from '../../../v10/CardGallery';
+import { SpendGuardSection } from '../../../v1/SpendGuard';
 
 /* ---------------- 运行状态 ---------------- */
 export function StatusPage({ go, id }: { go: (to: string) => void; id?: string | null }) {
@@ -121,6 +122,7 @@ export function SettingsV9Page() {
         {err && <Problem title={err} advice={t('改好后再保存')} />}
         <button type="button" className="primary self-start" onClick={() => void saveSpend()} data-testid="spend-save">{t('保存')}</button>
       </Section>
+      <SpendGuardSection />
       <Section title={t('Key 共用方式')}>
         {([['account', '同一服务商一个 Key，各能力通用（默认）', '例如百炼填一次，文本、生图、配音、转写都能用；某一类仍可单独改'], ['per-role', '每类单独填写', '每个能力页都要填自己的地址与 Key']] as const).map(([v, l, h]) => (
           <label key={v} className="list-row cursor-pointer"><input type="radio" name="keypolicy" checked={(prefs.keyPolicy ?? 'account') === v} onChange={() => void setKeyPolicy(v)} /><span className="row-text"><span className="row-label">{t(l)}</span><span className="row-hint">{t(h)}</span></span></label>

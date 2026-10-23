@@ -256,16 +256,16 @@ function ProfileBody({ d }: { d: any }) {
   );
 }
 
-/** L2 确认卡。 */
-export function ConfirmCard({ label, args, onDecide }: { label: string; args: unknown; onDecide: (d: 'allow' | 'deny' | 'remember') => void }) {
+/** L2 确认卡。花钱类（含超预算）显示预计费用；超预算 / 视频 / 删除等代码强制项不提供“记住此类”。 */
+export function ConfirmCard({ label, args, onDecide, rememberable = true, spend = false, estCost }: { label: string; args: unknown; onDecide: (d: 'allow' | 'deny' | 'remember') => void; rememberable?: boolean; spend?: boolean; estCost?: number | null }) {
   return (
     <section className="my-2 rounded-[12px] border border-line bg-surface px-3 py-2" data-testid="confirm-card" role="alertdialog" aria-label={`确认：${label}`}>
-      <p className="m-0 text-[14px] text-fg">Agent 想要「{label}」，会修改你本机已有的数据。允许吗？</p>
-      <pre className="m-0 mt-1 max-h-24 overflow-auto text-[12px] text-muted">{JSON.stringify(args)}</pre>
+      <p className="m-0 text-[14px] text-fg">{spend ? `这一步要花钱：「${label}」${estCost != null ? `，预计 ¥${estCost.toFixed(3)}` : '，单价未知'}。允许吗？` : `Agent 想要「${label}」，会修改你本机已有的数据。允许吗？`}</p>
+      {args !== undefined && <pre className="m-0 mt-1 max-h-24 overflow-auto text-[12px] text-muted">{JSON.stringify(args)}</pre>}
       <div className="mt-2 flex flex-wrap gap-2">
         <button type="button" className="primary !min-h-9" data-testid="confirm-allow" onClick={() => onDecide('allow')}>允许</button>
         <button type="button" className="!min-h-9" data-testid="confirm-deny" onClick={() => onDecide('deny')}>拒绝</button>
-        <button type="button" className="!min-h-9" data-testid="confirm-remember" onClick={() => onDecide('remember')}>允许并记住此类</button>
+        {rememberable && <button type="button" className="!min-h-9" data-testid="confirm-remember" onClick={() => onDecide('remember')}>允许并记住此类</button>}
       </div>
     </section>
   );

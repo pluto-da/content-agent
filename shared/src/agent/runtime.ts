@@ -6,7 +6,7 @@
 import { transition, IllegalTransition, TERMINAL, type RunEvent, type RunState } from './fsm.js';
 import { DEFAULT_LIMITS, type Limits } from './limits.js';
 import { LockManager } from './lock.js';
-import { detectBoundary, detectCorrection, extractConstraint, detectInjection, asksConsciousness, asksSystemPrompt, needsApproval, APPROVAL_REASON_TEXT, type ApprovalReason } from './policy.js';
+import { detectBoundary, detectCorrection, extractConstraint, detectInjection, asksConsciousness, asksSystemPrompt, needsApproval, monthBudgetReached, HARD_CONFIRM, BUDGET_CONFIRM, APPROVAL_REASON_TEXT, type ApprovalReason, type SpendGuard, type SpendState } from './policy.js';
 import { selfCheck, type ToolOutcome } from './selfcheck.js';
 import { repairJson } from './jsonrepair.js';
 import { validatePlan, executePlan, shouldAnnounce, type Plan, type StepResult } from './planner.js';
@@ -62,6 +62,8 @@ export interface RuntimePorts {
   now?(): number;
   online?(): boolean;
   spentToday?(): Promise<number>;
+  /** 1.0 费用护栏：当前设置与本月 / 今天按角色已花（不传 = 不启用护栏）。 */
+  spendGuard?(): Promise<{ guard: SpendGuard; state: SpendState } | null>;
   remembered?(): Promise<{ tool: string; scope: string }[]>;
   remember?(r: { tool: string; scope: string }): Promise<void>;
   knownNumbers?(): Promise<number[]>;
@@ -176,11 +178,20 @@ export class AgentRuntime {
         if (pend.type === 'offline') { await this.go(run, { type: 'answered', pendingId: pend.id }); }
         else if (pend.type === 'clarify') { run.messages.push({ role: 'user', content: d.answer ?? '' }); await this.go(run, { type: 'answered', pendingId: pend.id }); }
         else if (d.decision === 'deny') { await this.go(run, { type: 'rejected', rejectTo: 'running' }); run.messages.push({ role: 'user', content: `（用户拒绝了 ${pend.tool}，不要再调用它，改用替代方案或直接说明）` }); }
-        else { if (d.decision === 'remember') await this.p.remember?.({ tool: pend.tool!, scope: '*' }); await this.go(run, { type: 'approved', pendingId: pend.id }); this.approvedOnce.add(pend.id); }
+        else { if (d.decision === 'remember' && !pend.reasons?.some((r) => HARD_CONFIRM.has(r) || BUDGET_CONFIRM.has(r))) await this.p.remember?.({ tool: pend.tool!, scope: '*' }); await this.go(run, { type: 'approved', pendingId: pend.id }); this.approvedOnce.add(pend.id); }
       }
       if (run.state === 'planning') {
         const pre = await this.precheck(run);
         if (pre) { await this.finalize(run, pre, true); return; }
+        // 1.0 费用护栏：本月预算已用完 → 对话本身（模型回合也花钱）开跑前一定先问；拒绝或无人回答都不调用模型
+        if (depth === 0) {
+          const sg = await this.p.spendGuard?.().catch(() => null) ?? null;
+          if (sg && monthBudgetReached(sg.guard, sg.state)) {
+            const pending: PendingItem = { id: `budget-${run.id}`, type: 'approval', tool: 'chat_turn', reasons: ['budget_month'], estCost: null, text: `本月预算 ¥${sg.guard.monthBudgetYuan} 已用完（已花 ¥${sg.state.spentMonth.toFixed(2)}），这一轮还要调用模型，继续吗？` };
+            const a = this.p.ask ? await this.p.ask(pending) : undefined;
+            if (!a || a.decision === 'deny') { await this.finalize(run, a ? '好的，这一轮没有调用模型，没有花钱。可以在“我的 → 花钱与实验功能”调高本月预算。' : '本月预算已用完，需要你确认后才继续调用模型（没有花钱）。', true); return; }
+          }
+        }
         run.messages = await this.initialMessages(run, depth);
         if (this.p.flags?.planner !== false && depth === 0 && /(并|然后|再|配图|三张|3 张|出图|配音|视频|选题|复盘|写一篇.*图)/.test(run.userText)) {
           const plan = await this.makePlan(run, ac.signal, o.tools);
@@ -385,7 +396,8 @@ export class AgentRuntime {
     // 审批（代码强制项不受文件影响）
     const est = spec.estimateCost?.(args!) ?? (spec.role ? null : 0);
     const level = spec.level === 'L2' && spec.needsConfirm && !(await spec.needsConfirm(args!).catch(() => true)) ? 'L1' : spec.level;
-    const approval = needsApproval({ tool: name, level, kind: spec.kind ?? (spec.role ? 'model' : 'other'), role: spec.role, estCost: est, spentToday: (await this.p.spentToday?.()) ?? 0, mediaRole: !!spec.media, thresholds: this.lim.budget, remembered: (await this.p.remembered?.()) ?? [], scope: spec.approvalScope?.(args!) ?? '*' });
+    const sg = await this.p.spendGuard?.().catch(() => null) ?? null;
+    const approval = needsApproval({ tool: name, level, kind: spec.kind ?? (spec.role ? 'model' : 'other'), role: spec.role, estCost: est, spentToday: (await this.p.spentToday?.()) ?? 0, mediaRole: !!spec.media, thresholds: this.lim.budget, remembered: (await this.p.remembered?.()) ?? [], scope: spec.approvalScope?.(args!) ?? '*', ...(sg ? { guard: sg.guard, spend: sg.state } : {}) });
     const pendId = `p-${sha256(idemKey).slice(0, 10)}`;
     if (approval.confirm && !this.approvedOnce.has(pendId) && run.state === 'waiting_user') { run.toolCallCount--; return 'waiting'; }   // 同批另一个工具已在等确认：本工具留到确认后再跑
     if (approval.confirm && !this.approvedOnce.has(pendId)) {
