@@ -4,7 +4,7 @@
  * 特性开关 agent.runtime.v9 关闭时退回 0.8 循环（应急）。
  */
 import { syncNativeSchedule } from './reminders';
-import {
+import { type RoleRequest,
   AgentRuntime, LockManager, ToolRegistry, callError, createBuiltinTools, assemblePrefix, loadSemiotics, routeSkill, skillMeta, skillsDirectory, readLimits, flagOn, redact, findSecrets,
   proposeMemory as ruleProposeMemory, searchMemory, forget, computeAttribution, summarize, knownNumbers, validateProposal, proposalFile, bm25Search, configuredRoles, ROLE_IDS, sha256,
   type RunStore, type RunRecord, type ToolCallRecord, type LockStore, type LockRecord, type ModelPort, type ModelTurn, type ToolServices, type ChatMessage, type ToolSpec as V9Tool, type MemoryEntry, type RevenueRecord, type Proposal, type CardSpec, type PendingItem,
@@ -85,7 +85,7 @@ async function currentCfg(): Promise<ProviderConfig | null> { return resolveProv
 
 /* ---------------- 工具服务（本机实现） ---------------- */
 const services: ToolServices = {
-  call: (role, req, o) => call(role, req, { signal: o.signal, runId: o.runId, toolCallId: o.toolCallId, conversationId: o.conversationId, override: o.override ?? null }),
+  call: (role, req, o) => call(role, req, { signal: o.signal, runId: o.runId, toolCallId: o.toolCallId, conversationId: o.conversationId, override: o.override ?? null, task: o.task }),
   estimate: () => null,
   configured: () => true,
   async saveMedia(items, meta) { const rows = await saveMedia(items, meta); return rows.map((r) => ({ id: `media-${r.id}`, kind: r.kind, mime: r.mime, model: r.model, aiLabel: r.aiLabel })); },
@@ -192,12 +192,21 @@ async function systemPrompt(userText: string, jsonTools?: { name: string; descri
 }
 
 /* ---------------- 对话模型端口（流式 → 界面） ---------------- */
+export const ROUTED_PURPOSES: string[] = ['compress', 'plan', 'repair', 'judge'];
 function modelPort(ui: { onEvent: (e: AgentEvent) => void; conversationId: number; ctx: { streamId: number | null }; runId: () => string; call?: typeof chatAgent }): ModelPort {
   return async (i): Promise<ModelTurn> => {
     const cfg = await currentCfg();
     if (!cfg) return { ok: false, error: { kind: 'role_not_configured', reason: '还没接文本对话模型', advice: '到“我的 → 模型”接一个文本模型', retriable: false, actions: ['configure'] } };
     const msgs: AgentMsg[] = i.messages.map((m) => ({ role: m.role, content: typeof m.content === 'string' ? m.content : m.content.map((p) => (p.type === 'text' ? p.text : '')).join(''), ...(m.tool_calls ? { tool_calls: m.tool_calls } : {}), ...(m.tool_call_id ? { tool_call_id: m.tool_call_id } : {}) }));
     const visible = i.purpose === 'turn' || i.purpose === 'summary';
+    // 0.10.0 按任务路由：压缩 / 规划 / 参数修复 / 判官这类后台调用，若在“我的 → 模型 → 高级：按任务路由”给 chat 指定了模型，就走统一能力层的那个模型；失败时回到对话模型
+    if (!visible && ROUTED_PURPOSES.includes(i.purpose)) {
+      const tt = (await getModelsV3()).roles.chat?.tasks?.[i.purpose];
+      if (tt) {
+        const r = await call('chat', { role: 'chat', messages: msgs.filter((m) => m.role !== 'tool' && !m.tool_calls).map((m) => ({ role: m.role, content: m.content })), maxTokens: 1500, json: i.mode === 'json' } as RoleRequest, { task: i.purpose, signal: i.signal, runId: ui.runId(), conversationId: ui.conversationId });
+        if (r.ok && r.value.type === 'text') return { ok: true, text: r.value.text, toolCalls: [], cost: r.cost, model: r.target.model, respondedModel: r.respondedModel };
+      }
+    }
     if (visible && !ui.ctx.streamId) { const row = await addMessage({ conversationId: ui.conversationId, role: 'assistant', content: '', model: `${cfg.label} · ${cfg.model}`, meta: { streaming: true, v9: true, runId: ui.runId() } }); ui.ctx.streamId = row.id; ui.onEvent({ type: 'message', msg: row }); }
     const sid = ui.ctx.streamId;
     try {
@@ -224,11 +233,11 @@ function modelPort(ui: { onEvent: (e: AgentEvent) => void; conversationId: numbe
 
 /* ---------------- 对外：与 0.8 runTurn 同形 ---------------- */
 let current: AgentRuntime | null = null;
-export async function runTurnV9(o: TurnOpts & { pick?: { providerId?: string | null; model?: string | null } }): Promise<void> {
+export async function runTurnV9(o: TurnOpts & { pick?: { providerId?: string | null; model?: string | null }; override?: Record<string, { accountId: string; modelEntryId: string; model: string }>; overrideLabels?: string[] }): Promise<void> {
   pick = o.pick ?? { providerId: o.cfg.id, model: o.cfg.model };
   await refreshSnapshots();
   const f = await flags();
-  const userMsg = await addMessage({ conversationId: o.conversationId, role: 'user', content: o.text });
+  const userMsg = await addMessage({ conversationId: o.conversationId, role: 'user', content: o.text, ...(o.overrideLabels?.length ? { meta: { atOverride: o.overrideLabels } } : {}) });
   o.onEvent({ type: 'message', msg: userMsg });
   const ctx = { streamId: null as number | null, cardMsgs: new Map<string, number>() };
   let runId = '';
@@ -266,7 +275,7 @@ export async function runTurnV9(o: TurnOpts & { pick?: { providerId?: string | n
   o.signal?.addEventListener('abort', onAbort, { once: true });
   const hb = setInterval(() => { if (runId) void locks.heartbeat(o.conversationId, runId); }, 5000);
   try {
-    const r = await rt.send(o.conversationId, o.text, { fromQueue: true });
+    const r = await rt.send(o.conversationId, o.text, { fromQueue: true, ...(o.override ? { override: o.override } : {}) });   // 0.10.0：@ 指定只影响本轮
     if (r.status === 'queued') { o.onEvent({ type: 'done', error: `上一条还在处理，这条已排队（第 ${r.n} 条）` }); return; }
     if (r.status !== 'ran') { o.onEvent({ type: 'done' }); return; }
     const run = r.run;

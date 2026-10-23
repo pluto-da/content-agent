@@ -22,6 +22,9 @@ import { addInbox, bus, createConversation, deleteConversation, deleteInbox, lis
 import { toolByName } from '../agent/tools';
 import { computeOverview, type Overview } from '../agent/overview';
 import { overlayManager } from '../browser/browserHost';
+import { AtChips, AtMenu, atQuery, pickLabel, type AtPick } from '../v10/AtMenu';
+import { useModelsV3 } from '../pages/me/v9/common';
+import { ROLE_IDS, findEntry, displayModel, roleLabel, type RoleId } from '@content-agent/shared';
 
 const Write = lazy(() => import('../pages/write').then((m) => ({ default: m.Write })));
 
@@ -99,7 +102,7 @@ export function useAgent() {
     else if (e.type === 'mode') setNotice('这个模型不支持原生工具调用，已自动切换为兼容模式（JSON 指令）');
   }, []);
 
-  const send = useCallback(async (text: string) => {
+  const send = useCallback(async (text: string, at?: AtPick[]) => {
     const t = text.trim();
     if (!t || running || runningRef.current) return;
     if (!cfg) { setNotice(models?.providers.length ? '模型还没填 Key：到“我的 → 模型”填好 Key 再发' : '先连接一个模型，Agent 才能工作'); return; }
@@ -114,7 +117,7 @@ export function useAgent() {
       if (pick) await updateConversation(id, { model: `${cfg.label} · ${cfg.model}` });
       const pf = await getPrefs();
       const turn = flagOn('agent.runtime.v9', pf.flags ?? {}) ? runTurnV9 : runTurn;
-      await turn({ conversationId: id, text: t, cfg, signal: abort.current.signal, onEvent: (e) => { onEvent(e); if (e.type === 'done') { setMsgs((m) => m.map((x) => ({ ...x, meta: { ...(x.meta ?? {}), streaming: false }, stopped: e.stopped && x.meta?.streaming ? true : x.stopped }))); if (e.error && cfgState !== 'ok') setNotice(`发送失败：${e.error}。这个模型还没测试通过，可到“我的 → 模型”点“测试连接”看具体原因`); void refreshConvs(); } } });
+      await turn({ conversationId: id, text: t, cfg, signal: abort.current.signal, ...(at?.length ? { override: Object.fromEntries(at.map((p) => [p.role, p.target])), overrideLabels: at.map(pickLabel) } : {}), onEvent: (e) => { onEvent(e); if (e.type === 'done') { setMsgs((m) => m.map((x) => ({ ...x, meta: { ...(x.meta ?? {}), streaming: false }, stopped: e.stopped && x.meta?.streaming ? true : x.stopped }))); if (e.error && cfgState !== 'ok') setNotice(`发送失败：${e.error}。这个模型还没测试通过，可到“我的 → 模型”点“测试连接”看具体原因`); void refreshConvs(); } } });
     } catch (e) {
       setNotice(`发送失败：${e instanceof Error ? e.message : String(e)}。可以再发一次，或到“我的 → 模型”检查设置`);
     } finally {
@@ -179,6 +182,9 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
   const [plusOpen, setPlusOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [delId, setDelId] = useState<number | null>(null);
+  const [atPicks, setAtPicks] = useState<AtPick[]>([]);
+  const [atQ, setAtQ] = useState<string | null>(null);
+  const v3 = useModelsV3().data;
   const endRef = useRef<HTMLDivElement>(null);
   const showSideList = variant === 'full' && lay === 'desktop';
   const conv = a.convs.find((c) => c.id === a.cid);
@@ -193,7 +199,8 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
   useEffect(() => (sessionsOpen || modelOpen || plusOpen || delId !== null ? overlayManager.push() : undefined), [sessionsOpen, modelOpen, plusOpen, delId]);
 
   const actions: CardActions = { ask: (t) => void a.send(t), userTool: a.userTool, openDraft: (id) => go(`agent/drafts/${id}`) };
-  const submit = () => { const t = text; setText(''); void a.send(t); };
+  const submit = () => { const t = text; const at = atPicks; setText(''); setAtPicks([]); setAtQ(null); void a.send(t, at); };
+  const onAtPick = (p: AtPick) => { setAtPicks((l) => [...l.filter((x) => x.role !== p.role), p]); setText((x) => { const q = atQuery(x); return q ? x.slice(0, q.start) : x; }); setAtQ(null); };
   const visible = a.msgs.filter((m) => m.role !== 'tool' && !m.meta?.toolResult && !m.meta?.hidden);
   const connected = a.models ? configuredProviders(a.models) : [];
 
@@ -208,7 +215,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
         </button>
       )}
       <button type="button" aria-label="模型" data-testid="model-pill" className="!min-h-9 max-w-[42%] !rounded-full !px-3 !text-[13px] !font-normal" onClick={() => setModelOpen(true)}>
-        {a.models === null ? <span className="skeleton inline-block h-3 w-24" aria-label="正在读取模型" /> : <span key={a.cfg ? `${a.cfg.id}:${a.cfg.model}` : 'none'} className="anim-swap truncate" data-testid="model-pill-label">{a.cfg ? `${presetOf(a.cfg.id)?.label ?? a.cfg.label} · ${a.cfg.model}` : '未连接模型'}</span>}{a.cfgState && a.cfgState !== 'ok' && <span className="shrink-0 text-[12px] text-muted" data-testid="model-untested">{a.cfgState === 'failed' ? '测试未通过' : '未测试'}</span>}<Icon name="chevronDown" size={14} />
+        <span className="shrink-0 text-muted" data-testid="model-pill-role">文本：</span>{a.models === null ? <span className="skeleton inline-block h-3 w-24" aria-label="正在读取模型" /> : <span key={a.cfg ? `${a.cfg.id}:${a.cfg.model}` : 'none'} className="anim-swap truncate" data-testid="model-pill-label">{a.cfg ? `${presetOf(a.cfg.id)?.label ?? a.cfg.label} · ${a.cfg.model}` : '未连接模型'}</span>}{a.cfgState && a.cfgState !== 'ok' && <span className="shrink-0 text-[12px] text-muted" data-testid="model-untested">{a.cfgState === 'failed' ? '测试未通过' : '未测试'}</span>}<Icon name="chevronDown" size={14} />
       </button>
       <button type="button" aria-label="新会话" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => { a.setCid(null); setTab('chat'); }}><Icon name="newChat" size={18} /></button>
       {!showSideList && <button type="button" aria-label="会话列表" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => setSessionsOpen(true)}><Icon name="history" size={18} /></button>}
@@ -250,7 +257,10 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
       {visible.map((m) => (
         <Fragment key={m.id}>
           {m.role === 'user' ? (
-            <div className="anim-msg ml-auto max-w-[85%] whitespace-pre-wrap rounded-[12px] bg-surface-2 px-3 py-2 text-[15px] text-fg" data-testid="msg-user">{m.content}</div>
+            <div className="ml-auto flex max-w-[85%] flex-col items-end">
+              {Array.isArray(m.meta?.atOverride) && (m.meta!.atOverride as string[]).length > 0 && <p className="m-0 mb-0.5 text-[12px] text-muted" data-testid="msg-at-label">本轮指定：{(m.meta!.atOverride as string[]).join('；')}</p>}
+              <div className="anim-msg whitespace-pre-wrap rounded-[12px] bg-surface-2 px-3 py-2 text-[15px] text-fg" data-testid="msg-user">{m.content}</div>
+            </div>
           ) : (
             <div className="anim-msg max-w-full text-[15px] leading-relaxed text-fg" data-testid="msg-agent" data-streamed={m.streamed ? 'true' : 'false'}>
               {m.reasoning && <details className="mb-1 text-[13px] text-muted"><summary>已思考</summary><div className="whitespace-pre-wrap">{m.reasoning.slice(0, 3000)}</div></details>}
@@ -272,12 +282,14 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
   const input = (
     <div className="shrink-0 border-t border-line bg-canvas px-3 pt-2 pb-[calc(8px+var(--sa-bottom))]">
       {a.notice && <p className="m-0 mb-1 text-[13px] text-muted" role="status">{a.notice} <button type="button" className="!min-h-0 !border-0 !bg-transparent !p-0 !text-[13px] !text-accent" onClick={() => a.setNotice('')}>知道了</button></p>}
-      <div className="flex items-end gap-2">
+      <AtChips picks={atPicks} onRemove={(r) => setAtPicks((l) => l.filter((x) => x.role !== r))} />
+      <div className="relative flex items-end gap-2">
+        {atQ !== null && <AtMenu state={v3} q={atQ} onPick={onAtPick} onClose={() => setAtQ(null)} />}
         <button type="button" aria-label="附加" className="!min-h-11 !min-w-11 !rounded-full !p-0" onClick={() => setPlusOpen(true)}><Icon name="plus" size={18} /></button>
         <textarea value={text} rows={1} placeholder="和 Agent 说点什么…" aria-label="和 Agent 说点什么" data-testid="agent-input"
           className="!min-h-11 max-h-40 min-w-0 flex-1 resize-none !py-2.5 !text-[15px]"
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && lay !== 'phone') { e.preventDefault(); submit(); } }} />
+          onChange={(e) => { setText(e.target.value); const q = atQuery(e.target.value, e.target.selectionStart ?? e.target.value.length); setAtQ(q ? q.q : null); }}
+          onKeyDown={(e) => { if (e.key === 'Escape' && atQ !== null) { setAtQ(null); return; } if (e.key === 'Enter' && !e.shiftKey && lay !== 'phone' && atQ === null) { e.preventDefault(); submit(); } }} />
         {a.running
           ? <button type="button" aria-label="停止" data-testid="stop" className="!min-h-11 !min-w-11 !rounded-full !p-0" onClick={a.stop}><Icon name="stop" size={16} /></button>
           : <button type="button" aria-label="发送" data-testid="send" className="primary !min-h-11 !min-w-11 !rounded-full !p-0" disabled={!text.trim()} onClick={submit}><Icon name="sendUp" size={18} /></button>}
@@ -319,6 +331,12 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
               return <DrawerItem key={`${p.id}:${m}`} label={`${presetOf(p.id)?.label ?? p.label} · ${m}`} hint={price && base ? `单价 ×${(price / base).toFixed(price / base >= 10 ? 0 : 1)}${p.toolMode ? ` · 工具调用：${p.toolMode === 'json' ? '兼容模式' : '原生'}` : ''}` : p.toolMode === 'json' ? '工具调用：兼容模式' : undefined} onClick={() => { a.setPick({ providerId: p.id, model: m }); setModelOpen(false); }} />;
             });
           })}
+          {v3 && ROLE_IDS.filter((r) => v3.roles[r]?.primary && findEntry(v3, v3.roles[r]!.primary!.modelEntryId)).length > 0 && (
+            <div className="px-3 pt-2 pb-1" data-testid="role-bindings">
+              <p className="m-0 text-[12px] font-semibold text-muted">本会话各能力当前绑定（输入 @ 可只换这一轮）</p>
+              <ul className="m-0 list-none p-0 text-[13px] text-fg-2">{ROLE_IDS.filter((r) => v3.roles[r]?.primary).map((r: RoleId) => { const f = findEntry(v3, v3.roles[r]!.primary!.modelEntryId); return f ? <li key={r} className="py-0.5">{roleLabel(r)}：{displayModel(f.entry)} · {f.account.label}</li> : null; })}</ul>
+            </div>
+          )}
           <DrawerItem label="管理模型" onClick={() => { setModelOpen(false); go('me/models'); }} />
         </DrawerContent>
       </Drawer>

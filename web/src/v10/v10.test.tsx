@@ -105,7 +105,7 @@ describe('Key 硬件绑定（SecretBackend）', () => {
     const zip = await exportBackup({ includeMedia: false });
     const text = new TextDecoder().decode(zip);
     expect(text.includes(KEY)).toBe(false);
-    expect(findSecrets(text).filter((f) => f.value?.includes?.('ABCDEFGH'))).toHaveLength(0);
+    expect(findSecrets(text)).toHaveLength(0);
   });
 });
 

@@ -121,7 +121,7 @@ function tiffWithUserComment(tiffIn: Uint8Array | null, text: string, dims?: { w
   const old = readUC(t);
   const full = old ? `${old}\n${text}` : text;
   const uc = concat(ascii('UNICODE\0'), utf16(full, t.le));
-  let tail: Uint8Array = new Uint8Array(0);
+  let tail: Uint8Array;
   let cur = t.b.length + (t.b.length % 2);
   const pad = new Uint8Array(t.b.length % 2);
   const ucOff = cur; cur += uc.length + (uc.length % 2);

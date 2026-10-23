@@ -18,6 +18,7 @@ import { addInbox } from '../../../agent/store';
 import { db } from '../../../local/db';
 import { GroupList, ListRow, Problem, StatusDot, Busy, useToast } from '../../../ui';
 import { ModelsPage } from '../models';
+import { RoutingPage } from '../../../v10/RoutingPage';
 import { useAsync, useModelsV3, SegTabs, BackBar, Section, Note, pct } from './common';
 
 const ROLE_ICON: Record<RoleId, string> = { chat: 'bot', reason: 'compass', fast: 'activity', vision: 'eye', image: 'wand', imageEdit: 'edit', tts: 'mic', asr: 'list', video: 'creator', embed: 'search', rerank: 'kanban' };
@@ -33,6 +34,7 @@ const TONE_TEXT: Record<Tone, string> = { ok: '已实测', warn: '未实测', ba
 export function RolesPage({ id, go, lay }: { id: string | null; go: (to: string) => void; lay: Layout }) {
   if (!id) return <RolesIndex go={go} />;
   if (id === 'accounts') return <Accounts go={go} />;
+  if (id === 'routing') return <RoutingPage go={go} />;
   if (id === 'legacy') return <ModelsPage id={null} go={go} lay={lay} />;
   if (id.startsWith('acc-')) return <AccountDetail accountId={id.slice(4)} go={go} />;
   if (isRoleId(id)) return <RoleDetail role={id} go={go} />;
@@ -61,6 +63,7 @@ function RolesIndex({ go }: { go: (to: string) => void }) {
       <GroupList title={t('更多')}>
         <ListRow icon="key" label={t('账号与 Key')} hint={t('同一服务商一个 Key，默认各能力通用')} onClick={() => go('me/models/accounts')} testId="accounts-link" />
         <ListRow icon="activity" label={t('用量与费用')} hint={t('延迟、成本、缓存命中、错误率')} onClick={() => go('me/status')} />
+        <ListRow icon="kanban" label={t('高级：按任务路由')} hint={t('封面、识字、上下文压缩等单独指定模型')} onClick={() => go('me/models/routing')} testId="routing-link" />
         <ListRow icon="cpu" label={t('常用服务快速连接')} hint={t('6 家常用服务：填 Key → 测试连接（只接文本对话）')} onClick={() => go('me/models/legacy')} testId="legacy-link" />
       </GroupList>
     </div>

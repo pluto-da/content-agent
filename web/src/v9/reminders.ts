@@ -33,7 +33,8 @@ export async function notifyPerms(): Promise<NotifyPerms> {
     const web = typeof Notification === 'undefined' ? 'unsupported' : Notification.permission === 'default' ? 'prompt' : (Notification.permission as PermState);
     return { display: web, exact: 'unsupported', native: false };
   }
-  let display: PermState = 'unsupported', exact: PermState = 'unsupported';
+  let display: PermState = 'unsupported';
+  let exact: PermState;
   try { display = norm((await L.checkPermissions()).display); } catch { /* 插件不可用 */ }
   try { exact = norm((await L.checkExactNotificationSetting()).exact_alarm); } catch { exact = 'unsupported'; /* Android 11 及以下 / iOS 无此项 */ }
   return { display, exact, native: true };
