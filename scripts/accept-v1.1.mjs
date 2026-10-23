@@ -20,6 +20,7 @@ const J = (p) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { r
 const txt = (p) => { try { return readFileSync(join(root, p), 'utf8'); } catch { return ''; } };
 const SECRET = [/\bsk-[A-Za-z0-9_-]{16,}/, /\btp-[A-Za-z0-9_-]{16,}/, /\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/i, /\bgh[pousr]_[A-Za-z0-9]{30,}/, /"api-key"\s*:\s*"[^"]{12,}"/i];
 const leaks = (s) => SECRET.filter((r) => r.test(s)).length;
+const semverGte = (a, b) => { const x = String(a ?? '0').split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0); } return true; };
 
 // ---- 单测结果（CI 单测步骤生成 out/vitest-*.json）
 const results = [];
@@ -150,7 +151,7 @@ const i18n = J(join(out, 'i18n-audit.json'));
 const ciRun = J(join(root, 'docs/release/ci-v1.1.json'));
 const D16 = [
   grep('.github/workflows/ci.yml', 'accept-v1\\.1\\.mjs --strict', 'CI 跑 accept-v1.1 --strict'),
-  grep('.github/workflows/ci.yml', 'name: reports-1\\.1\\.0', 'CI 报告产物 reports-1.1.0'),
+  grep('.github/workflows/ci.yml', 'name: reports-1\\.(?:[1-9]|\\d{2,})\\.\\d+', 'CI 报告产物 reports-1.x（1.2.0 起作回归：≥ reports-1.1.0）'),
   { ok: /vitest run[^\n]*--outputFile=\.\.\/out\/vitest-shared\.json/.test(ci) && ci.indexOf('vitest-shared.json') < ci.indexOf('accept-v1.1.mjs'), text: 'CI 在 accept 之前现场生成 out/vitest-*.json' },
   { ok: !/uses:\s*android-actions\/setup-android/.test(ci), text: '未使用 android-actions/setup-android' },
   { ok: !/154\.8\.183\.93/.test(ci), text: 'CI 不部署 154.8.183.93' },
@@ -165,7 +166,7 @@ const apk = J(join(root, 'docs/release/apk-manifest-v1.1.json'));
 const desk = J(join(root, 'docs/release/desktop-manifest-v1.1.json'));
 const arts = J(join(root, 'docs/release/artifacts-v1.1.json'));
 const D17 = [
-  ...['.', 'shared', 'server', 'web', 'desktop', 'mobile'].map((w) => { const v = J(join(root, w, 'package.json'))?.version; const label = `${w === '.' ? '' : `${w}/`}package.json ${v}`; return v === '1.1.0' ? { ok: true, text: label } : v === '1.0.0' ? soft(`${label}（尚未升版，第十三部分最后一步“版本”）`) : { ok: false, text: label }; }),
+  ...['.', 'shared', 'server', 'web', 'desktop', 'mobile'].map((w) => { const v = J(join(root, w, 'package.json'))?.version; const label = `${w === '.' ? '' : `${w}/`}package.json ${v}`; return semverGte(v, '1.1.0') ? { ok: true, text: `${label}（1.2.0 起作回归：≥ 1.1.0）` } : v === '1.0.0' ? soft(`${label}（尚未升版，第十三部分最后一步“版本”）`) : { ok: false, text: label }; }),
   grep('mobile/scripts/apply-native.mjs', 'Number\\(mv\\[1\\]\\) \\* 10000', 'versionCode = x*10000+y*100+z（1.1.0 → 10100）'),
   apk ? { ok: apk.versionName === '1.1.0' && String(apk.versionCode) === '10100', text: `APK build.log：${apk.versionName} / ${apk.versionCode}（run ${apk.run}）` } : soft('APK 尚未取回（docs/release/apk-manifest-v1.1.json）'),
   desk ? { ok: !!desk.win?.installer && !!desk.mac?.installer && desk.win?.sha256ok && desk.mac?.sha256ok, text: `桌面：win ${desk.win?.installer ?? '—'}、mac ${desk.mac?.installer ?? '—'}，分片校验 ${desk.win?.sha256ok && desk.mac?.sha256ok ? '一致' : '不一致'}` } : soft('桌面包尚未取回（docs/release/desktop-manifest-v1.1.json）'),

@@ -80,11 +80,17 @@ jobs:
         run: |
           ls -la out/vitest-*.json
           node scripts/accept-v1.1.mjs --strict
+      # 1.2.0：E1–E22（超级 Agent 指挥体系）。证据同上：单测结果现场生成，截图 / walkthrough / MiMo 实测随提交带入。
+      - name: accept:v1.2 (E1–E22)
+        if: always()
+        run: node scripts/accept-v1.2.mjs --strict
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: reports-1.1.0
+          name: reports-1.2.0
           path: |
+            out/accept-v1.2.json
+            out/accept-v1.2.md
             out/accept-v1.1.json
             out/accept-v1.1.md
             out/single-source.json
