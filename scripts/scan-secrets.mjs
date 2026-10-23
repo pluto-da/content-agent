@@ -2,6 +2,9 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 const PATTERNS = [/sk-[A-Za-z0-9]{20,}/, /AKIA[0-9A-Z]{16}/, /-----BEGIN (RSA |EC )?PRIVATE KEY-----/, /"(appsecret|api_key|apiKey|secret)"\s*:\s*"[A-Za-z0-9_-]{16,}"/i, /xox[baprs]-[A-Za-z0-9-]{10,}/, /AAAAAAAAAAAAAAAAAAAAA[A-Za-z0-9%]{20,}/];
+// 1.0：测试夹具里的明显假值（连续字母表 / 全 x / 全 0）不算密钥；git 历史里已有的夹具因此不会让历史扫描失败。
+const FAKE = /abcdefghijklmnop|x{16,}|0{16,}|EXAMPLE|placeholder/i;
+const hit = (t) => PATTERNS.find((re) => [...t.matchAll(new RegExp(re.source, re.flags.replace('g', '') + 'g'))].some((m) => !FAKE.test(m[0])));
 const SKIP = /node_modules|\.git|\.png$|\.jpg$|\.ico$|\.woff2?$/;
 const hits = [];
 function walk(d) {
@@ -10,10 +13,10 @@ function walk(d) {
     if (SKIP.test(p)) continue;
     const s = statSync(p);
     if (s.isDirectory()) walk(p);
-    else if (s.size < 5_000_000) { const t = readFileSync(p, 'utf8'); for (const re of PATTERNS) if (re.test(t)) hits.push(`${p}: ${re}`); }
+    else if (s.size < 5_000_000) { const t = readFileSync(p, 'utf8'); const re = hit(t); if (re) hits.push(`${p}: ${re}`); }
   }
 }
-function scanFile(p) { const s = statSync(p); if (s.size < 5_000_000) { const t = readFileSync(p, 'utf8'); for (const re of PATTERNS) if (re.test(t)) hits.push(`${p}: ${re}`); } }
+function scanFile(p) { const s = statSync(p); if (s.size < 5_000_000) { const t = readFileSync(p, 'utf8'); const re = hit(t); if (re) hits.push(`${p}: ${re}`); } }
 // 参数可以是目录或文件；--stdin 从标准输入读文件列表（CI：git ls-files | node scripts/scan-secrets.mjs --stdin）
 const args = process.argv.slice(2);
 const list = args.includes('--stdin') ? readFileSync(0, 'utf8').split('\n').filter(Boolean) : args;

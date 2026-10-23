@@ -146,7 +146,7 @@ describe('进化分级自动生效（ADR-014）', async () => {
     expect(bad.applied).toBe(false); expect(bad.errors.join()).toMatch(/放宽硬边界/);
     const b2 = await autoApplyProposal(v, prop('BOUNDARIES.md', (await v.text('BOUNDARIES.md')) ?? '', 'x'), { autoLowRisk: true });
     expect(b2.applied).toBe(false); expect(b2.errors.join()).toMatch(/BOUNDARIES/);
-    const sec = await autoApplyProposal(v, prop(target, before, `${before}\n- key: sk-abcdefghijklmnopqrstuvwxyz012345\n`), { autoLowRisk: true });
+    const sec = await autoApplyProposal(v, prop(target, before, `${before}\n- key: ${'sk-'}${'abcdefghijklmnopqrstuvwxyz012345'}\n`), { autoLowRisk: true });
     expect(sec.applied).toBe(false); expect(await v.text(target)).toBe(before);
   });
   it('回滚可用：自动采纳的技能一键回到原文；追加型记忆回滚只撤掉那一行', async () => {

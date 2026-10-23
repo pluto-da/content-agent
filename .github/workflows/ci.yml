@@ -34,6 +34,8 @@ jobs:
         run: npm run typecheck
       - name: lint
         run: npx eslint .
+      - name: i18n audit (1.0：英文缺失 0、未知 id 0、写死中文 0)
+        run: node scripts/i18n-audit.mjs --strict
       - name: vfs defaults up to date
         run: node scripts/gen-vfs-defaults.mjs --check
       - name: unit tests (shared / server / web)
