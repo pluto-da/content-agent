@@ -64,6 +64,8 @@ export interface RuntimePorts {
   spentToday?(): Promise<number>;
   /** 1.0 费用护栏：当前设置与本月 / 今天按角色已花（不传 = 不启用护栏）。 */
   spendGuard?(): Promise<{ guard: SpendGuard; state: SpendState } | null>;
+  /** 1.0 进化分级：“低风险改进自动生效”开关（默认开）。 */
+  autoLowRisk?(): Promise<boolean>;
   remembered?(): Promise<{ tool: string; scope: string }[]>;
   remember?(r: { tool: string; scope: string }): Promise<void>;
   knownNumbers?(): Promise<number[]>;
@@ -397,7 +399,7 @@ export class AgentRuntime {
     const est = spec.estimateCost?.(args!) ?? (spec.role ? null : 0);
     const level = spec.level === 'L2' && spec.needsConfirm && !(await spec.needsConfirm(args!).catch(() => true)) ? 'L1' : spec.level;
     const sg = await this.p.spendGuard?.().catch(() => null) ?? null;
-    const approval = needsApproval({ tool: name, level, kind: spec.kind ?? (spec.role ? 'model' : 'other'), role: spec.role, estCost: est, spentToday: (await this.p.spentToday?.()) ?? 0, mediaRole: !!spec.media, thresholds: this.lim.budget, remembered: (await this.p.remembered?.()) ?? [], scope: spec.approvalScope?.(args!) ?? '*', ...(sg ? { guard: sg.guard, spend: sg.state } : {}) });
+    const approval = needsApproval({ tool: name, level, kind: spec.kind ?? (spec.role ? 'model' : 'other'), role: spec.role, estCost: est, spentToday: (await this.p.spentToday?.()) ?? 0, mediaRole: !!spec.media, thresholds: this.lim.budget, remembered: (await this.p.remembered?.()) ?? [], scope: spec.approvalScope?.(args!) ?? '*', ...(sg ? { guard: sg.guard, spend: sg.state } : {}), lowRiskAuto: !!spec.lowRisk?.(args!) && ((await this.p.autoLowRisk?.().catch(() => false)) ?? false) });
     const pendId = `p-${sha256(idemKey).slice(0, 10)}`;
     if (approval.confirm && !this.approvedOnce.has(pendId) && run.state === 'waiting_user') { run.toolCallCount--; return 'waiting'; }   // 同批另一个工具已在等确认：本工具留到确认后再跑
     if (approval.confirm && !this.approvedOnce.has(pendId)) {

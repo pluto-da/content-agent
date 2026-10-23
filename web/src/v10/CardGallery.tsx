@@ -2,7 +2,7 @@
  * 0.10.0 卡片预览（我的 → 运行状态 → 卡片预览，#me/status/cards）：用演示数据回放对话里的 0.9 新卡片，每类一张“正常”、一张“失败”，
  * 与对话里完全同一个组件（ToolCard → V9Body），用于逐张截图验收（shots-v10）与真机目测。不读写任何真实数据、不调用模型。
  */
-import { useT, tr } from '../i18n';
+import { useT } from '../i18n';
 import { ToolCard, type CardActions } from '../agent/cards';
 import type { CardData } from '../agent/store';
 import { BackBar, Note } from '../pages/me/v9/common';

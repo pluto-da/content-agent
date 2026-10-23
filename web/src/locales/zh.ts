@@ -1269,4 +1269,9 @@ export const ZH_UI: Record<string, string> = {
   'ui.experimental_switches': '实验开关',
   'ui.storage_cleanup': '存储清理',
   'ui.open_in_main_area': '在主区打开',
+  'ui.auto_apply_low_risk_improvements': '低风险改进自动生效',
+  'ui.memory_entries_skill_files_new': '记忆条目、技能文件（新增与修订）、lesson 经硬边界 / 密钥 / 大小与命名校验通过后自动采纳，不再弹改动确认；写审计、在成长记录里可见并可一键回滚。SOUL / AGENTS / SYSTEM / USER 等核心文件与花钱策略始终要你确认（ADR-014）',
+  'ui.auto_adopted': '自动采纳',
+  'ui.low_risk': '低风险',
+  'ui.core_file_needs_your_confirmation': '核心文件：需要你确认',
 };

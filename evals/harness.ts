@@ -31,7 +31,7 @@ export class ScriptedModel {
   get used(): number { return this.i; }
 }
 
-export interface HarnessOpts { contextWindow?: number; imageVendor?: string; roles?: Partial<Record<RoleId, string>>; online?: () => boolean; approve?: (p: PendingItem) => 'allow' | 'deny' | 'remember' | 'wait'; limits?: Partial<Limits>; flags?: { planner?: boolean; subtasks?: boolean }; mode?: 'native' | 'json'; spentToday?: number; spendGuard?: { guard: SpendGuard; state: SpendState } }
+export interface HarnessOpts { contextWindow?: number; imageVendor?: string; roles?: Partial<Record<RoleId, string>>; online?: () => boolean; approve?: (p: PendingItem) => 'allow' | 'deny' | 'remember' | 'wait'; limits?: Partial<Limits>; flags?: { planner?: boolean; subtasks?: boolean }; mode?: 'native' | 'json'; spentToday?: number; spendGuard?: { guard: SpendGuard; state: SpendState }; autoLowRisk?: boolean }
 export async function makeHarness(script: ScriptTurn[], o: HarnessOpts = {}, fallback?: (i: ModelInput) => ScriptTurn | null) {
   const vfs = new Vfs(memoryVfsBackend(), () => new Date('2026-10-23T07:33:00Z'));
   await initVfs(vfs);
@@ -102,6 +102,7 @@ export async function makeHarness(script: ScriptTurn[], o: HarnessOpts = {}, fal
     online: o.online,
     spentToday: async () => o.spentToday ?? 0,
     ...(o.spendGuard ? { spendGuard: async () => o.spendGuard! } : {}),
+    ...(o.autoLowRisk !== undefined ? { autoLowRisk: async () => o.autoLowRisk! } : {}),
     remembered: async () => remembered,
     remember: async (r) => { remembered.push(r); },
     knownNumbers: async () => knownNumbers(revenue, ctl.attr ?? computeAttribution(revenue)),

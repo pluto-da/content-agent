@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import {
-  validateRevenue, previewImport, computeAttribution, summarize, funnel, METHOD_LABEL, applyProposal, rollbackProposal, t as ct, sha256,
+  validateRevenue, previewImport, computeAttribution, summarize, funnel, METHOD_LABEL, applyProposal, rollbackProposal, evolutionRisk, t as ct, sha256,
   type RevenueRecord, type RevenueType, type ColumnMap, type ImportPreview, type Proposal, type Lesson, type MetricRecord,
 } from '@content-agent/shared';
 import { useT } from '../../../i18n';
@@ -152,7 +152,13 @@ export function GrowthPage() {
     try {
       const v = await getVfs(); const next = { ...p };
       if (act === 'approve') { const r = await applyProposal(v, next); show(`${t('ui.adopted')} → v${r.version}`); }
-      else if (act === 'rollback') { const r = await rollbackProposal(v, next); show(`${t('ui.rolled_back')} → v${r.version}`); }
+      else if (act === 'rollback') {
+        const r = await rollbackProposal(v, next);
+        // 1.0：记忆条目的回滚同时删掉对应的记忆记录
+        const mid = (p as Proposal & { memoryId?: string }).memoryId;
+        if (p.kind === 'memory' && mid) for (const row of await db.all('memories')) if (String(row.id) === mid || (row as Record<string, unknown>).entryId === mid) await db.del('memories', row.id);
+        show(`${t('ui.rolled_back')} → v${r.version}`);
+      }
       else { next.status = 'rejected'; next.decidedAt = new Date().toISOString(); show(t('ui.denied')); }
       await db.update('proposals', id, next as unknown as Record<string, unknown>);
       await audit({ kind: 'system_file_change', actor: 'user', summary: `${act === 'approve' ? '采纳' : act === 'rollback' ? '回滚' : '拒绝'}修订建议 ${p.id}（${p.target}）`, target: p.target, outcome: act === 'reject' ? 'denied' : 'ok' });
@@ -172,6 +178,7 @@ export function GrowthPage() {
         {!(props ?? []).length && <div className="card !p-0"><EmptyState icon="history" title={t('ui.no_proposals_yet')} why={t('ui.after_reviews_or_your_corrections')} /></div>}
         {(props ?? []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((p) => (
           <Section key={p.id} title={`${p.target} · ${t({ pending: '待确认', approved: '已采纳', rejected: '已拒绝', rolled_back: '已回滚' }[p.status])}`} testId={`proposal-${p.status}`}>
+            <div className="flex flex-wrap gap-2" data-testid="proposal-risk">{p.auto && <span className="v9-chip on">{t('ui.auto_adopted')}</span>}<span className="v9-chip">{(p.risk ?? evolutionRisk(p.target)) === 'low' ? t('ui.low_risk') : t('ui.core_file_needs_your_confirmation')}</span></div>
             <Note>{p.reason} · {t('ui.basis')}：{p.basedOn.join('、') || t('ui.your_request')} · {p.createdAt.slice(0, 10)}</Note>
             <DiffInline a={p.before} b={p.after} />
             <div className="flex flex-wrap gap-2">

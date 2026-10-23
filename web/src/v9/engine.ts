@@ -6,7 +6,7 @@
 import { syncNativeSchedule } from './reminders';
 import { type RoleRequest,
   AgentRuntime, LockManager, HARD_CONFIRM, BUDGET_CONFIRM, ToolRegistry, callError, createBuiltinTools, assemblePrefix, loadSemiotics, routeSkill, skillMeta, skillsDirectory, readLimits, flagOn, redact, findSecrets,
-  proposeMemory as ruleProposeMemory, searchMemory, forget, computeAttribution, summarize, knownNumbers, validateProposal, proposalFile, bm25Search, hybridSearch, configuredRoles, ROLE_IDS, sha256,
+  proposeMemory as ruleProposeMemory, autoApplyProposal, searchMemory, forget, computeAttribution, summarize, knownNumbers, validateProposal, proposalFile, bm25Search, hybridSearch, configuredRoles, ROLE_IDS, sha256,
   type RunStore, type RunRecord, type ToolCallRecord, type LockStore, type LockRecord, type ModelPort, type ModelTurn, type ToolServices, type ChatMessage, type ToolSpec as V9Tool, type MemoryEntry, type RevenueRecord, type Proposal, type CardSpec, type PendingItem,
 } from '@content-agent/shared';
 import { db, type Row } from '../local/db';
@@ -88,7 +88,7 @@ let turnCfg: ProviderConfig | null = null;
 async function currentCfg(): Promise<ProviderConfig | null> { return turnCfg ?? resolveProvider(await getModels(), pick); }
 
 /* ---------------- 工具服务（本机实现） ---------------- */
-const services: ToolServices = {
+export const services: ToolServices = {
   call: (role, req, o) => call(role, req, { signal: o.signal, runId: o.runId, toolCallId: o.toolCallId, conversationId: o.conversationId, override: o.override ?? null, task: o.task }),
   estimate: () => null,
   configured: () => true,
@@ -107,8 +107,13 @@ const services: ToolServices = {
     if (banned) return { ok: false, reason: '你之前要求不要记住这类信息' };
     await db.insert('memories', p.entry as unknown as Record<string, unknown>);
     const v = await getVfs(); const cur = (await v.text('memory/preferences.md')) ?? '# 偏好\n';
-    await v.write('memory/preferences.md', `${cur.replace(/\s*$/, '')}\n- ${p.entry.text}${p.entry.condition ? `（条件：${p.entry.condition}）` : ''}（来源：你说的，${p.entry.createdAt.slice(0, 10)}）\n`, { author: 'user_approved', note: 'memory_propose' });
-    await audit({ kind: 'memory_change', actor: 'user', summary: `记住：${p.entry.text}`, outcome: 'ok' });
+    const after = `${cur.replace(/\s*$/, '')}\n- ${p.entry.text}${p.entry.condition ? `（条件：${p.entry.condition}）` : ''}（来源：你说的，${p.entry.createdAt.slice(0, 10)}）\n`;
+    await v.write('memory/preferences.md', after, { author: 'user_approved', note: 'memory_propose' });
+    // 1.0 进化分级（ADR-014）：记忆条目属低风险；开关开着时没有弹确认，记一条已采纳的修订（成长记录可见、可一键回滚）
+    const auto = flagOn('evolution.autoLowRisk', await flags());
+    const prop: Proposal & { memoryId?: string } = { id: `P-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${sha256(after).slice(0, 6)}`, kind: 'memory', target: 'memory/preferences.md', before: cur, after, basedOn: [], evidenceLevel: 'user', status: 'approved', reason: `记住：${p.entry.text}`, createdAt: new Date().toISOString(), decidedAt: new Date().toISOString(), auto, risk: 'low', memoryId: p.entry.id };
+    await db.insert('proposals', prop as unknown as Record<string, unknown>);
+    await audit({ kind: 'memory_change', actor: auto ? 'agent' : 'user', summary: `${auto ? '自动采纳（低风险）' : '记住'}：${p.entry.text}`, target: 'memory/preferences.md', outcome: 'ok', detail: { proposal: prop.id, auto } });
     return { ok: true, path: 'memory/preferences.md' };
   },
   async forgetMemory(q) {
@@ -140,11 +145,14 @@ const services: ToolServices = {
     const errs = validateProposal({ kind, target, before, after }, hist);
     if (findSecrets(after).length) errs.push('内容里有疑似密钥');
     if (errs.length) return { ok: false, errors: errs };
-    const p: Proposal = { id: `P-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${sha256(after).slice(0, 6)}`, kind, target, before, after, basedOn: [], evidenceLevel: 'user', status: 'pending', reason, createdAt: new Date().toISOString() };
+    const p: Proposal = { id: `P-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${sha256(after).slice(0, 6)}`, kind: target.startsWith('memory/lessons/') ? 'lesson' : kind, target, before, after, basedOn: [], evidenceLevel: 'user', status: 'pending', reason, createdAt: new Date().toISOString() };
+    // 1.0 进化分级（ADR-014）：低风险（技能 / 记忆 / lesson）且开关开着 → 校验通过后自动采纳；核心文件仍等你看改动对比确认
+    const r = await autoApplyProposal(v, p, { autoLowRisk: flagOn('evolution.autoLowRisk', await flags()), history: hist });
+    if (r.errors.length) { await audit({ kind: 'system_file_change', actor: 'agent', summary: `修订建议被拒：${target}（${r.errors.join('；')}）`, target, outcome: 'denied' }); return { ok: false, errors: r.errors }; }
     await db.insert('proposals', p as unknown as Record<string, unknown>);
     await v.write(`workspace/proposals/${p.id}.md`, proposalFile(p), { author: 'system' }).catch(() => {});
-    await audit({ kind: 'system_file_change', actor: 'agent', summary: `提议修改 ${target}（待你确认）`, target, outcome: 'pending' });
-    return { ok: true, id: p.id };
+    await audit({ kind: 'system_file_change', actor: 'agent', summary: r.applied ? `自动采纳（低风险）：${target} → v${r.version}（成长记录可回滚）` : `提议修改 ${target}（${r.decision.why}）`, target, outcome: r.applied ? 'ok' : 'pending', detail: { proposal: p.id, risk: r.decision.risk, auto: r.applied } });
+    return { ok: true, id: p.id, auto: r.applied };
   },
   pollVideo: async (jobId, signal) => { const s = await getModelsV3(); return poll(s.roles.video.primary!, jobId, signal); },
   async search(q, _scope, k) {
@@ -298,6 +306,7 @@ export async function runTurnV9(o: TurnOpts & { pick?: { providerId?: string | n
     },
     online: () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false),
     spendGuard: () => guardPort(),
+    autoLowRisk: async () => flagOn('evolution.autoLowRisk', await flags()),
     spentToday: async () => { const d = new Date().toISOString().slice(0, 10); return (await db.all('usage_log')).filter((r) => String(r.at ?? '').startsWith(d)).reduce((s, r) => s + Number(r.cost ?? 0), 0); },
     remembered: async () => (await db.getKV<{ tool: string; scope: string }[]>('approvals.remembered')) ?? [],
     remember: async (r) => { const l = (await db.getKV<{ tool: string; scope: string }[]>('approvals.remembered')) ?? []; await db.setKV('approvals.remembered', [...l, r]); },

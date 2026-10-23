@@ -57,6 +57,8 @@ export interface ApprovalInput {
   remembered: { tool: string; scope: string }[]; scope?: string;
   /** 1.0 费用护栏（可选；不传等于不启用）：月度预算、按角色日上限。 */
   guard?: SpendGuard; spend?: SpendState;
+  /** 1.0 进化分级（ADR-014）：低风险目标（记忆、技能、lesson）且“自动生效”开关打开 → 不再弹记忆写入 / 修订建议确认（仍写审计、可回滚）。 */
+  lowRiskAuto?: boolean;
 }
 /** 代码硬性要求确认（即使 APPROVAL.md 删掉也照样确认）：视频、删除、系统文件、记忆写入。 */
 export const HARD_CONFIRM: ReadonlySet<ApprovalReason> = new Set(['video', 'delete', 'system_file', 'memory_write']);
@@ -64,8 +66,8 @@ export function needsApproval(i: ApprovalInput): { confirm: boolean; reasons: Ap
   const reasons: ApprovalReason[] = [];
   if (i.role === 'video') reasons.push('video');
   if (i.kind === 'delete') reasons.push('delete');
-  if (i.kind === 'system_file') reasons.push('system_file');
-  if (i.kind === 'memory') reasons.push('memory_write');
+  if (i.kind === 'system_file' && !i.lowRiskAuto) reasons.push('system_file');
+  if (i.kind === 'memory' && !i.lowRiskAuto) reasons.push('memory_write');
   if (i.kind === 'overwrite') reasons.push('overwrite');
   if (i.kind === 'model' || i.role) {
     if (i.estCost === null && i.mediaRole) reasons.push('unknown_price_media');
@@ -73,7 +75,7 @@ export function needsApproval(i: ApprovalInput): { confirm: boolean; reasons: Ap
     if (i.estCost !== null && i.spentToday + i.estCost >= i.thresholds.perDayConfirmYuan && i.estCost > 0) reasons.push('spend_day');
   }
   if ((i.kind === 'model' || i.role) && i.guard && i.spend) for (const r of budgetReasons(i.guard, i.spend, i.role ?? 'chat', i.estCost)) reasons.push(r);
-  if (i.level === 'L2' && !reasons.length) reasons.push('l2');
+  if (i.level === 'L2' && !reasons.length && !i.lowRiskAuto) reasons.push('l2');
   const hard = reasons.some((r) => HARD_CONFIRM.has(r) || BUDGET_CONFIRM.has(r));
   const rememberable = !hard && reasons.length > 0;
   const remembered = rememberable && i.remembered.some((r) => r.tool === i.tool && r.scope === (i.scope ?? '*'));

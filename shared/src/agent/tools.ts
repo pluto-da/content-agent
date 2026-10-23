@@ -31,6 +31,8 @@ export interface ToolSpec {
   /** L2 工具按参数判断是否真的需要确认（如“覆盖已有数据”才需要）；返回 false 时按 L1 处理（代码硬性项除外） */
   needsConfirm?(args: Record<string, unknown>): Promise<boolean>;
   approvalScope?(args: Record<string, unknown>): string;
+  /** 1.0 进化分级：这次调用的目标是否低风险（记忆 / 技能 / lesson），配合“自动生效”开关免确认。 */
+  lowRisk?(args: Record<string, unknown>): boolean;
   run(args: Record<string, unknown>, ctx: ToolRunCtx): Promise<ToolOutput>;
 }
 export const FORBIDDEN_TOOL = /(^|_)(publish|post|comment|reply_send|send_message|dm|like|follow|favorite|collect|push_draft|auto_click)(_|$)/;

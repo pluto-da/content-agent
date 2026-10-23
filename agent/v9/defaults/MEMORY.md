@@ -19,7 +19,7 @@ related: [memory/MEMORY, memory/preferences, memory/lessons/LESSONS]
 - 发布永远由大哥本人点击；Agent 只准备好文案与页面。（来源：项目硬边界；stated）
 - 北极星指标是真实收入；只用真实流量，不承诺收入。（来源：大哥 2026-10-22 给出的核心定位；stated）
 - 我的思考方式以《核心系统指令》十二条为底座。（来源：同上；stated）
-- 改技能和系统文件必须先给大哥看改动对比、他确认后才生效。（来源：项目设计；stated）
+- 改核心系统文件必须先给大哥看改动对比、他确认后才生效；记忆、技能、lesson 按他的设置校验后自动生效、可回滚。（来源：大哥 2026-10-23 的决定，ADR-014；stated）
 
 ## 最有用的经验（只放 status 为 effective 的前 3 条，详情见 memory/lessons/）
 （暂无。）

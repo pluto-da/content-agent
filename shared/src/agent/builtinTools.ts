@@ -2,6 +2,7 @@
  * 内置工具（6.19 + 8.13 + 0.8 工具中可本机实现的部分）：工具定义只有一份，服务（模型调用、媒体库、草稿、提醒、记忆、收益、VFS、热点）由调用方注入。
  * web 端注入 IndexedDB 实现；评测注入内存实现。没有任何对外写入工具（注册表强制）。
  */
+import { evolutionRisk } from '../evolution/index.js';
 import { ToolRegistry, type ToolOutput, type ToolSpec, type Source } from './tools.js';
 import { callError, type CallError } from '../models/errors.js';
 import type { CallResult } from '../models/runner.js';
@@ -29,7 +30,7 @@ export interface ToolServices {
   forgetMemory(query: string): Promise<{ removed: number; verifyHits: number }>;
   revenueSummary(): Promise<{ total: number; count: number; text: string }>;
   modelsStatus(): Promise<Record<string, { configured: boolean; model?: string; healthy?: boolean }>>;
-  proposeSystemFile(target: string, after: string, reason: string): Promise<{ ok: boolean; id?: string; errors?: string[] }>;
+  proposeSystemFile(target: string, after: string, reason: string): Promise<{ ok: boolean; id?: string; errors?: string[]; auto?: boolean }>;
   pollVideo(jobId: string, signal: AbortSignal): Promise<CallResult>;
   search(query: string, scope: string, k: number): Promise<{ mode: 'keyword' | 'vector'; hits: { id: string; title: string; score: number }[] }>;
   now(): Date;
@@ -95,7 +96,7 @@ export function createBuiltinTools(s: ToolServices): ToolRegistry {
   add({ name: 'reminder_create', title: '设提醒', description: '创建本机提醒（到点只提醒，不自动执行任何动作）。when 用大哥的原话，如“明早9点”', level: 'L1', idempotent: true, inputSchema: { type: 'object', required: ['text', 'when'], properties: { text: { type: 'string' }, when: { type: 'string' }, link: { type: 'string' } } },
     async run(a) { const w = parseWhenZh(String(a.when), s.now()); if (!w) return fail({ ...callError('unknown'), reason: `没看懂时间“${a.when}”`, advice: '请说具体时间，比如“明早 9 点”' }); const r = await s.addReminder({ text: String(a.text), at: w.at?.toISOString(), rrule: w.rrule, link: a.link as string | undefined }); return { ok: true, result: { id: r.id, when: w.text, at: w.at ? shDateTime(w.at) : undefined }, card: { type: 'reminder', data: { id: r.id, text: a.text, when: w.text } } }; } });
   add({ name: 'reminder_cancel', title: '取消提醒', description: '取消本机提醒', level: 'L1', idempotent: true, inputSchema: { type: 'object', required: ['target'], properties: { target: { type: 'string' } } }, async run(a) { const n = await s.cancelReminder(String(a.target)); return { ok: true, result: { cancelled: n } }; } });
-  add({ name: 'memory_propose', title: '记住偏好', description: '提议写入长期记忆（必须大哥点“记住”才写入）', level: 'L2', idempotent: true, kind: 'memory', noSubtask: true, inputSchema: { type: 'object', required: ['text'], properties: { text: { type: 'string' }, condition: { type: 'string' } } },
+  add({ name: 'memory_propose', title: '记住偏好', description: '写入长期记忆（低风险：“低风险改进自动生效”开着时校验通过即写入，可在成长记录回滚；关着时等大哥点“记住”）', level: 'L2', idempotent: true, kind: 'memory', lowRisk: () => true, noSubtask: true, inputSchema: { type: 'object', required: ['text'], properties: { text: { type: 'string' }, condition: { type: 'string' } } },
     async run(a) { const r = await s.proposeMemory(String(a.text), { condition: a.condition as string | undefined }); return r.ok ? { ok: true, result: r, card: { type: 'memory', data: { text: a.text, condition: a.condition, path: r.path } } } : fail({ ...callError('unknown'), reason: r.reason ?? '没有记住' }); } });
   add({ name: 'memory_delete', title: '忘掉', description: '检索并删除相关记忆，删除后再检索验证为 0，并写“不要记住”规则', level: 'L2', idempotent: true, kind: 'delete', noSubtask: true, inputSchema: { type: 'object', required: ['query'], properties: { query: { type: 'string' } } },
     async run(a) { const r = await s.forgetMemory(String(a.query)); return { ok: true, result: r, card: { type: 'memory', data: { forgotten: r.removed, verifyHits: r.verifyHits } } }; } });
@@ -103,7 +104,7 @@ export function createBuiltinTools(s: ToolServices): ToolRegistry {
     async run(a) { const ids = a.ids as string[]; const all = ids.includes('*') ? (await s.listDrafts()).map((d) => d.id) : ids; const n = await s.deleteDrafts(all); return { ok: true, result: { deleted: n } }; } });
   add({ name: 'models_status', title: '模型状态', description: '各能力是否已接、默认模型、健康度', level: 'L0', idempotent: true, inputSchema: { type: 'object', properties: {} }, async run() { return { ok: true, result: await s.modelsStatus() }; } });
   add({ name: 'revenue_summary', title: '收益汇总', description: '汇总大哥录入或导入的收入（没有数据就说没有）', level: 'L0', idempotent: true, inputSchema: { type: 'object', properties: {} }, async run() { const r = await s.revenueSummary(); return { ok: true, result: r, card: { type: 'revenue', data: r } }; } });
-  add({ name: 'system_file_propose', title: '修订建议', description: '对系统文件或技能提出修订建议（生成改动对比，大哥确认后才生效；BOUNDARIES.md 不接受）', level: 'L2', idempotent: true, kind: 'system_file', noSubtask: true, inputSchema: { type: 'object', required: ['target', 'after', 'reason'], properties: { target: { type: 'string' }, after: { type: 'string' }, reason: { type: 'string' } } },
-    async run(a) { const r = await s.proposeSystemFile(String(a.target), String(a.after), String(a.reason)); return r.ok ? { ok: true, result: r, card: { type: 'proposal', data: { id: r.id, target: a.target } } } : fail({ ...callError('unknown'), reason: `修订建议被拒：${(r.errors ?? []).join('；')}` }); } });
+  add({ name: 'system_file_propose', title: '修订建议', description: '对系统文件或技能提出修订建议（技能 / 记忆 / lesson 属低风险，开关开着时校验通过自动采纳、可回滚；SOUL / AGENTS / SYSTEM / USER 等核心文件生成改动对比，大哥确认后才生效；BOUNDARIES.md 不接受）', level: 'L2', idempotent: true, kind: 'system_file', lowRisk: (a) => evolutionRisk(String(a.target ?? '')) === 'low', noSubtask: true, inputSchema: { type: 'object', required: ['target', 'after', 'reason'], properties: { target: { type: 'string' }, after: { type: 'string' }, reason: { type: 'string' } } },
+    async run(a) { const r = await s.proposeSystemFile(String(a.target), String(a.after), String(a.reason)); return r.ok ? { ok: true, result: r, card: { type: 'proposal', data: { id: r.id, target: a.target, auto: !!r.auto } } } : fail({ ...callError('unknown'), reason: `修订建议被拒：${(r.errors ?? []).join('；')}` }); } });
   return reg;
 }

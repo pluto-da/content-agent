@@ -32,7 +32,7 @@ for (const f of files) {
   const lines = s.split('\n').filter((l) => CJK.test(l) && !/^\s*(\/\/|\*|\/\*)/.test(l)).length;
   if (lines) residual[rel] = lines;
 }
-let coreMissing = [];
+let coreMissing;
 try { const core = fs.readFileSync(path.join(ROOT, 'shared/src/core/i18n.ts'), 'utf8'); const block = (name) => { const i = core.indexOf(`const ${name}: Catalog = {`) >= 0 ? core.indexOf(`const ${name}: Catalog = {`) : core.indexOf(`export const ${name}: Catalog = {`); const j = core.indexOf('\n};', i); return new Set([...core.slice(i, j).matchAll(/'([a-z_.]+)':/g)].map((m) => m[1])); }; const z = block('ZH'), e = block('EN'); coreMissing = [...z].filter((k) => !e.has(k)); } catch (e) { coreMissing = [`读取失败：${e.message}`]; }
 const report = {
   at: new Date().toISOString(),

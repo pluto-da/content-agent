@@ -37,8 +37,8 @@ export function shouldDegrade(l: Lesson, recentVsBaseline: number[], lim: Limits
   return tail.length >= lim.degradeAfter && tail.every((x) => x < 0);
 }
 
-export type ProposalKind = 'skill_version' | 'system_file' | 'degrade' | 'rollback';
-export interface Proposal { id: string; kind: ProposalKind; target: string; basedOn: string[]; evidenceLevel: 'low' | 'medium' | 'high' | 'user'; status: 'pending' | 'approved' | 'rejected' | 'rolled_back'; before: string; after: string; reason: string; createdAt: string; decidedAt?: string; rejectReason?: string }
+export type ProposalKind = 'skill_version' | 'system_file' | 'degrade' | 'rollback' | 'memory' | 'lesson';
+export interface Proposal { id: string; kind: ProposalKind; target: string; basedOn: string[]; evidenceLevel: 'low' | 'medium' | 'high' | 'user'; status: 'pending' | 'approved' | 'rejected' | 'rolled_back'; before: string; after: string; reason: string; createdAt: string; decidedAt?: string; rejectReason?: string; auto?: boolean; risk?: EvolutionRisk }
 /** 提案校验器：拒绝针对 BOUNDARIES.md；删改 SOUL 第一部分要点；放宽 APPROVAL / REVENUE 红线；任何放宽边界的字样。 */
 export function validateProposal(p: Pick<Proposal, 'target' | 'before' | 'after' | 'kind'>, history: Proposal[] = [], now = new Date(), cooldownDays = 30): string[] {
   const errs: string[] = [];
@@ -62,28 +62,32 @@ export function proposalFile(p: Proposal): string {
   return `---\nid: workspace/proposals/${p.id}\ntype: proposal\ntitle: ${p.kind} · ${p.target}\nupdated: ${p.createdAt}\nversion: 1\neditable: system_only\nload: never\ntarget: ${p.target}\nkind: ${p.kind}\nbasedOn: [${p.basedOn.join(', ')}]\nevidenceLevel: ${p.evidenceLevel}\nstatus: ${p.status}\n---\n# 提案：${p.target}\n## 理由\n${p.reason}\n## 改动对比\n\`\`\`diff\n${unifiedDiff(p.before, p.after, `${p.target}（现在）`, `${p.target}（提议）`)}\n\`\`\`\n## 回滚方式\n成长记录里一键回滚到采纳前的版本。\n`;
 }
 /** 采纳：以 user_approved 写入目标文件（版本 +1），技能同时存 versions/vN.md，EVOLUTION.md 最近变更区追加一行。未确认的提案永不改变目标文件。 */
-export async function applyProposal(vfs: Vfs, p: Proposal, now = new Date()): Promise<{ version: number }> {
+export async function applyProposal(vfs: Vfs, p: Proposal, now = new Date(), o: { auto?: boolean } = {}): Promise<{ version: number }> {
   if (p.status !== 'pending') throw new Error('提案不是待确认状态');
   const errs = validateProposal(p);
   if (errs.length) throw new Error(errs.join('；'));
   const cur = await vfs.read(p.target);
   if ((cur?.content ?? '') !== p.before) throw new Error('目标文件在提案之后被改过，请重新生成提案');
   let after = p.after;
-  if (p.kind === 'skill_version' && /\/SKILL\.md$/.test(p.target)) {
+  if (p.kind === 'skill_version' && /\/SKILL\.md$/.test(p.target) && p.before.trim()) {
     const v = Number(parseDoc(p.before).fm.version ?? 1) + 1;
     after = patchFM(after, { version: v, status: 'testing' });
     await vfs.write(p.target.replace('SKILL.md', `versions/v${v - 1}.md`), p.before, { author: 'user_approved', note: `archive v${v - 1}` }).catch(() => {});
     await vfs.write(p.target.replace('SKILL.md', `versions/v${v}.md`), after, { author: 'user_approved', note: `v${v} from ${p.id}` });
   }
-  const f = await vfs.write(p.target, after, { author: 'user_approved', expectedVersion: cur?.version, note: `proposal ${p.id}` });
-  await appendEvolution(vfs, `${now.toISOString().slice(0, 10)} 采纳 ${p.id}：${p.target}（${p.kind}，依据 ${p.basedOn.join('、') || '用户要求'}）→ v${f.version}`);
+  const f = await vfs.write(p.target, after, { author: 'user_approved', expectedVersion: cur?.version, note: `${o.auto ? 'auto ' : ''}proposal ${p.id}` });
+  await appendEvolution(vfs, `${now.toISOString().slice(0, 10)} ${o.auto ? '自动采纳（低风险）' : '采纳'} ${p.id}：${p.target}（${p.kind}，依据 ${p.basedOn.join('、') || '用户要求'}）→ v${f.version}`);
   p.status = 'approved'; p.decidedAt = now.toISOString();
   return { version: f.version };
 }
 export async function rollbackProposal(vfs: Vfs, p: Proposal, now = new Date()): Promise<{ version: number }> {
   if (p.status !== 'approved') throw new Error('只有已采纳的提案可以回滚');
   const cur = await vfs.read(p.target);
-  const f = await vfs.write(p.target, p.before, { author: 'user_approved', expectedVersion: cur?.version, note: `rollback ${p.id}` });
+  // 追加型（记忆条目 / 文件在采纳后又被改过）：只撤掉这次新增的行，不覆盖之后的改动
+  const curText = cur?.content ?? '';
+  const added = addedLines(p.before, p.after);
+  const restore = curText === p.after || !added.length ? p.before : curText.split('\n').filter((l) => !added.includes(l)).join('\n');
+  const f = await vfs.write(p.target, restore, { author: 'user_approved', expectedVersion: cur?.version, note: `rollback ${p.id}` });
   await appendEvolution(vfs, `${now.toISOString().slice(0, 10)} 回滚 ${p.id}：${p.target} → v${f.version}`);
   p.status = 'rolled_back'; p.decidedAt = now.toISOString();
   return { version: f.version };
@@ -93,4 +97,49 @@ export async function appendEvolution(vfs: Vfs, line: string): Promise<void> {
   const marker = /## 最近变更[^\n]*\n/.exec(cur);
   const next = marker ? cur.replace(marker[0], `${marker[0]}- ${line}\n`) : `${cur.replace(/\s*$/, '')}\n\n## 最近变更（自动维护，最近 5 条）\n- ${line}\n`;
   await vfs.write('EVOLUTION.md', next, { author: 'system', note: 'evolution log' });
+}
+
+/* ---------------- 1.0 进化分级自动生效（ADR-014） ---------------- */
+/**
+ * 低风险（经现有校验通过后自动采纳，写审计、成长记录可见、可一键回滚；设置开关 evolution.autoLowRisk 默认开）：
+ *   记忆条目（memory/ 下，不含根 MEMORY.md）、技能文件（skills/ 下新增与修订）、lesson（memory/lessons/）。
+ * 高风险（永远要用户看 diff 确认）：根系统文件（SOUL / AGENTS / SYSTEM / IDENTITY / USER / MEMORY / TOOLS / APPROVAL / BOUNDARIES / HEARTBEAT /
+ *   PROACTIVE_PREFERENCES / REVENUE / EVOLUTION）、config/（含花钱阈值 limits.json、加载顺序）、semiotics/、docs/ 以及任何其他路径（默认按高风险）。
+ * BOUNDARIES.md 与放宽边界的内容仍由 validateProposal 直接拒绝，不分级。
+ */
+export type EvolutionRisk = 'low' | 'high';
+export const HIGH_RISK_ROOT = ['SOUL.md', 'AGENTS.md', 'SYSTEM.md', 'IDENTITY.md', 'USER.md', 'MEMORY.md', 'TOOLS.md', 'APPROVAL.md', 'BOUNDARIES.md', 'HEARTBEAT.md', 'PROACTIVE_PREFERENCES.md', 'REVENUE.md', 'EVOLUTION.md'];
+export function evolutionRisk(target: string): EvolutionRisk {
+  const t = target.replace(/^\/+/, '');
+  if (HIGH_RISK_ROOT.includes(t) || t.includes('..')) return 'high';
+  if (/^skills\/[a-z0-9][a-z0-9-]*\//.test(t)) return 'low';
+  if (/^memory\/(lessons|people|topics|daily)\//.test(t) || t === 'memory/preferences.md') return 'low';
+  return 'high';
+}
+export interface AutoDecision { auto: boolean; risk: EvolutionRisk; why: string }
+export function autoDecision(target: string, autoLowRisk: boolean): AutoDecision {
+  const risk = evolutionRisk(target);
+  if (risk === 'high') return { auto: false, risk, why: '核心规则文件，必须你看改动对比后确认' };
+  if (!autoLowRisk) return { auto: false, risk, why: '“低风险改进自动生效”已关闭，等你确认' };
+  return { auto: true, risk, why: '低风险改进，校验通过后自动采纳；成长记录里可一键回滚' };
+}
+/**
+ * 自动采纳：只对低风险目标、且开关打开时生效；先跑 validateProposal（硬边界 / 放宽字样 / 冷却），写入时 VFS 再做密钥拦截、大小与命名校验；
+ * 任何一项不过都抛错，不写入。成功后提案状态 approved + auto=true，可用 rollbackProposal 回滚。
+ */
+export async function autoApplyProposal(vfs: Vfs, p: Proposal, o: { autoLowRisk: boolean; history?: Proposal[]; now?: Date }): Promise<{ applied: boolean; version?: number; decision: AutoDecision; errors: string[] }> {
+  const decision = autoDecision(p.target, o.autoLowRisk);
+  p.risk = decision.risk;
+  const errors = validateProposal(p, o.history ?? [], o.now ?? new Date());
+  if (errors.length) return { applied: false, decision, errors };
+  if (!decision.auto) return { applied: false, decision, errors: [] };
+  try {
+    const r = await applyProposal(vfs, p, o.now ?? new Date(), { auto: true });
+    p.auto = true;
+    return { applied: true, version: r.version, decision, errors: [] };
+  } catch (e) { return { applied: false, decision, errors: [String((e as Error)?.message ?? e)] }; }
+}
+export function addedLines(before: string, after: string): string[] {
+  const b = new Set(before.split('\n'));
+  return after.split('\n').filter((l) => l.trim() && !b.has(l));
 }

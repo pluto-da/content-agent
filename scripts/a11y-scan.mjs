@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global window */
 /**
  * 1.0 可访问性与多语言扫描：Playwright + @axe-core/playwright（WCAG 2.0/2.1 A/AA 规则），中文 / 英文 × 手机浅 / 手机深 / 电脑浅，逐页扫描；
  * 同时收集英文界面下的运行时漏翻（window.__caI18nMiss）。无服务端：托管 web/dist、屏蔽 /api；演示数据见 scripts/a11y-seed.js（不含 Key）。

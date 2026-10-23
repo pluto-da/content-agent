@@ -76,12 +76,12 @@ describe('特性开关', () => {
 });
 
 describe('文案集中 i18n', () => {
-  it('插值、英文缺失回退中文、未知 id 原样', () => {
+  it('插值、英文齐全（1.0 起缺失 0）、未知 id 原样', () => {
     expect(t('err.model_not_found', { model: 'qwen3.7-plsu' })).toContain('模型名「qwen3.7-plsu」在这家服务里不存在');
     expect(t('agent.stopped', {}, 'en')).toMatch(/Stopped/);
-    expect(t('err.quota', { vendor: '智谱' }, 'en')).toContain('智谱余额不足');
+    expect(t('err.quota', { vendor: '智谱' }, 'en')).toContain('智谱 is out of balance');
     expect(t('nope.id')).toBe('nope.id');
-    expect(missingIds('en').length).toBeGreaterThan(0);
+    expect(missingIds('en')).toEqual([]);   // 1.0：英文缺失 0（原断言 >0 是 0.9 时英文未齐的现状）
   });
 });
 

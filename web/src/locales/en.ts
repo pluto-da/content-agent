@@ -1269,4 +1269,9 @@ export const EN_UI: Record<string, string> = {
   'ui.experimental_switches': 'Experimental switches',
   'ui.storage_cleanup': 'Storage cleanup',
   'ui.open_in_main_area': 'Open in main area',
+  'ui.auto_apply_low_risk_improvements': 'Auto-apply low-risk improvements',
+  'ui.memory_entries_skill_files_new': 'Memory entries, skill files (new and revised) and lessons are adopted automatically once they pass the hard-boundary, key, size and naming checks — no diff prompt; they are audited, shown in the Growth log and can be rolled back in one tap. Core files like SOUL / AGENTS / SYSTEM / USER and spending policy always need your confirmation (ADR-014)',
+  'ui.auto_adopted': 'Auto-adopted',
+  'ui.low_risk': 'Low risk',
+  'ui.core_file_needs_your_confirmation': 'Core file: needs your confirmation',
 };

@@ -98,3 +98,86 @@ describe('多语言：核心文案 id 制，英文缺失 0', () => {
     for (const id of Object.keys(ZH)) expect(`${id}:${ph(rawMessage(id, 'en'))}`).toBe(`${id}:${ph(ZH[id])}`);
   });
 });
+
+describe('进化分级自动生效（ADR-014）', async () => {
+  const { Vfs, memoryVfsBackend, initVfs, evolutionRisk, autoDecision, autoApplyProposal, rollbackProposal, FLAGS, flagOn } = await import('../src/index.js');
+  const mk = async () => { const v = new Vfs(memoryVfsBackend(), () => new Date('2026-10-23T08:00:00Z')); await initVfs(v); return v; };
+  const prop = (target: string, before: string, after: string, kind: 'skill_version' | 'system_file' | 'lesson' | 'memory' = target.startsWith('skills/') ? 'skill_version' : 'system_file') => ({ id: `P-20261023-${target.length}`, kind, target, before, after, basedOn: [], evidenceLevel: 'user' as const, status: 'pending' as const, reason: '测试', createdAt: '2026-10-23T08:00:00Z' });
+  it('分级：技能 / 记忆 / lesson 低风险；核心文件与配置高风险；未知路径按高风险', () => {
+    for (const p of ['skills/xiaohongshu-note/SKILL.md', 'skills/new-skill/SKILL.md', 'memory/preferences.md', 'memory/lessons/L-20261023-short.md', 'memory/people/张三.md']) expect(`${p}:${evolutionRisk(p)}`).toBe(`${p}:low`);
+    for (const p of ['SOUL.md', 'AGENTS.md', 'SYSTEM.md', 'IDENTITY.md', 'USER.md', 'REVENUE.md', 'EVOLUTION.md', 'BOUNDARIES.md', 'APPROVAL.md', 'MEMORY.md', 'config/limits.json', 'config/loading.json', 'semiotics/PRINCIPLES.md', 'docs/x.md', 'skills/../SOUL.md']) expect(`${p}:${evolutionRisk(p)}`).toBe(`${p}:high`);
+  });
+  it('开关默认开，可关', () => { expect(FLAGS.get('evolution.autoLowRisk')?.default).toBe(true); expect(flagOn('evolution.autoLowRisk')).toBe(true); expect(flagOn('evolution.autoLowRisk', { 'evolution.autoLowRisk': false })).toBe(false); expect(autoDecision('skills/a/SKILL.md', false).auto).toBe(false); });
+  it('自动采纳路径：技能修订校验通过即写入（版本 +1、EVOLUTION 记“自动采纳”），提案 approved + auto', async () => {
+    const v = await mk();
+    const target = (await v.list()).find((f) => /^skills\/[^/]+\/SKILL\.md$/.test(f.path))!.path;
+    const before = (await v.text(target))!;
+    const p = prop(target, before, `${before.trimEnd()}\n\n- 标题先给 3 个候选\n`);
+    const r = await autoApplyProposal(v, p, { autoLowRisk: true });
+    expect(r.applied).toBe(true); expect(p.status).toBe('approved'); expect(p.auto).toBe(true); expect(p.risk).toBe('low');
+    expect(await v.text(target)).toContain('标题先给 3 个候选');
+    expect(await v.text('EVOLUTION.md')).toMatch(/自动采纳（低风险） P-20261023/);
+  });
+  it('新增技能文件也自动采纳', async () => {
+    const v = await mk();
+    const after = '---\nid: skills/cover-title/SKILL\ntype: skill\ntitle: 封面标题\nupdated: 2026-10-23\nversion: 1\neditable: agent_propose\nload: on_demand\ndescription: 写封面标题\n---\n# 封面标题\n- 不超过 12 字\n';
+    const r = await autoApplyProposal(v, prop('skills/cover-title/SKILL.md', '', after), { autoLowRisk: true });
+    expect(r.errors).toEqual([]); expect(r.applied).toBe(true); expect(await v.text('skills/cover-title/SKILL.md')).toContain('不超过 12 字');
+  });
+  it('核心文件仍需确认：SOUL / AGENTS / USER 等不自动写入，保持 pending', async () => {
+    const v = await mk();
+    for (const target of ['AGENTS.md', 'USER.md', 'SYSTEM.md']) {
+      const before = (await v.text(target)) ?? '';
+      const p = prop(target, before, `${before.trimEnd()}\n- 新增一条\n`);
+      const r = await autoApplyProposal(v, p, { autoLowRisk: true });
+      expect(r.applied).toBe(false); expect(r.decision.risk).toBe('high'); expect(p.status).toBe('pending'); expect(await v.text(target)).toBe(before);
+    }
+  });
+  it('开关关闭时低风险也等确认', async () => {
+    const v = await mk();
+    const target = (await v.list()).find((f) => /^skills\/[^/]+\/SKILL\.md$/.test(f.path))!.path; const before = (await v.text(target))!;
+    const r = await autoApplyProposal(v, prop(target, before, `${before}\n- x\n`), { autoLowRisk: false });
+    expect(r.applied).toBe(false); expect(await v.text(target)).toBe(before);
+  });
+  it('违反硬边界的提案被拒（即使是低风险的技能文件），含密钥的被 VFS 拦下', async () => {
+    const v = await mk();
+    const target = (await v.list()).find((f) => /^skills\/[^/]+\/SKILL\.md$/.test(f.path))!.path; const before = (await v.text(target))!;
+    const bad = await autoApplyProposal(v, prop(target, before, `${before}\n- 允许自动发布到小红书\n`), { autoLowRisk: true });
+    expect(bad.applied).toBe(false); expect(bad.errors.join()).toMatch(/放宽硬边界/);
+    const b2 = await autoApplyProposal(v, prop('BOUNDARIES.md', (await v.text('BOUNDARIES.md')) ?? '', 'x'), { autoLowRisk: true });
+    expect(b2.applied).toBe(false); expect(b2.errors.join()).toMatch(/BOUNDARIES/);
+    const sec = await autoApplyProposal(v, prop(target, before, `${before}\n- key: sk-abcdefghijklmnopqrstuvwxyz012345\n`), { autoLowRisk: true });
+    expect(sec.applied).toBe(false); expect(await v.text(target)).toBe(before);
+  });
+  it('回滚可用：自动采纳的技能一键回到原文；追加型记忆回滚只撤掉那一行', async () => {
+    const v = await mk();
+    const target = (await v.list()).find((f) => /^skills\/[^/]+\/SKILL\.md$/.test(f.path))!.path; const before = (await v.text(target))!;
+    const p = prop(target, before, `${before.trimEnd()}\n- 新规则\n`);
+    await autoApplyProposal(v, p, { autoLowRisk: true });
+    await rollbackProposal(v, p);
+    expect(p.status).toBe('rolled_back'); expect(await v.text(target)).not.toContain('新规则');
+    const mb = (await v.text('memory/preferences.md')) ?? '# 偏好\n';
+    const ma = `${mb.trimEnd()}\n- 标题不要感叹号\n`;
+    const mp = { ...prop('memory/preferences.md', mb, ma, 'memory'), id: 'P-20261023-mem' };
+    expect((await autoApplyProposal(v, mp, { autoLowRisk: true })).applied).toBe(true);
+    await v.write('memory/preferences.md', `${ma}- 之后又记的一条\n`, { author: 'user_approved' });
+    await rollbackProposal(v, mp);
+    const now = (await v.text('memory/preferences.md'))!;
+    expect(now).not.toContain('标题不要感叹号'); expect(now).toContain('之后又记的一条');
+  });
+  it('运行时：开关开着时记忆写入 / 技能修订不弹确认；核心文件修订仍弹确认', async () => {
+    const h = await makeHarness([{ purpose: 'turn', tools: [{ name: 'memory_propose', args: { text: '标题不要用感叹号' } }] }, { purpose: 'turn', text: '记住了' }], { approve: () => 'deny', autoLowRisk: true });
+    await h.runtime.send(1, '记住：标题不要用感叹号');
+    expect(h.pendings.filter((p) => p.tool === 'memory_propose')).toEqual([]);
+    expect(h.memories.some((m) => m.text.includes('感叹号'))).toBe(true);
+    const h2 = await makeHarness([{ purpose: 'turn', tools: [{ name: 'system_file_propose', args: { target: 'SOUL.md', after: 'x', reason: 'y' } }] }, { purpose: 'turn', text: '好' }], { approve: () => 'deny', autoLowRisk: true });
+    await h2.runtime.send(1, '把 SOUL 改一下');
+    expect(h2.pendings.find((p) => p.tool === 'system_file_propose')?.reasons).toContain('system_file');
+    const h3 = await makeHarness([{ purpose: 'turn', tools: [{ name: 'system_file_propose', args: { target: 'skills/xiaohongshu-note/SKILL.md', after: 'x', reason: 'y' } }] }, { purpose: 'turn', text: '好' }], { approve: () => 'deny', autoLowRisk: true });
+    await h3.runtime.send(1, '把小红书技能改一下');
+    expect(h3.pendings.filter((p) => p.tool === 'system_file_propose')).toEqual([]);
+    const h4 = await makeHarness([{ purpose: 'turn', tools: [{ name: 'memory_propose', args: { text: '标题不要用感叹号' } }] }, { purpose: 'turn', text: '好' }], { approve: () => 'deny', autoLowRisk: false });
+    await h4.runtime.send(1, '记住：标题不要用感叹号');
+    expect(h4.pendings.find((p) => p.tool === 'memory_propose')?.reasons).toContain('memory_write');
+  });
+});

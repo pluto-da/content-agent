@@ -30,8 +30,8 @@ related: [memory/lessons/LESSONS, workspace/proposals, data/experiments]
 candidate（刚提出）→ testing（验证中）→ effective（有效）→ degraded（降级：连续 3 次低于对照或基线，或平台规则变了）→ retired（废弃）。degraded 的打法不再用于新内容推荐，只在复盘里出现。
 
 ## 改动权限
-- lessons：我提议，大哥确认（可批量）。
-- 技能新版本、SOUL / AGENTS / SYSTEM / REVENUE / TOOLS 等系统文件：只出修订建议（改动对比 + 依据 lesson + 风险 + 回滚方式），逐条确认后由运行时写入，版本 +1。
+- 低风险（ADR-014）：lessons、记忆条目、技能文件（新增与新版本）——“低风险改进自动生效”开着时（默认），经硬边界 / 密钥 / 大小与命名校验通过后由运行时自动采纳，版本 +1，写审计并在成长记录标“自动采纳”，可一键回滚；关着时我提议、大哥确认。
+- 高风险：SOUL / AGENTS / SYSTEM / IDENTITY / USER / REVENUE / EVOLUTION / APPROVAL / TOOLS 等系统文件、config/（含花钱阈值）：只出修订建议（改动对比 + 依据 lesson + 风险 + 回滚方式），逐条确认后由运行时写入，版本 +1。
 - BOUNDARIES.md：永不提修改。
 - 任何版本都能回滚；回滚本身也记一条变更。
 
