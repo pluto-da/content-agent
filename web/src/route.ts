@@ -98,7 +98,7 @@ export function parseHash(hash: string): Route {
   const [space, sub = '', id = null] = path.split('/') as [string, string?, string?];
   switch (space) {
     case 'p': return sub && /^[a-z0-9_-]+$/i.test(sub) ? { space: 'p', sub, id: null } : { space: 'agent', sub: '', id: null };
-    case 'me': return { space: 'me', sub: (ME_SUBS as readonly string[]).includes(sub) ? sub : '', id: sub === 'models' ? id : null };
+    case 'me': return { space: 'me', sub: (ME_SUBS as readonly string[]).includes(sub) ? sub : '', id: sub === 'models' || (sub === 'status' && id === 'cards') ? id : null };
     case 'onboarding': return { space: 'onboarding', sub: '', id: null };
     default: {
       const s = (AGENT_SUBS as readonly string[]).includes(sub) ? sub : '';

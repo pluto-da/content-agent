@@ -19,7 +19,7 @@ const num = (s: string | undefined) => Number(s);
 const byNewest = (a: Row, b: Row) => b.id - a.id;
 const TRANSITIONS: Record<string, string[]> = { pending: ['approved', 'rejected'], rejected: ['pending'], approved: ['handed_off', 'pending'], handed_off: ['approved'] };
 
-on('GET', /^\/api\/health$/, async () => ({ ok: true, version: '0.9.0', mode: 'local' }));
+on('GET', /^\/api\/health$/, async () => ({ ok: true, version: '0.10.0', mode: 'local' }));
 
 /* ---------- 草稿 ---------- */
 on('GET', /^\/api\/drafts$/, async (_m, _b, q) => {

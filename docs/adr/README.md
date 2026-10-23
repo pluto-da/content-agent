@@ -12,3 +12,6 @@
 - [ADR-008 Agent 文件系统（VFS）+ 系统文件只能经用户确认修改](ADR-008.md)
 - [ADR-009 提醒与心跳只在本机、只通知](ADR-009.md)
 - [ADR-010 评测以回放为主、真实模型为辅](ADR-010.md)
+- [ADR-011 Key 加密后端可插拔；安卓用 AndroidKeyStore 硬件主密钥](ADR-011.md)
+- [ADR-012 AIGC 隐式标识：纯 TS 改写元数据，保留服务商已有标识](ADR-012.md)
+- [ADR-013 安卓传输与提醒：JS 构造 multipart 兜底；系统闹钟预排提醒](ADR-013.md)

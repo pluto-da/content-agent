@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm ci
+      - name: external tools for AIGC checks (exiftool / ffprobe, distro packages)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libimage-exiftool-perl ffmpeg >/dev/null || echo "exiftool/ffmpeg 未装上：AIGC 外部校验将跳过，accept:v10 记为部分"
       - name: typecheck
         run: npm run typecheck
       - name: lint
@@ -41,13 +43,19 @@ jobs:
       - name: accept:v9 (C1–C56)
         if: always()
         run: node scripts/accept-v9.mjs
+      - name: accept:v10 (ROADMAP 0.10)
+        if: always()
+        run: node scripts/accept-v10.mjs --strict
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: reports-0.9.0
+          name: reports-0.10.0
           path: |
             out/accept-v9.json
             out/accept-v9.md
+            out/accept-v10.json
+            out/accept-v10.md
+            out/aigc-v10/
             out/eval-report-0.9.0.json
             out/eval-report-0.9.0.md
             out/vfs-doctor-report.json
