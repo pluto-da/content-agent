@@ -6,7 +6,7 @@
 import { syncNativeSchedule } from './reminders';
 import { type RoleRequest,
   AgentRuntime, LockManager, ToolRegistry, callError, createBuiltinTools, assemblePrefix, loadSemiotics, routeSkill, skillMeta, skillsDirectory, readLimits, flagOn, redact, findSecrets,
-  proposeMemory as ruleProposeMemory, searchMemory, forget, computeAttribution, summarize, knownNumbers, validateProposal, proposalFile, bm25Search, configuredRoles, ROLE_IDS, sha256,
+  proposeMemory as ruleProposeMemory, searchMemory, forget, computeAttribution, summarize, knownNumbers, validateProposal, proposalFile, bm25Search, hybridSearch, configuredRoles, ROLE_IDS, sha256,
   type RunStore, type RunRecord, type ToolCallRecord, type LockStore, type LockRecord, type ModelPort, type ModelTurn, type ToolServices, type ChatMessage, type ToolSpec as V9Tool, type MemoryEntry, type RevenueRecord, type Proposal, type CardSpec, type PendingItem,
 } from '@content-agent/shared';
 import { db, type Row } from '../local/db';
@@ -148,6 +148,12 @@ const services: ToolServices = {
   pollVideo: async (jobId, signal) => { const s = await getModelsV3(); return poll(s.roles.video.primary!, jobId, signal); },
   async search(q, _scope, k) {
     const docs = [...(await db.all('drafts')).map((d) => ({ path: `draft:${d.id}`, text: `${d.title ?? ''} ${d.body ?? ''}` })), ...Object.entries(await vfsFiles()).filter(([p]) => p.startsWith('memory/')).map(([path, text]) => ({ path, text }))];
+    // 0.11.0：search.vector（beta）打开时用 BM25 + 向量混合；接了 embed 角色就用它，没接用本机轻量嵌入；向量失败退回关键词并如实标注
+    if (flagOn('search.vector', await flags())) {
+      const embed = (await isRoleConfigured('embed')) ? async (texts: string[]) => { const r = await call('embed', { role: 'embed', input: texts } as RoleRequest, {}); if (!r.ok || r.value.type !== 'vectors') throw new Error('embed 失败'); return r.value.vectors; } : undefined;
+      const r = await hybridSearch(docs, q, { k, embed });
+      return { mode: r.mode === 'keyword-fallback' ? 'keyword' : 'vector', hits: r.hits.map((h) => ({ id: h.path, title: h.snippet, score: h.score })) };
+    }
     return { mode: 'keyword', hits: bm25Search(docs, q, { k }).map((h) => ({ id: h.path, title: h.snippet, score: h.score })) };
   },
   now: () => new Date(),
