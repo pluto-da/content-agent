@@ -1,0 +1,12 @@
+# 1.1.0 偏离记录（原意 → 实际 → 理由）
+
+| 编号 | 原意（PROMPT-v1.1） | 实际 | 理由 |
+|---|---|---|---|
+| V11-01 | 平台技能位于 `app/agent/skills/platform-*` | 仓库里平台技能是 `agent/skills/<id>.md`（打包进 VFS 为 `skills/<id>/SKILL.md`，小红书以 `agent/v9/defaults/skills/xiaohongshu-note` 为准）；没有 `platform-*` 前缀。唯一真相源定为 VFS `skills/<id>/SKILL.md` | 按 main 最新代码复核（2.2 要求），不改目录名以免破坏 1.0 用户的技能版本历史 |
+| V11-02 | resolveModel 优先级只有一条链（任务指定 → 主模型 → 同服务商 → 其他 → 无） | 链前保留第 0 级“本轮临时指定”（输入框 @、编辑器里的本次选择），不持久化 | 这是用户在这一轮明确点选的模型，属于“用户指定”；不保留会让 0.10 的 @ 功能失效 |
+| V11-03 | — | accept-v9 的 C2 引用的测试名“分组、顺序、状态与已接 N/11 类”随 11 行模型页删除；C2 改引用 1.1.0 的“未配置时只有一个主按钮”测试，并在条目说明里写明被 D3/D4 取代 | 旧验收项描述的界面已按本轮要求删除，保留旧断言等于要求保留冲突 |
+| V11-04 | 画像“与 Agent 的 USER 文件同源，编辑即写 USER” | 编辑写 `user/profile.md`（USER.md 的详情文件，front matter `related: [user/profile]`，带版本），不改 USER.md 本身的结构 | USER.md 的结构性规则属高风险系统文件，按第十二部分只能写进 proposals 等确认（见 proposals-v1.1 P3） |
+| V11-05 | 硬边界“代码中无第二份常量” | 界面已只读 BOUNDARIES.md（web 不再导入 HARD_BOUNDARIES）；服务端 `server/src/boundaries.ts` 的 HARD_BOUNDARIES（9 条，用于服务端提示词前缀与启动日志）仍在 | 让服务端从 BOUNDARIES.md 派生会改变送给模型的硬边界文本，属于高风险“硬边界”改动，写入 proposals-v1.1 P1 待确认 |
+| V11-06 | 热点来源“两处合并，以最近一次修改为准，冲突取并集并提示” | 审计确认两处入口写的是同一个 `prefs.hotSources`，没有第二个写入点，因此没有数据要合并；只删除了通用设置里的重复列表 | 按证据：不存在的冲突不做迁移，避免凭空造数据 |
+| V11-07 | 用 0.9 / 0.10 / 0.11 / 1.0 的备份文件各做一次恢复 → 迁移 → 使用 → 降级 | 测试里按各版本的真实备份格式（zip v3：manifest + vfs/ + data/ + kv/models_v3 v3、kv/profile、kv/assistants）现场生成四个备份，再走 restoreBackup；没有用户真实导出的历史备份文件 | 仓库与工作区里没有历史版本的真实导出文件；格式取自各版本的 backup.ts（四个版本备份包结构相同，0.9 无按任务路由） |
+| V11-08 | 能力自动识别“按能力声明、模型列表元数据和一次轻量探测” | 识别 = 适配器能力声明 ∩ 模型名规则（shared/unify.ts inferRoles），接入后自动跑一次现有探测（probe）验证；自定义 OpenAI 兼容地址只认名字里明示的生成型能力，其余由用户勾选 | 各家 /models 列表接口基本不返回能力字段；名字规则只写文档里常见的命名，宁少勿多，避免把未验证的能力点亮 |

@@ -100,7 +100,7 @@ function Playground({ role, go }: { role: RoleId; go: (to: string) => void }) {
   };
   const resultText = res?.ok ? (res.value.type === 'text' ? res.value.text : res.value.type === 'transcript' ? res.value.text : res.value.type === 'vectors' ? `${t('ui.vector_dimensions')} ${res.value.dims} × ${res.value.vectors.length}` : res.value.type === 'ranking' ? res.value.results.map((x) => `#${x.index} ${x.score.toFixed(3)}`).join('  ') : res.value.type === 'job' ? `${t('ui.task_submitted')}：${res.value.jobId}（${res.value.status}）` : '') : '';
   const toInbox = async () => { await addInbox({ kind: media[0] ? 'image' : 'text', text: resultText || text, image: media[0]?.dataUrl, title: `${t('ui.try_it')} · ${t(capName(role))}`, channel: 'paste' }); show(t('ui.sent_to_agent_asset_box')); };
-  const toDraft = async () => { const d = await db.insert('drafts', { platform: 'xiaohongshu', title: text.slice(0, 20) || t(capName(role)), body: resultText, status: 'pending', images: media.map((m) => m.dataUrl) }); show(t('ui.inserted_into_draft')); go(`agent/drafts/${d.id}`); };
+  const toDraft = async () => { const d = await db.insert('drafts', { platform: 'xiaohongshu', title: text.split('\n')[0].trim() || t(capName(role)), body: resultText, status: 'pending', images: media.map((m) => m.dataUrl) }); show(t('ui.inserted_into_draft')); go(`agent/drafts/${d.id}`); };
   return (
     <Section testId="playground">
       {toast}

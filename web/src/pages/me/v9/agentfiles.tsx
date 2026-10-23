@@ -164,7 +164,7 @@ export function MemoryPage() {
     await audit({ kind: 'memory_change', actor: 'user', summary: `忘掉：${q}（删除 ${f.removed.length} 条，复查命中 ${f.verifyHits}）`, outcome: 'ok' });
     show(`${t('ui.deleted')} ${f.removed.length} ${t('ui.items_re_check_hits')} ${f.verifyHits}`); reload();
   };
-  const saveEdit = async () => { if (!edit) return; await db.update('memories', edit.row, { text: edit.text, condition: edit.condition || undefined, source: 'user_edited', updatedAt: new Date().toISOString() }); await audit({ kind: 'memory_change', actor: 'user', summary: `编辑记忆：${edit.text.slice(0, 40)}`, outcome: 'ok' }); setEdit(null); reload(); };
+  const saveEdit = async () => { if (!edit) return; await db.update('memories', edit.row, { text: edit.text, condition: edit.condition || undefined, source: 'user_edited', updatedAt: new Date().toISOString() }); await audit({ kind: 'memory_change', actor: 'user', summary: `编辑记忆：${edit.text}`, outcome: 'ok' }); setEdit(null); reload(); };
   return (
     <div className="page page-narrow flex flex-col gap-3" data-testid="memory-page">
       {toast}
@@ -179,7 +179,7 @@ export function MemoryPage() {
               ) : <>
                 <span className="item-title !text-[15px]">{m.text}</span>
                 <span className="item-meta">{m.condition ? `${t('ui.condition')}：${m.condition} · ` : ''}{m.source === 'inferred' || m.confidence === 'inferred' ? t('ui.inferred') : m.source === 'user_edited' ? t('ui.edited_by_you') : t('ui.you_said')} · {String(m.createdAt ?? '').slice(0, 10)}</span>
-                <span className="flex gap-2">{id !== undefined && <><button type="button" className="ghost" onClick={() => setEdit({ row: id, text: m.text, condition: m.condition ?? '' })}>{t('ui.edit')}</button><button type="button" className="ghost danger" onClick={async () => { await db.del('memories', id); await audit({ kind: 'memory_change', actor: 'user', summary: `删除记忆：${m.text.slice(0, 40)}`, outcome: 'ok' }); reload(); }}>{t('ui.delete')}</button></>}</span>
+                <span className="flex gap-2">{id !== undefined && <><button type="button" className="ghost" onClick={() => setEdit({ row: id, text: m.text, condition: m.condition ?? '' })}>{t('ui.edit')}</button><button type="button" className="ghost danger" onClick={async () => { await db.del('memories', id); await audit({ kind: 'memory_change', actor: 'user', summary: `删除记忆：${m.text}`, outcome: 'ok' }); reload(); }}>{t('ui.delete')}</button></>}</span>
               </>}
             </li>
           ); })}

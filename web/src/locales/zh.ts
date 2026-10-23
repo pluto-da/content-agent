@@ -388,8 +388,6 @@ export const ZH_UI: Record<string, string> = {
   'ui.video': '视频',
   'ui.retrieval': '检索',
   'ui.chat': '文本对话',
-  'ui.reasoning': '深度推理',
-  'ui.fast_model': '快速小模型',
   'ui.vision': '看图理解',
   'ui.image': '生图',
   'ui.image_edit': '改图',

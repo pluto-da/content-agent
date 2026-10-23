@@ -73,11 +73,21 @@ jobs:
         run: |
           node scripts/i18n-audit.mjs >/dev/null || true
           node scripts/accept-v1.mjs --strict
+      # 1.1.0：D1–D17。out/vitest-*.json 由上面的单测步骤在本次 CI 现场生成（不读仓库里的旧结果）；
+      # 截图矩阵 / walkthrough / MiMo 实测 / 取回的产物清单作为 docs/ 与 evals/real/ 下的证据文件随提交带入。
+      - name: accept:v1.1 (D1–D17)
+        if: always()
+        run: |
+          ls -la out/vitest-*.json
+          node scripts/accept-v1.1.mjs --strict
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: reports-1.0.0
+          name: reports-1.1.0
           path: |
+            out/accept-v1.1.json
+            out/accept-v1.1.md
+            out/single-source.json
             out/accept-v9.json
             out/accept-v9.md
             out/accept-v10.json

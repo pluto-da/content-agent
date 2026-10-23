@@ -388,8 +388,6 @@ export const EN_UI: Record<string, string> = {
   'ui.video': 'Video',
   'ui.retrieval': 'Retrieval',
   'ui.chat': 'Chat',
-  'ui.reasoning': 'Reasoning',
-  'ui.fast_model': 'Fast model',
   'ui.vision': 'Vision',
   'ui.image': 'Image',
   'ui.image_edit': 'Image edit',
