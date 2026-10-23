@@ -1,0 +1,262 @@
+{
+  "version": "1.1.0",
+  "startedAt": "2026-10-23T21:23:16.087Z",
+  "baseURL": "https://api.xiaomimimo.com/v1",
+  "keyMode": "网络层按主机注入（脚本未读取真实 Key）",
+  "budgetYuan": 1,
+  "models": {
+    "chat": "mimo-v2.6-flash",
+    "vision": "mimo-v2.6-flash",
+    "tts": "mimo-v2.5-tts"
+  },
+  "steps": [
+    {
+      "id": "M0",
+      "name": "GET /models",
+      "ok": true,
+      "ms": 810,
+      "status": 200,
+      "models": [
+        "mimo-v2.5-asr",
+        "mimo-v2.5-tts",
+        "mimo-v2.5-tts-voiceclone",
+        "mimo-v2.5-tts-voicedesign",
+        "mimo-v2.6-flash",
+        "mimo-v2.6-pro",
+        "mimo-v2.6-pro-ultraspeed"
+      ],
+      "costYuan": 0
+    },
+    {
+      "id": "free-writing",
+      "name": "自由创作（mimo-v2.6-flash，free-writing 技能，思考关）",
+      "ok": true,
+      "criterion": "返回 JSON，含 title 与 ≥100 字正文，不带平台格式",
+      "resolved": {
+        "model": "mimo-v2.6-flash",
+        "via": "primary"
+      },
+      "ms": 15857,
+      "title": "下班后的二十分钟，我留给自己一件事",
+      "bodyChars": 321,
+      "bodyHead": "地铁到站，钥匙拧开门，鞋踢在玄关。换下衬衫的那一刻，一天里所有属于公司的事情就停在这里。\n\n我留出二十分钟，做一件固定的小事：把明天要穿的衣服、要带的东西、要回的三封邮件，挨个摆清楚。衣服挂在门后，电脑充电，水杯接满水，便签纸上只写三行字—",
+      "tags": [
+        "下班日常",
+        "自我提升",
+        "二十分钟",
+        "生活习惯",
+        "都市生活"
+      ],
+      "reasoningChars": 0,
+      "usage": {
+        "input": 334,
+        "output": 329,
+        "cached": 256,
+        "reasoning": 0
+      },
+      "costYuan": 0.000762
+    },
+    {
+      "id": "thinking",
+      "name": "思考开关（mimo-v2.6-flash，同一问题开 / 关各一次）",
+      "ok": true,
+      "criterion": "开：reasoning 非空且正文非空；关：reasoning 为空且正文非空；两次都按 usage 记账",
+      "runs": [
+        {
+          "id": "thinking-on",
+          "name": "对话 思考开（mimo-v2.6-flash，thinking=enabled）",
+          "ok": true,
+          "criterion": "返回思考内容（reasoning 非空）且正文非空",
+          "resolved": {
+            "model": "mimo-v2.6-flash",
+            "via": "primary"
+          },
+          "ms": 15647,
+          "reasoningChars": 625,
+          "reasoningHead": "The user asks whether the 3rd note (with 3000 reads) counts ",
+          "content": "第 3 篇的 3000 阅读是其余四篇均值（约 118）的 25 倍，相对本账号自身基线无疑是明显的流量峰值，算一次局部小爆款。但 3000 阅读的绝对量在公域里远够不上真正的爆款标准，只能算被算法偶然推了一把的优质信号。",
+          "usage": {
+            "input": 54,
+            "output": 290,
+            "cached": 0,
+            "reasoning": 198
+          },
+          "costYuan": 0.000634
+        },
+        {
+          "id": "thinking-off",
+          "name": "对话 思考关（mimo-v2.6-flash，thinking=disabled）",
+          "ok": true,
+          "criterion": "不走思考（reasoning 为空）且正文非空",
+          "resolved": {
+            "model": "mimo-v2.6-flash",
+            "via": "primary"
+          },
+          "ms": 3774,
+          "reasoningChars": 0,
+          "content": "以同期均值约708的标准看，3000是均值的4倍多，属显著异常高值，算爆款；但若以内容平台常见的数万/数十万阅读门槛论，3000仍属正常量级，不算爆款。",
+          "usage": {
+            "input": 56,
+            "output": 61,
+            "cached": 0,
+            "reasoning": 0
+          },
+          "costYuan": 0.000178
+        }
+      ],
+      "ms": 19421,
+      "costYuan": 0.000812
+    },
+    {
+      "id": "vision",
+      "name": "看图（mimo-v2.6-flash，本地 320×200 测试图：红圆、蓝方、文字 v1.1.0）",
+      "ok": true,
+      "criterion": "回答至少命中 红 / 蓝 / 圆 / v1.1.0 中的 3 项",
+      "resolved": {
+        "model": "mimo-v2.6-flash",
+        "via": "primary"
+      },
+      "ms": 5807,
+      "answer": "图中有红色的圆形和蓝色的方形，底部写的文字是“v1.1.0”。",
+      "hits": {
+        "red": true,
+        "blue": true,
+        "circle": true,
+        "version": true
+      },
+      "usage": {
+        "input": 88,
+        "output": 23,
+        "cached": 0,
+        "reasoning": 0
+      },
+      "costYuan": 0.000134
+    },
+    {
+      "id": "tts",
+      "name": "配音（mimo-v2.5-tts，wav）",
+      "ok": true,
+      "criterion": "返回 RIFF/WAVE 音频且时长 > 0.5 s",
+      "resolved": {
+        "model": "mimo-v2.5-tts",
+        "via": "primary"
+      },
+      "ms": 4214,
+      "text": "你好，这是超级工作台 1.1 的配音测试，本段语音由人工智能合成。",
+      "header": {
+        "riff": "RIFF",
+        "wave": "WAVE",
+        "bytes": 307244
+      },
+      "sampleRate": 24000,
+      "seconds": 6.4,
+      "priceKnown": true,
+      "usage": {
+        "chars": 33,
+        "input": 171,
+        "output": 42
+      },
+      "costYuan": 0
+    }
+  ],
+  "thinkingCompare": {
+    "on": {
+      "reasoningChars": 625,
+      "reasoningTokens": 198,
+      "output": 290,
+      "cost": 0.000634
+    },
+    "off": {
+      "reasoningChars": 0,
+      "reasoningTokens": 0,
+      "output": 61,
+      "cost": 0.000178
+    },
+    "consistent": true,
+    "note": "计费按 usage 记账：思考开时 reasoning 计入输出 token；关时无 reasoning。trace 与 usageLog 同源（onUsage）。"
+  },
+  "finishedAt": "2026-10-23T21:24:02.205Z",
+  "summary": {
+    "pass": 5,
+    "fail": 0,
+    "costYuan": 0.001708,
+    "budgetYuan": 1,
+    "withinBudget": true
+  },
+  "cost": {
+    "yuan": 0.001708,
+    "basis": "按 shared/models/pricing.ts 价目 × 实际 usage 计（TTS 限时免费记 ¥0）"
+  },
+  "keyInTrace": false,
+  "status": "通过",
+  "usageLog": [
+    {
+      "role": "chat",
+      "model": "mimo-v2.6-flash",
+      "ok": true,
+      "cost": 0.000762,
+      "usage": {
+        "input": 334,
+        "output": 329,
+        "cached": 256,
+        "reasoning": 0
+      },
+      "ms": 15857
+    },
+    {
+      "role": "chat",
+      "model": "mimo-v2.6-flash",
+      "ok": true,
+      "cost": 0.000634,
+      "usage": {
+        "input": 54,
+        "output": 290,
+        "cached": 0,
+        "reasoning": 198
+      },
+      "ms": 15647
+    },
+    {
+      "role": "chat",
+      "model": "mimo-v2.6-flash",
+      "ok": true,
+      "cost": 0.000178,
+      "usage": {
+        "input": 56,
+        "output": 61,
+        "cached": 0,
+        "reasoning": 0
+      },
+      "ms": 3774
+    },
+    {
+      "role": "vision",
+      "model": "mimo-v2.6-flash",
+      "ok": true,
+      "cost": 0.000134,
+      "usage": {
+        "input": 88,
+        "output": 23,
+        "cached": 0,
+        "reasoning": 0
+      },
+      "ms": 5807
+    },
+    {
+      "role": "tts",
+      "model": "mimo-v2.5-tts",
+      "ok": true,
+      "cost": 0,
+      "usage": {
+        "chars": 33,
+        "input": 171,
+        "output": 42
+      },
+      "ms": 4214
+    }
+  ],
+  "keyLeakScan": {
+    "findSecrets": 0,
+    "headersRecorded": false
+  }
+}
