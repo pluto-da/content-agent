@@ -13,6 +13,10 @@ function walk(d) {
     else if (s.size < 5_000_000) { const t = readFileSync(p, 'utf8'); for (const re of PATTERNS) if (re.test(t)) hits.push(`${p}: ${re}`); }
   }
 }
-for (const d of process.argv.slice(2)) walk(d);
+function scanFile(p) { const s = statSync(p); if (s.size < 5_000_000) { const t = readFileSync(p, 'utf8'); for (const re of PATTERNS) if (re.test(t)) hits.push(`${p}: ${re}`); } }
+// 参数可以是目录或文件；--stdin 从标准输入读文件列表（CI：git ls-files | node scripts/scan-secrets.mjs --stdin）
+const args = process.argv.slice(2);
+const list = args.includes('--stdin') ? readFileSync(0, 'utf8').split('\n').filter(Boolean) : args;
+for (const d of list) { if (SKIP.test(d)) continue; let st; try { st = statSync(d); } catch { continue; } if (st.isDirectory()) walk(d); else scanFile(d); }
 if (hits.length) { console.error('发现疑似密钥：\n' + hits.join('\n')); process.exit(1); }
 console.log('未发现疑似密钥');

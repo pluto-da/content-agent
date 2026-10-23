@@ -347,3 +347,19 @@ describe('运行状态 / 审计 / 设置 / 提醒 / 备份', () => {
     expect(screen.getByTestId('export-zip').textContent).toContain('.zip');
   });
 });
+
+describe('C38 / C48 发布检查新增：AI 生成声明、授权、引用出处、收益假设', () => {
+  it('含 AI 媒体 → 提醒勾选声明（不阻断、不自动勾）；真人 / 品牌 → 授权提醒；复刻音色未授权 → 阻断；缺收益假设 → 提醒', async () => {
+    const { runChecks } = await import('./agent/tools');
+    const d = { id: 1, platform: 'xiaohongshu', title: '短标题', body: '正文内容', tags: [], images: ['data:image/png;base64,xx'], image_prompts: ['明星同款穿搭'], voiceClone: true } as never;
+    const r = await runChecks(d, 'xiaohongshu');
+    const by = (id: string) => r.checks.find((c) => c.id === id)!;
+    expect(by('aigc').pass).toBe(false); expect(by('aigc').blocking).toBe(false); expect(by('aigc').detail).toContain('由你本人勾选');
+    expect(by('authorization').detail).toContain('明星');
+    expect(by('voice_clone').blocking).toBe(true);
+    expect(by('revenue_hypothesis').pass).toBe(false);
+    const r2 = await runChecks({ id: 2, platform: 'xiaohongshu', title: 't', body: 'b', tags: [], revenueHypothesis: '收藏 → 关注' } as never, 'xiaohongshu');
+    expect(r2.checks.find((c) => c.id === 'aigc')!.pass).toBe(true);
+    expect(r2.checks.find((c) => c.id === 'revenue_hypothesis')!.pass).toBe(true);
+  });
+});

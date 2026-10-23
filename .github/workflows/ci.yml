@@ -4,6 +4,56 @@ on:
   pull_request:
   workflow_dispatch:
 jobs:
+  # 0.9.0：严格校验（任何一步失败即失败）——类型、lint、三套单测、评测（回放）、VFS 自检、密钥扫描、逐项验收报告
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: typecheck
+        run: npm run typecheck
+      - name: lint
+        run: npx eslint .
+      - name: vfs defaults up to date
+        run: node scripts/gen-vfs-defaults.mjs --check
+      - name: unit tests (shared / server / web)
+        run: |
+          mkdir -p out
+          (cd shared && npx vitest run --reporter=default --reporter=json --outputFile=../out/vitest-shared.json)
+          (cd server && npx vitest run --reporter=default --reporter=json --outputFile=../out/vitest-server.json)
+          (cd web && npx vitest run --reporter=default --reporter=json --outputFile=../out/vitest-web.json)
+      - name: eval (golden G01–G28 + behavior BQ-01–BQ-32, replay)
+        run: |
+          (cd shared && npx vitest run ../evals --reporter=default --reporter=json --outputFile=../out/vitest-evals.json)
+          node scripts/eval-report.mjs
+      - name: vfs doctor
+        run: node scripts/vfs-doctor.mjs
+      - name: secret scan (tracked files, git history, build output)
+        run: |
+          git ls-files | node scripts/scan-secrets.mjs --stdin
+          git log -p --all -- . ':(exclude)*.png' ':(exclude)*.jpg' ':(exclude)package-lock.json' | grep '^+' > /tmp/history.txt || true
+          node scripts/scan-secrets.mjs /tmp/history.txt
+          npm run build
+          node scripts/scan-secrets.mjs web/dist shared/dist server/dist
+      - name: accept:v9 (C1–C56)
+        if: always()
+        run: node scripts/accept-v9.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-0.9.0
+          path: |
+            out/accept-v9.json
+            out/accept-v9.md
+            out/eval-report-0.9.0.json
+            out/eval-report-0.9.0.md
+            out/vfs-doctor-report.json
+            out/vitest-*.json
+          if-no-files-found: warn
+  # 旧的一键检查（含覆盖率与依赖审计），保留为参考，不阻断
   check:
     runs-on: ubuntu-latest
     steps:
@@ -13,6 +63,8 @@ jobs:
       - run: npm ci
       - run: bash scripts/ci.sh
         continue-on-error: true
+  # APK：用 runner 自带的 Android SDK（ANDROID_HOME / ANDROID_SDK_ROOT），不使用第三方 android-actions/setup-android；
+  # 产物与构建日志推到 apk-build 分支（取回方式：git clone --branch apk-build）。
   android-debug-apk:
     runs-on: ubuntu-latest
     permissions:
@@ -25,7 +77,7 @@ jobs:
         with: { distribution: temurin, java-version: 21 }
       - name: build apk
         shell: bash
-        run: set -o pipefail; bash scripts/build-android-debug.sh 2>&1 | tee /tmp/build.log
+        run: set -o pipefail; echo "ANDROID_HOME=${ANDROID_HOME:-unset}"; bash scripts/build-android-debug.sh 2>&1 | tee /tmp/build.log
       - name: publish apk and log to apk-build branch
         if: always()
         shell: bash

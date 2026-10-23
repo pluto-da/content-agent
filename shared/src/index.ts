@@ -29,6 +29,7 @@ export * from './agent/limits.js';
 export * from './agent/lock.js';
 export * from './agent/policy.js';
 export * from './agent/selfcheck.js';
+export * from './agent/outputs.js';
 export * from './agent/jsonrepair.js';
 export * from './agent/planner.js';
 export * from './agent/tools.js';

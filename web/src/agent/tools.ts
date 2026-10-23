@@ -78,8 +78,26 @@ export async function runChecks(d: Row, platform: string): Promise<{ checks: Che
   checks.push({ id: 'facts', label: '版权与未证实信息', pass: !unverified, detail: unverified ? `出现“${unverified[0]}”，请核实来源` : '未发现', fix: '删除或注明来源', blocking: false });
   const red = [...prof.redlines, ...prof.style.banned].filter((w) => w && text.includes(w));
   checks.push({ id: 'redline', label: '偏好红线', pass: red.length === 0, detail: red.length ? `命中：${red.join('、')}` : prof.redlines.length ? '无' : '画像里还没设红线', fix: '删掉命中的表达', blocking: true });
+  // 0.9.0 第十部分合规 + C48：AI 生成声明、授权、引用出处、收益假设（提醒项，不阻断；声明由你本人在平台勾选）
+  checks.push(...complianceV9(d, text));
   if (platform === 'xiaohongshu') checks.push({ id: 'images', label: '配图', pass: true, detail: `建议 ${((d.image_prompts as string[]) ?? []).length || 3} 张图（发布时由你上传）`, blocking: false });
   return { checks, blocking: checks.some((c) => !c.pass && c.blocking) };
+}
+
+export function complianceV9(d: Row, text: string): Check[] {
+  const out: Check[] = [];
+  const media = [...((d.images as unknown[]) ?? []), ...((d.media as unknown[]) ?? []), ...((d.media_ids as unknown[]) ?? [])];
+  const aiMedia = media.length > 0 || d.aigc === true;
+  out.push({ id: 'aigc', label: 'AI 生成声明', pass: !aiMedia, detail: aiMedia ? `含 ${media.length || 1} 个 AI 生成的图片 / 音频 / 视频：请在平台发布页勾选“AI 生成”声明（由你本人勾选）` : '没有 AI 生成的媒体', fix: '发布时在平台勾选 AI 生成声明', blocking: false });
+  const prompts = `${text}\n${((d.image_prompts as string[]) ?? []).join('\n')}`;
+  const person = /(明星|真人|名人|某某|肖像|代言|logo|LOGO|商标|品牌方)/.exec(prompts);
+  if (person) out.push({ id: 'authorization', label: '肖像与品牌授权', pass: false, detail: `出现“${person[0]}”：图片含真实人物或品牌时需要授权`, fix: '确认已获授权，或换成不含真实人物 / 品牌的画面', blocking: false });
+  if (d.voiceClone === true) out.push({ id: 'voice_clone', label: '声音授权', pass: d.voiceCloneConsent === true, detail: d.voiceCloneConsent === true ? '已确认授权' : '配音用了复刻音色，必须先确认声音本人授权', fix: '确认授权后再发布', blocking: d.voiceCloneConsent !== true });
+  const quoted = [...text.matchAll(/[“"「]([^”"」]{20,})[”"」]/g)].reduce((n, m) => n + [...m[1]!].length, 0);
+  if (quoted > 150) out.push({ id: 'quote', label: '引用出处', pass: false, detail: `引用他人文字约 ${quoted} 字，超过合理范围时要注明出处`, fix: '注明作者与来源，或改为转述', blocking: false });
+  const rh = String(d.revenueHypothesis ?? d.revenue_hypothesis ?? '').trim();
+  out.push({ id: 'revenue_hypothesis', label: '收益假设', pass: !!rh, detail: rh || '这篇还没写收益假设（它预计推动漏斗哪一层、怎么检验）', fix: '补一句：这篇预计带来什么（曝光 / 收藏 / 关注 / 转化）以及怎么检验', blocking: false });
+  return out;
 }
 
 /* ---------- 热点分析 ---------- */
