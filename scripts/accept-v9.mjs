@@ -39,6 +39,7 @@ let sem;
 try { sem = JSON.parse(execFileSync('python3', [join(root, 'scripts/check-semiotics.py'), join(root, 'agent')], { encoding: 'utf8' })); } catch { sem = null; }
 const shotsDir = [join(root, '../shots-v9'), join(root, 'shots-v9')].find((d) => existsSync(join(d, 'report.json')));
 const shots = shotsDir ? J(join(shotsDir, 'report.json')) : null;
+const semverGte = (a, b) => { const x = String(a ?? '0').split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0); } return true; };
 const apk = J(join(out, 'apk-manifest.json')) ?? J(join(root, '../out/apk-manifest.json'));
 const pkg = J(join(root, 'package.json'));
 const docsRoot = [join(root, '../design'), join(root, 'docs')].find((d) => existsSync(d));
@@ -107,7 +108,7 @@ const ITEMS = [
   ['C37', '损坏文件容错与超限截断', [test('C37|损坏')]],
   ['C38', '合规：显式 / 隐式标识、发布检查', [test('媒体入库带 AIGC 隐式标识'), test('生图先确认花钱 → 出图（AI 生成标识）'), test('C38 / C48 发布检查新增')], 'partial'],
   ['C39', '工程检查全绿 + 密钥扫描 + 硬边界扫描', [{ ok: haveResults && results.every((r) => r.status === 'passed' || r.status === 'skipped' || r.status === 'pending'), soft: !haveResults, text: haveResults ? `单测 ${results.length} 项：失败 ${results.filter((r) => r.status === 'failed').length}` : '本次未提供单测结果' }, file('scripts/scan-secrets.mjs')]],
-  ['C40', '交付：APK 0.9.0 / 900、zip、三视口截图、文档', [{ ok: pkg?.version === '0.9.0', text: `package.json 版本 ${pkg?.version}` }, apk ? { ok: apk.versionName === '0.9.0' && String(apk.versionCode) === '900' && apk.package === 'local.contentagent.app', text: `APK manifest ${apk.versionName} / ${apk.versionCode} / ${apk.package}` } : { ok: false, soft: true, text: 'APK 尚未取回（CI 构建后由 apk-build 分支取回）' }, shotsOk((s) => s.summary && ['overflow', 'outOfBounds', 'occluded', 'smallTouch'].every((k) => (s.summary[k] ?? 0) === 0), '溢出 / 越界 / 遮挡 / 触控<44 均为 0'), doc('deviations-v9.md')], 'pending_device'],
+  ['C40', '交付：APK 0.9.0 / 900、zip、三视口截图、文档', [{ ok: semverGte(pkg?.version, '0.9.0'), text: `package.json 版本 ${pkg?.version}（0.10.0 起作回归：版本 ≥ 0.9.0 即可）` }, apk ? { ok: apk.versionName === '0.9.0' && String(apk.versionCode) === '900' && apk.package === 'local.contentagent.app', text: `APK manifest ${apk.versionName} / ${apk.versionCode} / ${apk.package}` } : { ok: false, soft: true, text: 'APK 尚未取回（CI 构建后由 apk-build 分支取回）' }, shotsOk((s) => s.summary && ['overflow', 'outOfBounds', 'occluded', 'smallTouch'].every((k) => (s.summary[k] ?? 0) === 0), '溢出 / 越界 / 遮挡 / 触控<44 均为 0'), doc('deviations-v9.md')], 'pending_device'],
   ['C41', '模型名手填并真实调用（无 Key 时 mock 断言请求体）', [test('探测请求体的 model 就是用户填的字符串'), test('手填怪名字'), test('3 个模型名各自勾不同能力')], 'partial'],
   ['C42', '获取模型列表', [test('404 → 没有提供列表'), test('C42 获取列表')]],
   ['C43', '错误模型名白话报错', [test('model_not_found 的白话与两个按钮'), test('错误模型名白话报错'), test('导出不含 Key 且每条绑定都有 model 字段')]],

@@ -1,5 +1,5 @@
 {
- "at": "2026-10-23T20:42:59.896Z",
+ "at": "2026-10-23T21:38:27.535Z",
  "viewport": "360×800",
  "server": "none（/api 404，本机模式）",
  "provider": "本地模拟服务商（mock://local，不联网、无 Key）",
@@ -12,7 +12,7 @@
      "label": "首次打开 → 首启引导",
      "ok": true,
      "note": "引导第 1 步就是“我的 → 模型”同一个三步向导",
-     "ms": 508,
+     "ms": 495,
      "shot": "walkthrough/fresh/01-first-open.png"
     },
     {
@@ -20,7 +20,7 @@
      "label": "接入第一个模型（本地模拟服务商）",
      "ok": true,
      "note": "选服务商 → 填 Key（模拟不需要）→ 选模型（推荐 mock-omni）",
-     "ms": 4180,
+     "ms": 4155,
      "shot": "walkthrough/fresh/02-connect-first.png"
     },
     {
@@ -28,7 +28,7 @@
      "label": "模型页：主模型 + 能力覆盖自动点亮",
      "ok": true,
      "note": "主模型 mock-omni；点亮：3 项",
-     "ms": 1381,
+     "ms": 1384,
      "shot": "walkthrough/fresh/03-models-lit.png"
     },
     {
@@ -36,7 +36,7 @@
      "label": "自由创作一篇（不指定平台）",
      "ok": true,
      "note": "草稿 #1「通勤时间怎么利用：三件小事」平台 free",
-     "ms": 8135,
+     "ms": 8126,
      "shot": "walkthrough/fresh/04-free-write.png"
     },
     {
@@ -44,7 +44,7 @@
      "label": "适配到小红书与公众号（母稿保留）",
      "ok": true,
      "note": "适配稿 #2、#3，parent_id 均为 #1，母稿未变",
-     "ms": 11369,
+     "ms": 11355,
      "shot": "walkthrough/fresh/05-adapt-two.png"
     },
     {
@@ -52,7 +52,7 @@
      "label": "审核通过 → 去发布：复制文案、打开发布页，由用户点“我已发布”",
      "ok": true,
      "note": "发布前检查 → 准备发布：复制 191 字，发布页已打开；用户点“我已发布”后状态 handed_off",
-     "ms": 10932,
+     "ms": 10919,
      "shot": "walkthrough/fresh/06-copy-publish.png"
     },
     {
@@ -60,7 +60,7 @@
      "label": "录入数据（只填用户说出的数字）",
      "ok": true,
      "note": "metrics：阅读 1200 / 点赞 85 / 收藏 40",
-     "ms": 8128,
+     "ms": 8109,
      "shot": "walkthrough/fresh/07-metrics.png"
     },
     {
@@ -68,7 +68,7 @@
      "label": "看成长",
      "ok": true,
      "note": "成长页（修订建议 / 自动采纳 / 打法看板 / 收益标签）",
-     "ms": 1372,
+     "ms": 1375,
      "shot": "walkthrough/fresh/08-growth.png"
     },
     {
@@ -76,7 +76,7 @@
      "label": "改一条技能（自由创作）",
      "ok": true,
      "note": "已保存（v2），保存前看过 diff",
-     "ms": 3047,
+     "ms": 3041,
      "shot": "walkthrough/fresh/09-edit-skill.png"
     },
     {
@@ -84,7 +84,7 @@
      "label": "回滚这条技能",
      "ok": true,
      "note": "v2 → 回滚到 v1 的内容（生成新版本，历史保留）",
-     "ms": 1881,
+     "ms": 1887,
      "shot": "walkthrough/fresh/10-rollback.png"
     },
     {
@@ -92,7 +92,7 @@
      "label": "备份（导出 zip，不含 Key）",
      "ok": true,
      "note": "fresh-backup.zip 571780 字节",
-     "ms": 1454,
+     "ms": 1449,
      "shot": "walkthrough/fresh/11-backup.png"
     },
     {
@@ -100,7 +100,7 @@
      "label": "从备份恢复",
      "ok": true,
      "note": "恢复完成，草稿 3 篇与备份时一致",
-     "ms": 3903,
+     "ms": 3886,
      "shot": "walkthrough/fresh/12-restore.png"
     }
    ],
@@ -116,7 +116,7 @@
      "label": "打开 → 跳过引导",
      "ok": true,
      "note": "agent",
-     "ms": 1425,
+     "ms": 1414,
      "shot": "walkthrough/legacy/01-open-skip.png"
     },
     {
@@ -124,7 +124,7 @@
      "label": "用 1.0 备份恢复",
      "ok": true,
      "note": "恢复 15594 字节的 1.0 备份；旧草稿 1 篇",
-     "ms": 3935,
+     "ms": 3904,
      "shot": "walkthrough/legacy/02-restore-1.0.png"
     },
     {
@@ -132,7 +132,7 @@
      "label": "“我的”≤12 项、无重复入口",
      "ok": true,
      "note": "入口 12 个：模型、平台与软件、账号画像、设定与硬边界、记忆与技能、成长、提醒、花钱、记录、数据、通用设置、连接自己的服务器",
-     "ms": 1404,
+     "ms": 1388,
      "shot": "walkthrough/legacy/03-me-no-dup.png"
     },
     {
@@ -140,7 +140,7 @@
      "label": "迁移：主模型 = 出现最多的对话模型",
      "ok": true,
      "note": "主模型 mock-omni（原 roles.chat / reason / vision）",
-     "ms": 1367,
+     "ms": 1363,
      "shot": "walkthrough/legacy/04-migrated-model.png"
     },
     {
@@ -148,7 +148,7 @@
      "label": "迁移：1.0 写作助手覆盖 → 公众号技能用户修订",
      "ok": true,
      "note": "公众号技能正文 = 1.0 的覆盖（进版本历史，可回滚）",
-     "ms": 2121,
+     "ms": 2123,
      "shot": "walkthrough/legacy/05-migrated-skill.png"
     },
     {
@@ -156,7 +156,7 @@
      "label": "迁移：画像 → user/profile.md",
      "ok": true,
      "note": "账号画像显示 1.0 的定位与红线",
-     "ms": 1390,
+     "ms": 1389,
      "shot": "walkthrough/legacy/06-migrated-profile.png"
     },
     {
@@ -164,7 +164,7 @@
      "label": "自由创作一篇（不指定平台）",
      "ok": true,
      "note": "草稿 #2「通勤时间怎么利用：三件小事」平台 free",
-     "ms": 8168,
+     "ms": 8115,
      "shot": "walkthrough/legacy/07-free-write.png"
     },
     {
@@ -172,7 +172,7 @@
      "label": "适配到小红书与公众号（母稿保留）",
      "ok": true,
      "note": "适配稿 #3、#4，parent_id 均为 #2，母稿未变",
-     "ms": 11362,
+     "ms": 11368,
      "shot": "walkthrough/legacy/08-adapt-two.png"
     },
     {
@@ -180,7 +180,7 @@
      "label": "审核通过 → 去发布：复制文案、打开发布页，由用户点“我已发布”",
      "ok": true,
      "note": "发布前检查 → 准备发布：复制 191 字，发布页已打开；用户点“我已发布”后状态 handed_off",
-     "ms": 10916,
+     "ms": 10915,
      "shot": "walkthrough/legacy/09-copy-publish.png"
     },
     {
@@ -188,7 +188,7 @@
      "label": "录入数据（只填用户说出的数字）",
      "ok": true,
      "note": "metrics：阅读 1200 / 点赞 85 / 收藏 40",
-     "ms": 8119,
+     "ms": 8133,
      "shot": "walkthrough/legacy/10-metrics.png"
     },
     {
@@ -196,7 +196,7 @@
      "label": "看成长",
      "ok": true,
      "note": "成长页（修订建议 / 自动采纳 / 打法看板 / 收益标签）",
-     "ms": 1398,
+     "ms": 1513,
      "shot": "walkthrough/legacy/11-growth.png"
     },
     {
@@ -204,7 +204,7 @@
      "label": "改一条技能（自由创作）",
      "ok": true,
      "note": "已保存（v2），保存前看过 diff",
-     "ms": 3034,
+     "ms": 3039,
      "shot": "walkthrough/legacy/12-edit-skill.png"
     },
     {
@@ -212,7 +212,7 @@
      "label": "回滚这条技能",
      "ok": true,
      "note": "v2 → 回滚到 v1 的内容（生成新版本，历史保留）",
-     "ms": 1882,
+     "ms": 1864,
      "shot": "walkthrough/legacy/13-rollback.png"
     },
     {
@@ -220,7 +220,7 @@
      "label": "备份（导出 zip，不含 Key）",
      "ok": true,
      "note": "legacy-backup.zip 573144 字节",
-     "ms": 1454,
+     "ms": 1456,
      "shot": "walkthrough/legacy/14-backup.png"
     },
     {
@@ -228,7 +228,7 @@
      "label": "从备份恢复",
      "ok": true,
      "note": "恢复完成，草稿 4 篇与备份时一致",
-     "ms": 3903,
+     "ms": 3901,
      "shot": "walkthrough/legacy/15-restore.png"
     }
    ],
