@@ -22,6 +22,8 @@ def({ id: 'evolution.autoLowRisk', label: '低风险改进自动生效', descrip
 def({ id: 'ui.motion', label: '界面动效', description: '只做反馈类动效；系统“减少动态效果”打开时自动关闭', default: true, stage: 'stable', since: '0.8.1' });
 def({ id: 'sync.server', label: '服务端同步（预留）', description: '为未来连接自己的服务器同步 VFS 预留接口；本版本不开放，不做多账号', default: false, stage: 'reserved', since: '0.9.0', reviewBy: '1.1' });
 def({ id: 'models.serverRelay', label: '经服务端调用模型（预留）', description: '网页版跨域受限时经自己的服务器转发；本版本不开放', default: false, stage: 'reserved', since: '0.9.0', reviewBy: '1.1' });
+def({ id: 'a2a.client', label: 'A2A 客户端（外部 Agent）', description: '允许添加外部 A2A Agent，作为“外部子 Agent”被超级 Agent 调用；受同样的权限、预算、审批与审计约束，添加与启用都要你确认', default: false, stage: 'beta', since: '1.2.0' });
+def({ id: 'a2a.server', label: 'A2A 服务端（发布 Agent Card）', description: '只在“连接自己的服务器”模式下可开：发布超级 Agent 的 Agent Card，只暴露你勾选的技能，必须鉴权；收到的请求先进审批收件箱。手机本机模式不开放端口', default: false, stage: 'beta', since: '1.2.0' });
 FLAGS.freeze();
 
 export type FlagOverrides = Partial<Record<string, boolean>>;

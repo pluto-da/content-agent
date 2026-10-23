@@ -9,6 +9,7 @@ import { defaultHttp, HostRateLimiter, isPublicHttpUrl, type HttpClient } from '
 import { Logger } from './logger.js';
 import { TaskQueue } from './queue.js';
 import { HARD_BOUNDARIES, ALLOWED_TOOLS } from './boundaries.js';
+import { registerA2A, a2aOptsFromEnv, type A2AServerOpts } from './modules/a2a.js';
 import { ModelHub, builtinPrices, type Routes } from './models/hub.js';
 import { CAPABILITIES, CAPABILITY_LABELS, NotConfiguredError } from './models/types.js';
 import { loadSkills, missingCapabilities } from './skills/loader.js';
@@ -28,6 +29,8 @@ import { efficiencyMetrics } from './modules/efficiency.js';
 import { draftVerifySettings } from './modules/confidence.js';
 
 export interface AppOptions {
+  /** 1.2.0：A2A 服务端（测试注入；默认读环境变量，默认关闭） */
+  a2a?: A2AServerOpts;
   dataDir: string;
   agentDefaultsDir: string;
   webDist?: string;
@@ -125,6 +128,8 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
 
   /* ---------- 基础 ---------- */
   app.get('/api/health', async () => ({ ok: true, version: '1.1.0' }));
+  // 1.2.0：A2A 服务端（beta，默认关闭；A2A_SERVER=1 + A2A_TOKEN 才开放）
+  registerA2A(app, opts.a2a ?? a2aOptsFromEnv('1.1.0'));
   app.get('/api/boundaries', async () => ({ boundaries: HARD_BOUNDARIES, tools: ALLOWED_TOOLS }));
 
   /* ---------- 设置与密钥 ---------- */

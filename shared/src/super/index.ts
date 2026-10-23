@@ -5,3 +5,4 @@ export * from './sources.js';
 export * from './workflows.js';
 export * from './mcp.js';
 export * from './mcpMock.js';
+export * from './a2a.js';
