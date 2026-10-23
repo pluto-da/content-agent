@@ -7,7 +7,7 @@ import com.getcapacitor.BridgeActivity;
 
 /**
  * 注册本地插件（由 mobile/scripts/apply-native.mjs 写入生成的 Android 工程）。必须保持 singleTask（分享 / 选中文字回到同一实例）。
- * 0.7.0：LocalApps、BuiltinWeb、SplitScreen；0.8.0：BrowserHost（内嵌平台网页）、StreamHttp（模型流式请求）。
+ * 0.7.0：LocalApps、BuiltinWeb、SplitScreen；0.8.0：BrowserHost（内嵌平台网页）、StreamHttp（模型流式请求）；0.10.0：SecureKeys。
  */
 public class MainActivity extends BridgeActivity {
     @Override
@@ -17,6 +17,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SplitScreenPlugin.class);  // 0.7.0 平板分屏
         registerPlugin(BrowserHostPlugin.class);  // 0.8.0 内嵌平台网页 + 分享进来
         registerPlugin(StreamHttpPlugin.class);   // 0.8.0 模型流式请求
+        registerPlugin(SecureKeysPlugin.class);   // 0.10.0 Key 硬件绑定（AndroidKeyStore）
         super.onCreate(savedInstanceState);
     }
 

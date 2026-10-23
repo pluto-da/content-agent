@@ -1,52 +1,19 @@
 /**
- * 本机加密保存（0.8.0，数据源凭证用）：WebCrypto AES-GCM。
- * 加密密钥是 extractable=false 的 CryptoKey，存在 IndexedDB（结构化克隆保存的是不可导出的句柄，页面脚本也拿不到原始字节）。
- * 没有 WebCrypto 的环境（极少数）退回 base64 并标记 plain=true，界面如实提示“这台设备不支持加密”。
+ * 本机加密保存（0.8.0 起；0.10.0 改为可插拔后端，见 secretBackend.ts / ADR-011）：
+ * 安卓 App 用 AndroidKeyStore 硬件密钥（插件 SecureKeys），桌面 App 用系统钥匙串，网页版与兜底用 WebCrypto AES-GCM（不可导出 CryptoKey）。
+ * 没有任何加密能力的环境（极少数）退回 base64 并标记 plain=true，界面如实提示“这台设备不支持加密”。
  * 界面只显示末四位；密钥永不写日志、trace、备份。
  */
 import { db } from './db';
+import { sealWith, unsealWith, resetSecretBackend, type Sealed } from './secretBackend';
 
-interface Sealed { iv: string; data: string; plain?: boolean; tail: string }
-const b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u));
-const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-const subtle = () => (typeof crypto !== 'undefined' && crypto.subtle ? crypto.subtle : null);
-
-let keyP: Promise<CryptoKey | null> | null = null;
-async function key(): Promise<CryptoKey | null> {
-  const s = subtle();
-  if (!s) return null;
-  return (keyP ??= (async () => {
-    const saved = await db.getKV<CryptoKey>('secure.key').catch(() => undefined);
-    if (saved && typeof saved === 'object' && 'algorithm' in saved) return saved;
-    const k = await s.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
-    try { await db.setKV('secure.key', k); } catch { /* 内存库：本次会话有效 */ }
-    return k;
-  })());
-}
 /** 测试用。 */
-export function resetSecureKey(): void { keyP = null; }
+export function resetSecureKey(): void { resetSecretBackend(); }
 
 export const tail4 = (v: string) => (v ? `••••${v.slice(-4)}` : '');
 
-export async function seal(value: string): Promise<Sealed> {
-  const k = await key();
-  const tail = value.slice(-4);
-  if (!k) return { iv: '', data: btoa(unescape(encodeURIComponent(value))), plain: true, tail };
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const buf = await subtle()!.encrypt({ name: 'AES-GCM', iv }, k, new TextEncoder().encode(value));
-  return { iv: b64(iv), data: b64(new Uint8Array(buf)), tail };
-}
-
-export async function unseal(s: Sealed | undefined | null): Promise<string> {
-  if (!s?.data) return '';
-  if (s.plain) return decodeURIComponent(escape(atob(s.data)));
-  const k = await key();
-  if (!k) return '';
-  try {
-    const buf = await subtle()!.decrypt({ name: 'AES-GCM', iv: unb64(s.iv) }, k, unb64(s.data));
-    return new TextDecoder().decode(buf);
-  } catch { return ''; }
-}
+export async function seal(value: string): Promise<Sealed> { return sealWith(value); }
+export async function unseal(s: Sealed | undefined | null, ref?: string): Promise<string> { return unsealWith(s, ref); }
 
 /* ---------- 数据源凭证 ---------- */
 export interface SourceCred { id: string; fields: Record<string, Sealed>; plainFields?: Record<string, string>; check?: { ok: boolean; at: string; reason?: string; ms?: number } }

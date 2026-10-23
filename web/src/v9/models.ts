@@ -27,11 +27,11 @@ export async function estimate(role: RoleId, est: { chars?: number; images?: num
   return estimateCost(role, e ? priceOf(e.account.vendor, e.entry.model, s.prices) : undefined, est);
 }
 
-export interface MediaRow { id: number; kind: 'image' | 'audio' | 'video'; mime: string; dataUrl: string; model: string; prompt: string; role: RoleId; aiLabel: { explicit: boolean; implicit: boolean }; created_at?: string; sourceUrl?: string; note?: string }
+export interface MediaRow { id: number; kind: 'image' | 'audio' | 'video'; mime: string; dataUrl: string; model: string; prompt: string; role: RoleId; aiLabel: { explicit: boolean; implicit: boolean; reason?: string }; created_at?: string; sourceUrl?: string; note?: string }
 async function download(url: string): Promise<{ base64: string; mime: string } | null> {
   try { const r = await webTransport.send({ method: 'GET', url, headers: {}, responseType: 'binary' }, { timeoutMs: 60000 }); return r.base64 ? { base64: r.base64, mime: r.mime ?? 'application/octet-stream' } : null; } catch { return null; }
 }
-export async function saveMedia(items: MediaOut[], meta: { role: RoleId; model: string; prompt: string }): Promise<MediaRow[]> {
+export async function saveMedia(items: MediaOut[], meta: { role: RoleId; model: string; prompt: string; vendor?: string }): Promise<MediaRow[]> {
   const out: MediaRow[] = [];
   const f = await flags();
   for (const it of items) {
@@ -41,11 +41,16 @@ export async function saveMedia(items: MediaOut[], meta: { role: RoleId; model: 
     const kind: MediaRow['kind'] = meta.role === 'tts' ? 'audio' : meta.role === 'video' || mime.startsWith('video/') ? 'video' : mime.startsWith('audio/') ? 'audio' : 'image';
     let implicit = false, explicit = false;
     let dataUrl = b64 ? `data:${mime};base64,${b64}` : it.url ?? '';
-    if (b64 && kind === 'image') {
-      const im = labelImplicit(b64, mime, { model: meta.model, at: new Date().toISOString() }); implicit = im.implicit; dataUrl = `data:${mime};base64,${im.base64}`;
-      if (flagOn('media.aiLabel', f)) { const ex = await labelExplicit(dataUrl); explicit = ex.explicit; if (ex.explicit) dataUrl = ex.dataUrl; }
+    let implicitReason: string | undefined;
+    if (b64) {
+      // 0.10.0：图片 / 音频 / 视频都写隐式标识（服务商已有标识保留）；写不进去时记下白话原因，发布检查提醒在平台勾选声明
+      const contentId = `ca-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+      const im = labelImplicit(b64, mime, { model: meta.model, provider: meta.vendor, contentId, at: new Date().toISOString() }, { beep: kind === 'audio' && flagOn('media.audioCue', f) });
+      implicit = im.implicit; implicitReason = im.reason; if (im.note) note = note ? `${note}；${im.note}` : im.note;
+      dataUrl = `data:${mime};base64,${im.base64}`;
+      if (kind === 'image' && flagOn('media.aiLabel', f)) { const ex = await labelExplicit(dataUrl); explicit = ex.explicit; if (ex.explicit) dataUrl = ex.dataUrl; }
     }
-    const row = await db.insert('media', { kind, mime, dataUrl, model: meta.model, prompt: meta.prompt.slice(0, 200), role: meta.role, aiLabel: { explicit, implicit }, sourceUrl: b64 ? undefined : it.url, note });
+    const row = await db.insert('media', { kind, mime, dataUrl, model: meta.model, prompt: meta.prompt.slice(0, 200), role: meta.role, aiLabel: { explicit, implicit, ...(implicitReason ? { reason: implicitReason } : {}) }, sourceUrl: b64 ? undefined : it.url, note });
     out.push(row as unknown as MediaRow);
   }
   return out;

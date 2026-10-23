@@ -17,7 +17,7 @@ export interface ToolServices {
   call(role: RoleId, req: RoleRequest, o: { runId: string; toolCallId: string; conversationId: number; signal: AbortSignal; override?: { accountId: string; modelEntryId: string; model: string } }): Promise<CallResult>;
   estimate(role: RoleId, est: { chars?: number; images?: number; seconds?: number }): number | null;
   configured(role: RoleId): boolean;
-  saveMedia(items: MediaOut[], meta: { role: RoleId; model: string; prompt: string }): Promise<MediaRef[]>;
+  saveMedia(items: MediaOut[], meta: { role: RoleId; model: string; prompt: string; vendor?: string }): Promise<MediaRef[]>;
   getMedia(id: string): Promise<{ dataUrl: string; mime: string } | null>;
   writeDraft(input: { platform: string; topic: string; userText: string; signal: AbortSignal }): Promise<DraftRef | CallError>;
   listDrafts(): Promise<DraftRef[]>;
@@ -49,7 +49,7 @@ export function createBuiltinTools(s: ToolServices): ToolRegistry {
     if (!r.ok) return { ok: false, error: r.error, card: { type: role === 'video' ? 'video' : role === 'tts' ? 'audio' : 'image', data: { status: 'failed', reason: r.error.reason, advice: r.error.advice, actions: r.error.actions, model: r.target?.model } } };
     if (r.value.type === 'job') return { ok: true, result: { jobId: r.value.jobId, status: r.value.status }, cost: r.cost, ...modelOf(r), card: { type: 'video', data: { status: r.value.status, jobId: r.value.jobId, ...modelOf(r) } } };
     if (r.value.type !== 'media') return fail(callError('format'));
-    const refs = await s.saveMedia(r.value.items, { role, model: r.target.model, prompt });
+    const refs = await s.saveMedia(r.value.items, { role, model: r.target.model, prompt, vendor: r.account.vendor });
     return { ok: true, result: { media: refs.map((m) => m.id), count: refs.length, model: r.target.model }, count: refs.length, artifacts: refs.map((m) => m.id), cost: r.cost, ...modelOf(r), card: { type: role === 'tts' ? 'audio' : 'image', data: { media: refs, cost: r.cost, note: r.note, ...modelOf(r) } } };
   };
   add({ name: 'draft_write', title: '写稿', description: '按平台把选题写成草稿（含标题、正文、配图提示词与收益假设）', level: 'L1', idempotent: true, role: 'chat', inputSchema: { type: 'object', required: ['platform', 'topic'], properties: { platform: { type: 'string' }, topic: { type: 'string', minLength: 1 } } }, estimateCost: () => s.estimate('chat', { chars: 3000 }),
@@ -71,7 +71,7 @@ export function createBuiltinTools(s: ToolServices): ToolRegistry {
       const r = await s.pollVideo(String(a.jobId), ctx.signal);
       if (!r.ok) return fail(r.error);
       if (r.value.type !== 'job') return fail(callError('format'));
-      if (r.value.status === 'succeeded' && r.value.items?.length) { const refs = await s.saveMedia(r.value.items, { role: 'video', model: r.target.model, prompt: String(a.jobId) }); return { ok: true, result: { status: 'succeeded', media: refs.map((m) => m.id) }, count: refs.length, artifacts: refs.map((m) => m.id), card: { type: 'video', data: { status: 'succeeded', media: refs, ...modelOf(r) } } }; }
+      if (r.value.status === 'succeeded' && r.value.items?.length) { const refs = await s.saveMedia(r.value.items, { role: 'video', model: r.target.model, prompt: String(a.jobId), vendor: r.account?.vendor }); return { ok: true, result: { status: 'succeeded', media: refs.map((m) => m.id) }, count: refs.length, artifacts: refs.map((m) => m.id), card: { type: 'video', data: { status: 'succeeded', media: refs, ...modelOf(r) } } }; }
       return { ok: true, result: { status: r.value.status, error: r.value.error }, card: { type: 'video', data: { status: r.value.status, jobId: a.jobId, ...modelOf(r) } } };
     } });
   add({ name: 'reason_deep', title: '深度推理', description: '需要多步推理的问题交给推理模型，返回结论与推理过程', level: 'L0', idempotent: true, role: 'reason', inputSchema: { type: 'object', required: ['question'], properties: { question: { type: 'string' } } }, estimateCost: () => s.estimate('reason', { chars: 2000 }),

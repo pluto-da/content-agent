@@ -203,7 +203,7 @@ function Playground({ role, go }: { role: RoleId; go: (to: string) => void }) {
       const r = await call(role, req as never);
       setRes(r);
       if (r.ok && r.value.type === 'media') {
-        const rows = await saveMedia(r.value.items, { role, model: r.target.model, prompt: text });
+        const rows = await saveMedia(r.value.items, { role, model: r.target.model, prompt: text, vendor: r.account.vendor });
         setMedia(rows.map((x) => ({ id: x.id, dataUrl: x.dataUrl, kind: x.kind })));
       }
     } finally { setBusy(false); }

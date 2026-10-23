@@ -98,7 +98,7 @@ describe('新 Agent 运行时（本机接线）', () => {
     const media = await db.all('media');
     expect(media).toHaveLength(1);
     const meta = pngReadText(base64ToBytes(String(media[0]!.dataUrl).split(',')[1]!));
-    expect(JSON.parse(meta.AIGC!).Label).toBe('AI 生成');
+    expect(JSON.parse(meta.AIGC!)).toMatchObject({ Label: '1', LabelText: 'AI 生成' });   // 0.10.0：字段对齐 GB 45438 结构（Label 为代码，文字在 LabelText），见 deviations-v10 T1
     const msgs = await listMessages(c.id);
     expect(msgs.some((x) => x.cards?.some((k) => k.type === 'image' && k.status === 'done'))).toBe(true);
     expect(msgs.at(-1)!.content).toContain('已生成 1 张图');

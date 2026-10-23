@@ -10,6 +10,7 @@
  *    声明 ShareReceiverActivity（ACTION_SEND text/plain、image/*，标签“超级工作台”）与 ProcessTextActivity（ACTION_PROCESS_TEXT，标签“发给 Agent”），
  *    均为透明、exported=true、只接收文字 / 图片；<queries> 增加 PROCESS_TEXT intent；app/build.gradle 增加 androidx.webkit 依赖（多 Profile）；
  *    MainActivity 保持 singleTask（不改动模板的 launchMode）。
+ *  - 0.10.0：复制 SecureKeysPlugin（AndroidKeyStore 主密钥，Key 硬件绑定）；通知权限 POST_NOTIFICATIONS / SCHEDULE_EXACT_ALARM 由 @capacitor/local-notifications 的清单合并提供（此处校验）。
  *  - AndroidManifest.xml 增加 <queries>：只声明各平台官方 App 的包名与 URL Scheme（不申请 QUERY_ALL_PACKAGES，
  *    以符合 Google Play 包可见性政策）；增加 FileProvider（分享草稿素材用）。
  *  - 额外包名：环境变量 CA_EXTRA_PACKAGES="com.a.b,com.c.d"。
@@ -102,7 +103,7 @@ function android() {
   m = m.replace(/<\/manifest>/, `${queries}\n</manifest>`);
   if (/QUERY_ALL_PACKAGES/.test(m)) console.warn('警告：清单中存在 QUERY_ALL_PACKAGES，上架 Google Play 需要特别审批，建议移除');
   writeFileSync(manifestPath, m);
-  console.log(`Android：已写入 LocalApps / BuiltinWeb / SplitScreen / BrowserHost / StreamHttp 插件、InAppWebActivity、ShareReceiverActivity、ProcessTextActivity 与 <queries>（${pkgs.length} 个包名 + PROCESS_TEXT）`);
+  console.log(`Android：已写入 LocalApps / BuiltinWeb / SplitScreen / BrowserHost / StreamHttp / SecureKeys 插件、InAppWebActivity、ShareReceiverActivity、ProcessTextActivity 与 <queries>（${pkgs.length} 个包名 + PROCESS_TEXT）`);
 
   // 版本号与 mobile/package.json 保持一致：versionName = x.y.z，versionCode = x*10000 + y*100 + z
   const gradlePath = join(root, 'android', 'app', 'build.gradle');

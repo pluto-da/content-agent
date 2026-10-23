@@ -23,6 +23,12 @@ contextBridge.exposeInMainWorld('contentAgent', {
     onError: (fn) => ipcRenderer.on('browser:error', (_e, s) => fn(s)),
     onSendToAgent: (fn) => ipcRenderer.on('browser:send-to-agent', (_e, s) => fn(s)),
   },
+  // 0.10.0 Key 加密（系统钥匙串）：只暴露加解密，不暴露密钥
+  safeStorage: {
+    available: () => ipcRenderer.invoke('safe:available'),
+    encrypt: (s) => ipcRenderer.invoke('safe:encrypt', s),
+    decrypt: (b) => ipcRenderer.invoke('safe:decrypt', b),
+  },
   localApp: {
     pick: () => ipcRenderer.invoke('localapp:pick'),
     launch: (opts) => ipcRenderer.invoke('localapp:launch', opts),

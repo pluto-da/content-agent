@@ -15,7 +15,7 @@
  * 安全：禁用 Node 集成、开启上下文隔离与沙箱；平台视图（WebContentsView）无预加载脚本、只允许 https、新窗口在当前视图打开；
  * 主进程不对创作中心执行任何脚本（无 executeJavaScript / debugger），不读取、不修改、不伪造 Cookie 值或有效期。
  */
-const { app, BrowserWindow, WebContentsView, Menu, shell, session, ipcMain, dialog, clipboard } = require('electron');
+const { app, BrowserWindow, WebContentsView, Menu, shell, session, ipcMain, dialog, clipboard, safeStorage } = require('electron');
 const { createBrowserViews } = require('./browser-views.cjs');
 const { fork } = require('node:child_process');
 const path = require('node:path');
@@ -130,6 +130,11 @@ async function createWindow() {
   const fromUi = (e) => { try { return new URL(e.senderFrame.url).origin === origin; } catch { return false; } };
   const guard = (fn) => async (e, ...args) => { if (!fromUi(e)) throw new Error('拒绝：来源不是主界面'); return fn(...args); };
 
+  // 0.10.0 Key 加密后端 electron-safeStorage（ADR-011）：只做字符串加解密，明文不落盘、不写日志；Linux 只有 basic_text 时报告不可用
+  const safeBackend = () => { try { return process.platform === 'linux' && safeStorage.getSelectedStorageBackend ? safeStorage.getSelectedStorageBackend() : 'os'; } catch { return 'unknown'; } };
+  ipcMain.handle('safe:available', guard(async () => { const backend = safeBackend(); return { ok: safeStorage.isEncryptionAvailable() && backend !== 'basic_text', backend }; }));
+  ipcMain.handle('safe:encrypt', guard(async (s) => { if (typeof s !== 'string' || s.length > 8192) throw new Error('参数不正确'); return safeStorage.encryptString(s).toString('base64'); }));
+  ipcMain.handle('safe:decrypt', guard(async (b) => { if (typeof b !== 'string' || b.length > 20000) throw new Error('参数不正确'); return safeStorage.decryptString(Buffer.from(b, 'base64')); }));
   ipcMain.handle('ca:open-external', guard(async (url) => { if (typeof url === 'string' && /^https:\/\//.test(url)) await shell.openExternal(url); }));
   ipcMain.handle('creator:last-url', guard(async (id) => (validId(id) && state[id]?.lastUrl && allowed(state[id].lastUrl) ? state[id].lastUrl : null)));
   ipcMain.handle('creator:status', guard(async (ids) => {

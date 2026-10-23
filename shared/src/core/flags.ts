@@ -16,6 +16,7 @@ def({ id: 'agent.selfcheck.judge', label: '自检判官', description: '多步�
 def({ id: 'agent.subtasks', label: '子任务', description: '把可独立完成的一块交给子运行（深度 1、预算独立）', default: true, stage: 'stable', since: '0.9.0' });
 def({ id: 'models.healthRouting', label: '健康路由', description: '默认模型近期失败率高时先走备用（仅可重试类错误）', default: true, stage: 'stable', since: '0.9.0' });
 def({ id: 'media.aiLabel', label: '图片 AI 角标', description: '生成图片默认加“AI 生成”显式标识（关闭时仍需在平台勾选声明）', default: true, stage: 'stable', since: '0.9.0' });
+def({ id: 'media.audioCue', label: '配音开头提示音', description: '生成的 WAV 配音开头加 0.5 秒提示音，提醒听众这是 AI 合成（MP3 不重编码，不加）；默认关', default: false, stage: 'beta', since: '0.10.0' });
 def({ id: 'search.vector', label: '向量检索', description: '配置了向量模型时，记忆与素材检索加入向量召回', default: false, stage: 'experimental', since: '0.9.0', reviewBy: '1.0' });
 def({ id: 'evolution.batchLessonConfirm', label: '复盘后 lessons 一次确认', description: '复盘生成的多条经验可一次确认；技能与系统文件修改仍逐条确认', default: false, stage: 'beta', since: '0.9.0' });
 def({ id: 'ui.motion', label: '界面动效', description: '只做反馈类动效；系统“减少动态效果”打开时自动关闭', default: true, stage: 'stable', since: '0.8.1' });

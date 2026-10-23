@@ -1,9 +1,10 @@
 /**
  * AI 生成内容标识（合规，C38）：
- * - 隐式：PNG 写入 tEXt 元数据（AIGC 标识、生成方式、模型、时间），纯 JS 实现；JPEG / 音频 / 视频本版不改写二进制（如实记 implicit=false，见偏离 D-AIGC）；
+ * - 隐式：PNG tEXt（0.9.0）；0.10.0 起 JPEG（EXIF UserComment + XMP）、MP3（ID3 TXXX）、WAV（LIST/INFO ICMT）、MP4（moov 元数据）都写，实现见 v10/aigcMedia.ts；
  * - 显式：图片右下角叠加“AI 生成”角标（需要 Canvas；不可用时 explicit=false 并在发布检查里提醒在平台勾选声明）。
  */
 import { crc32, base64ToBytes, bytesToBase64, utf8 } from '@content-agent/shared';
+import { labelImplicitBytes } from '../v10/aigcMedia';
 
 export function pngInsertText(bytes: Uint8Array, key: string, value: string): Uint8Array {
   const sig = [137, 80, 78, 71, 13, 10, 26, 10];
@@ -32,10 +33,9 @@ export function pngReadText(bytes: Uint8Array): Record<string, string> {
   }
   return out;
 }
-export function labelImplicit(base64: string, mime: string, meta: { model: string; at: string }): { base64: string; implicit: boolean } {
-  if (mime !== 'image/png') return { base64, implicit: false };
-  const b = pngInsertText(base64ToBytes(base64), 'AIGC', JSON.stringify({ Label: 'AI 生成', ContentProducer: 'content-agent', ProduceID: meta.at, Model: meta.model }));
-  return { base64: bytesToBase64(b), implicit: true };
+export function labelImplicit(base64: string, mime: string, meta: { model: string; at: string; provider?: string; contentId?: string }, o: { beep?: boolean } = {}): { base64: string; implicit: boolean; reason?: string; note?: string; preservedVendorMark?: boolean } {
+  const r = labelImplicitBytes(base64ToBytes(base64), mime, meta, o);
+  return { base64: r.implicit && r.bytes.length ? bytesToBase64(r.bytes) : base64, implicit: r.implicit, reason: r.reason, note: r.note, preservedVendorMark: r.preservedVendorMark };
 }
 /** 显式角标：浏览器 / App 内用 Canvas 叠加；失败返回原图与 explicit=false。 */
 export async function labelExplicit(dataUrl: string): Promise<{ dataUrl: string; explicit: boolean }> {
