@@ -94,9 +94,10 @@ describe('黄金任务 G01–G28', () => {
   }, 'evals/golden.test.ts#G07'));
 
   it('G08 运行中再发新消息', () => evalCase('G08', '运行中再发新消息进入队列', async () => {
-    // eslint-disable-next-line prefer-const -- h 在下面的回调里自引用，必须先声明
+    /* eslint-disable prefer-const -- h 在下面的回调里自引用，必须先声明再赋值 */
     let h!: Harness; let queuedResult: unknown;
     h = await makeHarness([{ purpose: 'turn', text: '第一条处理完了。', check: () => { queuedResult = h.runtime.send(1, '第二条要求'); return null; } }, { purpose: 'turn', text: '第二条也处理了。' }]);
+    /* eslint-enable prefer-const */
     await h.runtime.send(1, '第一条要求');
     const q = await (queuedResult as Promise<{ status: string }>);
     const f: string[] = [];
