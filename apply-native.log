@@ -1,0 +1,4 @@
+已加入 App target：LocalAppsPlugin.swift
+已加入 App target：MainViewController.swift
+已加入 App target：SecureKeysPlugin.swift
+iOS：已复制 Swift 文件（LocalAppsPlugin.swift、MainViewController.swift、SecureKeysPlugin.swift）、写入 LSApplicationQueriesSchemes、版本 1.0.0 (10000)。
