@@ -69,7 +69,7 @@ const shotsOk = (pred, label) => (shots ? { ok: !!pred(shots), text: `截图报�
 /* ---------- C1–C56 ---------- */
 const ITEMS = [
   ['C1', '无服务端：打开即 Agent 首页，控制台错误 0', [shotsOk((s) => s.summary?.pageErrors === 0 && s.summary?.consoleErrors === 0, '页面报错 0、控制台错误 0（屏蔽 /api）'), test('A1|首页|Agent 首页', '首页即 Agent')]],
-  ['C2', '11 角色 5 组、状态点与已接 N/11', [test('11 个角色、5 组顺序'), test('分组、顺序、状态与“已接 N / 11 类”'), shotsOk((s) => s.pages?.includes?.('me-models'), '模型页三视口')]],
+  ['C2', '11 角色 5 组、状态点与已接 N/11（1.1.0 起界面改为主模型 + 能力覆盖一览，角色退到内部，见 deviations-v1.1 V11-03）', [test('11 个角色、5 组顺序'), test('未配置时只有一个主按钮'), shotsOk((s) => s.pages?.includes?.('me-models'), '模型页三视口')]],
   ['C3', '每角色多服务商、默认与备用、账号共用与单独填写', [test('账号共用 Key 与按角色单独填写'), test('默认 / 备用下拉来自勾选了该能力的模型名'), test('添加 OpenAI 兼容服务商')]],
   ['C4', '每角色至少 1 个 Mock 调用跑通、按角色最小探测', [test('11 个角色都有探测定义'), test('Mock 全角色|能力层 Mock')]],
   ['C5', 'MiMo 真实文本 chat 流式 + reason 各 1 次', [{ ok: !!J(join(out, 'mimo-v9-trace.json'))?.chat?.ok, soft: true, text: '需要真实 MiMo Key（本轮未执行，见 deviations-v9 D-REAL）' }], 'pending_key'],

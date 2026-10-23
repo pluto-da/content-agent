@@ -6,45 +6,34 @@ import { Icon } from '../icons';
 import { ME_GROUPS, type Layout } from '../nav';
 import { CENTERS, center } from '../data/platforms';
 import { canClearBuiltin, clearAllBuiltin, clearBuiltin } from '../builtin';
-import { ASSISTANTS } from '../data/assistants';
-import { HOT_SOURCES } from '../local/hot';
-import { getAssistantOverrides, getPrefs, setAssistantOverride, setPrefs, usageToday, type AssistantOverride, type Prefs, type UsageDay } from '../local/store';
-import { HARD_BOUNDARIES } from '../../../server/src/boundaries';
+import { getPrefs, setPrefs, usageToday, type Prefs, type UsageDay } from '../local/store';
 import { useLocalApps, OS_LABEL } from '../format';
 import { Busy, EmptyState, ErrorNext, GroupList, ListRow, Problem, useToast } from '../ui';
 import { RolesPage } from './me/v9/roles';
-import { AgentSettingsPage, MemoryPage, SkillsPage } from './me/v9/agentfiles';
-import { RevenuePage, GrowthPage } from './me/v9/revenue';
-import { StatusPage, AuditPage, SettingsV9Page, RemindersPage, BackupV9Page } from './me/v9/ops';
+import { AgentSettingsPage } from './me/v9/agentfiles';
+import { StatusPage, RemindersPage, SettingsV9Page } from './me/v9/ops';
+import { HardBoundaries, MemorySkillsPage, GrowthAllPage, SpendPage, RecordsPage, DataPage } from '../v11/MePages';
 import { SourcesPage } from './me/sources';
 import { ProfilePage } from './me/profile';
-import { StoragePage } from '../v1/StoragePage';
 import { KEEP_ALIVE_MAX, KEEP_ALIVE_MIN } from '../browser/pool';
-import { ModelPicker, type Pick } from '../components/ModelPicker';
 import { useAddApp } from '../components/addAppContext';
 import type { Theme } from '../state';
 
-export function Me({ sub, id, go, lay, theme, setTheme, lang, setLang }: { sub: string; id: string | null; go: (to: string) => void; lay: Layout; theme: Theme; setTheme: (t: Theme) => void; lang: Lang; setLang: (l: Lang) => void }) {
+export function Me({ sub, id, query, go, lay, theme, setTheme, lang, setLang }: { sub: string; id: string | null; query?: Record<string, string>; go: (to: string) => void; lay: Layout; theme: Theme; setTheme: (t: Theme) => void; lang: Lang; setLang: (l: Lang) => void }) {
   switch (sub) {
-    case 'models': return <RolesPage id={id} go={go} lay={lay} />;
-    case 'files': return <AgentSettingsPage go={go} />;
-    case 'memory': return <MemoryPage />;
-    case 'skills': return <SkillsPage go={go} />;
-    case 'revenue': return <RevenuePage />;
-    case 'growth': return <GrowthPage />;
-    case 'reminders': return <RemindersPage />;
-    case 'status': return <StatusPage go={go} id={id} />;
-    case 'audit': return <AuditPage />;
-    case 'settings': return <SettingsV9Page />;
-    case 'platforms': return <PlatformsSub go={go} />;
-    case 'sources': return <SourcesPage />;
+    case 'models': return <RolesPage key={`${id ?? ''}${query?.cap ?? ''}`} id={id} go={go} lay={lay} query={query} />;
+    case 'platforms': return <PlatformsSub go={go} query={query} />;
     case 'profile': return <ProfilePage />;
-    case 'agent': return <AgentSub go={go} />;
-    case 'prefs': return <PrefsSub theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />;
-    case 'backup': return <BackupV9Page />;
-    case 'storage': return <StoragePage />;
-    case 'logs': return <LogsSub />;
+    case 'files': return <><div className="page page-narrow !pb-0"><HardBoundaries /></div><AgentSettingsPage go={go} /></>;
+    case 'memory': return <MemorySkillsPage key={query?.tab ?? ''} go={go} query={query} />;
+    case 'growth': return <GrowthAllPage key={query?.tab ?? ''} query={query} />;
+    case 'reminders': return <RemindersPage />;
+    case 'spend': return <SpendPage />;
+    case 'records': return <RecordsPage key={`${query?.tab ?? ''}${query?.filter ?? ''}`} go={go} query={query} logs={<LogsSub />} />;
+    case 'data': return <DataPage key={query?.tab ?? ''} query={query} />;
+    case 'prefs': return <PrefsSub theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} go={go} />;
     case 'server': return <ServerSub />;
+    case 'status': return <StatusPage go={go} id={id} />;   // 只剩 #me/status/cards（卡片样例）
     default: return <MeIndex go={go} />;
   }
 }
@@ -75,12 +64,13 @@ function MeIndex({ go }: { go: (to: string) => void }) {
   );
 }
 
-function PlatformsSub({ go }: { go: (to: string) => void }) {
+function PlatformsSub({ go, query }: { go: (to: string) => void; query?: Record<string, string> }) {
   const { t } = useT();
   const { open: openAdd, version } = useAddApp();
   const apps = useLocalApps(version);
   const [prefs, setP] = useState<Prefs | null>(null);
   const [toast, show] = useToast();
+  const [tab, setTab] = useState<'apps' | 'sources'>(query?.tab === 'sources' ? 'sources' : 'apps');
   useEffect(() => { void getPrefs().then(setP); }, []);
   useStoreChange(['kv:prefs'], () => void getPrefs().then(setP));
   const toggle = async (id: string) => {
@@ -89,7 +79,7 @@ function PlatformsSub({ go }: { go: (to: string) => void }) {
     setP(await setPrefs({ platforms: on ? prefs.platforms.filter((x) => x !== id) : [...prefs.platforms, id] }));
   };
   const reg = apps.data?.apps ?? [];
-  return (
+  const body = (
     <div className="page page-narrow">
       {toast}
       <GroupList title={t('ui.platforms_i_publish_on')}>
@@ -128,53 +118,15 @@ function PlatformsSub({ go }: { go: (to: string) => void }) {
       <p className="px-1 text-[13px] text-muted">{t('ui.add_app_only_opens_apps_2')} <button type="button" className="ghost" onClick={() => go('publish')}>{t('ui.go_publish')} ›</button></p>
     </div>
   );
-}
-
-function AgentSub({ go }: { go: (to: string) => void }) {
-  const { t } = useT();
-  const [ov, setOv] = useState<Record<string, AssistantOverride>>({});
-  const [open, setOpen] = useState<string | null>(null);
-  const [toast, show] = useToast();
-  useEffect(() => { void getAssistantOverrides().then(setOv); }, []);
-  useStoreChange(['kv:assistants'], () => void getAssistantOverrides().then(setOv));
-  const a = ASSISTANTS.find((x) => x.platform === open);
   return (
-    <div className="page page-narrow">
-      {toast}
-      {!a ? (
-        <>
-          <GroupList title={t('ui.writing_assistants_one_style_per')}>
-            {ASSISTANTS.map((x) => <ListRow key={x.platform} icon="agent" label={x.description.replace(/^把选题/, '').slice(0, 24) || x.name} hint={ov[x.platform] ? t('ui.customized') : t('ui.default_style')} onClick={() => setOpen(x.platform)} />)}
-          </GroupList>
-          <GroupList title={t('ui.hard_boundaries_not_editable')}>
-            {HARD_BOUNDARIES.map((b) => <li key={b}><div className="list-row static"><span className="row-ico"><Icon name="shield" size={18} /></span><span className="row-text"><span className="row-hint !text-[14px] !text-fg-2">{b}</span></span></div></li>)}
-          </GroupList>
-        </>
-      ) : (
-        <AssistantEdit key={a.platform} a={a} ov={ov[a.platform]} go={go} onBack={() => setOpen(null)} onSaved={async (o) => { await setAssistantOverride(a.platform, o); setOv(await getAssistantOverrides()); show(o ? t('ui.saved') : t('ui.restored_defaults')); }} />
-      )}
+    <div className="flex flex-col" data-testid="platforms-page">
+      <div className="page page-narrow !pb-0"><div className="seg" role="group" aria-label={t('ui.platforms_and_apps')}>{([['apps', 'ui.platforms_and_apps'], ['sources', 'ui.data_sources_and_trend_sources']] as const).map(([v, l]) => <button key={v} type="button" aria-pressed={tab === v} onClick={() => setTab(v)} data-testid={`platforms-tab-${v}`}>{t(l)}</button>)}</div></div>
+      {tab === 'apps' ? body : <SourcesPage />}
     </div>
   );
 }
 
-function AssistantEdit({ a, ov, go, onBack, onSaved }: { a: (typeof ASSISTANTS)[number]; ov?: AssistantOverride; go: (to: string) => void; onBack: () => void; onSaved: (o: AssistantOverride | null) => Promise<void> }) {
-  const { t } = useT();
-  const [body, setBody] = useState(ov?.body ?? a.body);
-  const [pick, setPick] = useState<Pick>({ providerId: ov?.providerId ?? null, model: ov?.model ?? null });
-  return (
-    <section className="card flex flex-col gap-3">
-      <div className="flex items-center gap-2"><button type="button" className="ghost !px-1" aria-label={t('ui.back')} onClick={onBack}><Icon name="arrowLeft" size={18} /></button><h2 className="grow">{a.description}</h2></div>
-      <label className="field !m-0"><span>{t('ui.writing_instructions')}</span><textarea rows={12} value={body} onChange={(e) => setBody(e.target.value)} /></label>
-      <div className="flex flex-col gap-1"><span className="text-[14px] font-medium text-fg">{t('ui.model_used_by_this_assistant')}</span><ModelPicker value={pick} onChange={setPick} go={go} /></div>
-      <div className="flex flex-wrap gap-2">
-        <button type="button" className="primary" onClick={() => void onSaved({ body: body.trim() === a.body.trim() ? undefined : body, providerId: pick.providerId, model: pick.model })}>{t('ui.save')}</button>
-        <button type="button" onClick={() => { setBody(a.body); setPick({ providerId: null, model: null }); void onSaved(null); }}>{t('ui.restore_default')}</button>
-      </div>
-    </section>
-  );
-}
-
-function PrefsSub({ theme, setTheme, lang, setLang }: { theme: Theme; setTheme: (t: Theme) => void; lang: Lang; setLang: (l: Lang) => void }) {
+function PrefsSub({ theme, setTheme, lang, setLang, go }: { theme: Theme; setTheme: (t: Theme) => void; lang: Lang; setLang: (l: Lang) => void; go: (to: string) => void }) {
   const { t } = useT();
   const [prefs, setP] = useState<Prefs | null>(null);
   useEffect(() => { void getPrefs().then(setP); }, []);
@@ -194,10 +146,9 @@ function PrefsSub({ theme, setTheme, lang, setLang }: { theme: Theme; setTheme: 
         <li><label className="list-row cursor-pointer"><input type="checkbox" checked={!!prefs?.bindSessions} onChange={async () => setP(await setPrefs({ bindSessions: !prefs?.bindSessions }))} /><span className="row-text"><span className="row-label">{t('ui.platform_conversation_binding')}</span><span className="row-hint">{t('ui.when_a_platform_opens_the')}</span></span></label></li>
         <li><div className="list-row static flex-wrap"><span className="row-text"><span className="row-label">{t('ui.agent_panel_dock')}</span></span>{seg(prefs?.agentDock ?? 'right', [['right', '右侧'], ['left', '左侧']], async (v) => setP(await setPrefs({ agentDock: v })), t('ui.agent_panel_dock'))}</div></li>
       </GroupList>
-      <GroupList title={t('ui.public_trend_sources_more_in')}>
-        {HOT_SOURCES.map((s) => (
-          <li key={s.id}><label className="list-row cursor-pointer"><input type="checkbox" checked={!!prefs?.hotSources.includes(s.id)} onChange={async () => { if (!prefs) return; const on = prefs.hotSources.includes(s.id); setP(await setPrefs({ hotSources: on ? prefs.hotSources.filter((x) => x !== s.id) : [...prefs.hotSources, s.id] })); }} aria-label={s.label} /><span className="row-text"><span className="row-label">{s.label}</span><span className="row-hint">{s.kind === 'rss' ? t('ui.official_rss') : t('ui.public_boards_robots_txt_checked')}</span></span></label></li>
-        ))}
+      <SettingsV9Page part="flags" />
+      <GroupList title={t('ui.more')}>
+        <ListRow icon="retry" label={t('ui.cap_restart')} hint={t('ui.cap_restart_h')} onClick={() => go('onboarding')} href="#onboarding" testId="me-onboarding" />
       </GroupList>
     </div>
   );

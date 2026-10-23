@@ -14,7 +14,7 @@ export interface AuditEvent {
   outcome?: 'ok' | 'denied' | 'failed' | 'pending';
   detail?: Record<string, unknown>;
 }
-export interface AuditFilter { kinds?: AuditKind[]; actor?: AuditEvent['actor']; from?: string; to?: string; text?: string; runId?: string }
+export interface AuditFilter { kinds?: AuditKind[]; actor?: AuditEvent['actor']; from?: string; to?: string; text?: string; runId?: string; outcome?: AuditEvent['outcome'] }
 
 export function makeAudit(e: Omit<AuditEvent, 'at'> & { at?: string }): AuditEvent {
   return redactDeep({ ...e, at: e.at ?? new Date().toISOString() });
@@ -22,7 +22,7 @@ export function makeAudit(e: Omit<AuditEvent, 'at'> & { at?: string }): AuditEve
 export function filterAudit(list: AuditEvent[], f: AuditFilter = {}): AuditEvent[] {
   const q = f.text?.trim().toLowerCase();
   return list.filter((e) =>
-    (!f.kinds?.length || f.kinds.includes(e.kind)) && (!f.actor || e.actor === f.actor) && (!f.runId || e.runId === f.runId) &&
+    (!f.kinds?.length || f.kinds.includes(e.kind)) && (!f.outcome || e.outcome === f.outcome) && (!f.actor || e.actor === f.actor) && (!f.runId || e.runId === f.runId) &&
     (!f.from || e.at >= f.from) && (!f.to || e.at <= f.to) &&
     (!q || `${e.summary} ${e.tool ?? ''} ${e.target ?? ''}`.toLowerCase().includes(q)));
 }

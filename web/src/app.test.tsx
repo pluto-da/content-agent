@@ -31,7 +31,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 /* ---------------- A12 旧路由全部重定向 ---------------- */
 describe('A12 / B14 路由重定向', () => {
   // 0.8.0：先按旧规则映射到 0.6.0/0.7.0 位置（normalizeV7，断言保持原样），再经 V7_MAP 到 0.8.0 位置
-  const valid = /^(agent(\/(drafts(\/\d+)?|inbox))?(\?(ask|filter)=\w+)?|onboarding|p\/[a-z0-9_-]+|me(\/(models|platforms|sources|profile|agent|prefs|backup|logs|server))?)$/;
+  const valid = /^(agent(\/(drafts(\/\d+)?|inbox))?(\?(ask|filter)=\w+)?|onboarding|p\/[a-z0-9_-]+|me(\/(models|platforms|profile|files|memory|growth|reminders|spend|records|data|prefs|server))?(\?(tab|filter)=\w+)?)$/;
   it.each(Object.entries(V5_MAP))('0.5.0 %s → %s', (from, to) => { expect(normalizeV7(from)).toBe(to); expect(toHash(parseHash(from))).toMatch(valid); });
   it.each(Object.entries(SETTINGS_MAP))('#settings/%s → %s', (from, to) => { expect(normalize(`settings/${from}`.replace(/\/$/, ''))).toBe(to); });
   it.each(Object.entries(LEGACY))('0.2.x %s → %s', (from, to) => { expect(normalizeV7(from)).toBe(to); expect(toHash(parseHash(from))).toMatch(valid); });
@@ -44,7 +44,11 @@ describe('A12 / B14 路由重定向', () => {
     expect(toHash(parseHash('#nonsense'))).toBe('agent');
     expect(toHash(parseHash('#home'))).toBe('agent');
     expect(toHash(parseHash('#topics'))).toBe('agent?ask=hot');
-    expect(toHash(parseHash('#agent/files'))).toBe('me/agent');
+    expect(toHash(parseHash('#agent/files'))).toBe('me/memory?tab=skills');
+    expect(toHash(parseHash('#me/audit'))).toBe('me/records?filter=recent');
+    expect(toHash(parseHash('#me/backup'))).toBe('me/data');
+    expect(toHash(parseHash('#me/agent'))).toBe('me/memory?tab=skills');
+    expect(toHash(parseHash('#me/models/connect?cap=image'))).toBe('me/models/connect?cap=image');
     expect(parseHash('#me/models/mimo')).toEqual({ space: 'me', sub: 'models', id: 'mimo' });
     expect(parseHash('#p/xiaohongshu')).toEqual({ space: 'p', sub: 'xiaohongshu', id: null });
     expect(toHash(parseHash('#write/pending'))).toBe('agent/drafts?filter=pending');
@@ -65,13 +69,16 @@ describe('A9 / B3 导航（0.8.0：首页即 Agent，平台在侧栏）', () => 
   });
   it('“我的”是分组列表，包含模型、平台与软件、数据源、账号画像、规则、通用、备份、日志、连接服务器、重新开始引导', () => {
     // 0.9.0 改写断言（deviations-v9 T1）：新增 Agent 组（设定 / 记忆 / 技能 / 收益 / 成长记录 / 提醒）与运维项（花钱与实验、运行状态、审计）
-    expect(ME_GROUPS.flatMap((g) => g.items.map((i) => i.id))).toEqual(['me/models', 'me/platforms', 'me/sources', 'me/profile', 'me/agent', 'me/files', 'me/memory', 'me/skills', 'me/revenue', 'me/growth', 'me/reminders', 'me/prefs', 'me/settings', 'me/status', 'me/audit', 'me/backup', 'me/storage', 'me/logs', 'me/server', 'onboarding']);
+    expect(ME_GROUPS.flatMap((g) => g.items.map((i) => i.id))).toEqual(['me/models', 'me/platforms', 'me/profile', 'me/files', 'me/memory', 'me/growth', 'me/reminders', 'me/spend', 'me/records', 'me/data', 'me/prefs', 'me/server']);   // 1.1.0：22 → 12（deviations-v1.1）
   });
   it('命令面板别名：旧名称都能搜到新位置', () => {
     const find = (q: string) => NAV.filter((n) => `${n.label}${n.desc}${n.keywords ?? ''}`.toLowerCase().includes(q)).map((n) => n.id);
     expect(find('灵感')).toContain('agent?ask=hot'); expect(find('找选题')).toContain('agent?ask=hot'); expect(find('创作')).toContain('agent/drafts');
     expect(find('去发布')).toContain('agent/drafts?filter=approved'); expect(find('复盘')).toContain('agent?ask=metrics'); expect(find('首页')).toContain('agent');
     expect(find('密钥')).toContain('me/models'); expect(find('插件')).toContain('me/platforms'); expect(find('偏好')).toContain('me/prefs');
+    // 1.1.0：旧入口名仍能搜到新位置
+    expect(find('审计')).toContain('me/records?filter=recent'); expect(find('写作助手')).toContain('me/memory?tab=skills'); expect(find('运行状态')).toContain('me/records?tab=status');
+    expect(find('备份')).toContain('me/data'); expect(find('数据源')).toContain('me/platforms'); expect(find('收益')).toContain('me/growth'); expect(find('重新开始引导')).toContain('onboarding');
   });
   it('首页主按钮与卡片文字都是动作', () => {
     const s: Snapshot = { hasModel: false, hotCount: 0, pending: 0, approved: 0, published: 0, drafts: 0 };

@@ -7,7 +7,13 @@ export type Space = 'agent' | 'p' | 'me' | 'onboarding';
 export interface Route { space: Space; sub: string; id: string | null; query?: Record<string, string> }
 
 export const SPACES: Space[] = ['agent', 'p', 'me', 'onboarding'];
-export const ME_SUBS = ['models', 'platforms', 'sources', 'profile', 'agent', 'prefs', 'backup', 'logs', 'server', 'files', 'memory', 'skills', 'revenue', 'growth', 'reminders', 'status', 'audit', 'settings', 'storage'] as const;
+/** 1.1.0：“我的”12 个入口对应的子页（status 只保留 #me/status/cards 卡片样例页）。 */
+export const ME_SUBS = ['models', 'platforms', 'profile', 'files', 'memory', 'growth', 'reminders', 'spend', 'records', 'data', 'prefs', 'server', 'status'] as const;
+/** 1.1.0：旧“我的”子页 → 新位置（旧链接、旧书签、命令面板旧词都能到达）。 */
+export const ME_REDIRECTS: Record<string, string> = {
+  agent: 'me/memory?tab=skills', sources: 'me/platforms?tab=sources', skills: 'me/memory?tab=skills', revenue: 'me/growth?tab=revenue',
+  status: 'me/records?tab=status', audit: 'me/records?filter=recent', logs: 'me/records', settings: 'me/spend', backup: 'me/data', storage: 'me/data?tab=storage',
+};
 export const WRITE_FILTERS = ['all', 'pending', 'approved', 'handed_off'] as const;
 export const AGENT_SUBS = ['', 'drafts', 'inbox'] as const;
 
@@ -19,20 +25,20 @@ export const V5_MAP: Record<string, string> = {
   analytics: 'results',
   platforms: 'me/platforms',
   models: 'me/models', 'models/routes': 'me/models', 'models/keys': 'me/models', 'models/usage': 'me/models',
-  agent: 'me/agent', 'agent/files': 'me/agent', 'agent/improve': 'me/agent',
-  prefs: 'me/prefs', 'prefs/general': 'me/prefs', 'prefs/backup': 'me/backup', 'prefs/logs': 'me/logs',
+  agent: 'me/memory?tab=skills', 'agent/files': 'me/memory?tab=skills', 'agent/improve': 'me/memory?tab=skills',
+  prefs: 'me/prefs', 'prefs/general': 'me/prefs', 'prefs/backup': 'me/data', 'prefs/logs': 'me/records',
 };
 
 /** 0.3.x 设置中心 9 个分区。 */
 export const SETTINGS_MAP: Record<string, string> = {
   '': 'me/prefs', status: 'me/models', models: 'me/models', secrets: 'me/models', plugins: 'me/platforms', 'local-apps': 'me/platforms',
-  agent: 'me/agent', improve: 'me/agent', general: 'me/prefs', backup: 'me/backup', tasks: 'me/logs',
+  agent: 'me/memory?tab=skills', improve: 'me/memory?tab=skills', general: 'me/prefs', backup: 'me/data', tasks: 'me/records',
 };
 
 /** 0.2.x 的 13 个平级页面。 */
 export const LEGACY: Record<string, string> = {
   overview: 'home', hot: 'topics', library: 'topics', topics: 'topics', review: 'write', creator: 'publish', analytics: 'results',
-  status: 'me/models', improve: 'me/agent', plugins: 'me/platforms', tasks: 'me/logs', settings: 'me/prefs',
+  status: 'me/models', improve: 'me/memory?tab=skills', plugins: 'me/platforms', tasks: 'me/records', settings: 'me/prefs',
 };
 
 /** 0.7.0 六页 → 0.8.0（单测逐条覆盖）。值为完整 hash（可带 ?query）。 */
@@ -72,10 +78,16 @@ export function normalize(target: string): string {
   const [path = ''] = raw.split('?');
   const head = path.split('/')[0]!;
   // 0.5.0 的 #agent/files、#agent/improve（Agent 系统文件页）→ 我的 → 写作助手与规则；裸 #agent 在 0.8.0 起是首页
-  if (head === 'agent' && /^agent\/(files|improve)$/.test(path)) return 'me/agent';
+  if (head === 'agent' && /^agent\/(files|improve)$/.test(path)) return 'me/memory?tab=skills';
   if (head === 'agent' || head === 'p' || head === 'onboarding') return raw;
-  if (head === 'me') return path === 'me/sources' || path === 'me/profile' ? path : normalizeV7(path);
+  if (head === 'me') {
+    const [, sub = '', id] = path.split('/');
+    if (sub in ME_REDIRECTS && !(sub === 'status' && id === 'cards')) return ME_REDIRECTS[sub]!;
+    const n = normalizeV7(path);
+    return raw.includes('?') && n === path ? raw : n;
+  }
   const v7 = normalizeV7(path);
+  if (v7.startsWith('me/')) { const sub = v7.split('/')[1] ?? ''; if (sub in ME_REDIRECTS) return ME_REDIRECTS[sub]!; }
   if (v7.startsWith('me') || v7 === 'onboarding') return v7;
   if (v7 in V7_MAP) return V7_MAP[v7]!;
   const m = /^write\/(\d+)$/.exec(v7);
@@ -98,7 +110,7 @@ export function parseHash(hash: string): Route {
   const [space, sub = '', id = null] = path.split('/') as [string, string?, string?];
   switch (space) {
     case 'p': return sub && /^[a-z0-9_-]+$/i.test(sub) ? { space: 'p', sub, id: null } : { space: 'agent', sub: '', id: null };
-    case 'me': return { space: 'me', sub: (ME_SUBS as readonly string[]).includes(sub) ? sub : '', id: sub === 'models' || (sub === 'status' && id === 'cards') ? id : null };
+    case 'me': { const r: Route = { space: 'me', sub: (ME_SUBS as readonly string[]).includes(sub) ? sub : '', id: sub === 'models' ? id : sub === 'status' && id === 'cards' ? id : null }; if (query) r.query = query; return r; }
     case 'onboarding': return { space: 'onboarding', sub: '', id: null };
     default: {
       const s = (AGENT_SUBS as readonly string[]).includes(sub) ? sub : '';

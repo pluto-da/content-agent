@@ -22,7 +22,8 @@ export function StatusPage({ go, id }: { go: (to: string) => void; id?: string |
   if (id === 'cards') return <CardGallery go={go} />;
   return <StatusMain go={go} />;
 }
-function StatusMain({ go }: { go: (to: string) => void }) {
+/** 1.1.0：运行详情只讲健康、延迟、错误与缓存；花费只在“花钱”页显示（这里给链接）。 */
+export function StatusMain({ go }: { go: (to: string) => void }) {
   const { t } = useT();
   const [days, setDays] = useState<'1' | '7' | '30'>('7');
   const { data, error, reload } = useAsync(() => modelStats(Number(days)), ['usage_log'], [days]);
@@ -32,7 +33,7 @@ function StatusMain({ go }: { go: (to: string) => void }) {
       <SegTabs value={days} onChange={setDays} label={t('ui.time_range')} options={[['1', '今天'], ['7', '近 7 天'], ['30', '近 30 天']]} />
       {error && <Problem title={t('ui.failed_to_read_run_data')} advice={error} action={t('ui.retry')} onAction={reload} />}
       {data && <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }} data-testid="status-totals">
-        {[[t('ui.calls_2'), String(data.totals.calls)], [t('ui.cost_2'), `¥${data.totals.cost.toFixed(3)}`], [t('ui.error_rate'), pct(data.totals.errorRate)], [t('ui.cache_hits'), pct(data.totals.cacheRate)]].map(([k, v]) => <div key={k} className="stat"><span className="text-[13px] text-muted">{k}</span><strong className="text-[22px] tabular-nums">{v}</strong></div>)}
+        {[[t('ui.calls_2'), String(data.totals.calls)], [t('ui.error_rate'), pct(data.totals.errorRate)], [t('ui.cache_hits'), pct(data.totals.cacheRate)]].map(([k, v]) => <div key={k} className="stat"><span className="text-[13px] text-muted">{k}</span><strong className="text-[22px] tabular-nums">{v}</strong></div>)}
       </div>}
       {data && !data.stats.length && <div className="card !p-0"><EmptyState icon="activity" title={t('ui.no_calls_yet')} why={t('ui.chats_try_it_and_connection')} action={t('ui.connect_a_model')} onAction={() => go('me/models')} /></div>}
       {!!data?.stats.length && (
@@ -41,7 +42,7 @@ function StatusMain({ go }: { go: (to: string) => void }) {
             <li key={s.key}>
               <StatusDot tone={!s.healthy ? 'bad' : s.errorRate > 0.2 ? 'warn' : 'ok'}>{s.healthy ? t('ui.healthy') : t('ui.unstable')}</StatusDot>
               <span className="flex min-w-0 flex-1 flex-col"><span className="item-title !text-[14px] break-all">{s.model} · {s.vendor} · {t(s.role)}</span>
-                <span className="item-meta">{s.calls} {t('ui.calls')} · p50 {(s.p50 / 1000).toFixed(1)}s · p95 {(s.p95 / 1000).toFixed(1)}s · ¥{s.cost.toFixed(3)} · {t('ui.cache_hits')} {pct(s.cacheRate)} · {t('ui.error_rate')} {pct(s.errorRate)}{s.lastError ? ` · ${t('ui.last_error')} ${s.lastError}` : ''}</span></span>
+                <span className="item-meta">{s.calls} {t('ui.calls')} · p50 {(s.p50 / 1000).toFixed(1)}s · p95 {(s.p95 / 1000).toFixed(1)}s · {t('ui.cache_hits')} {pct(s.cacheRate)} · {t('ui.error_rate')} {pct(s.errorRate)}{s.lastError ? ` · ${t('ui.last_error')} ${s.lastError}` : ''}</span></span>
             </li>
           ))}
         </ul>
@@ -50,20 +51,21 @@ function StatusMain({ go }: { go: (to: string) => void }) {
         <Note tone={doc && doc.problems.filter((p) => !p.fixed).length ? 'warn' : 'ok'}>{doc ? `${doc.files} ${t('ui.files_2')} · ${doc.folders} ${t('ui.folders')} · ${t('ui.question')} ${doc.problems.filter((p) => !p.fixed).length}（${t('ui.auto_fixed')} ${doc.fixed}）` : t('ui.self_check_runs_once_after')}</Note>
       </Section>
       <Note>{t('ui.health_routing_when_the_default')}</Note>
+      <button type="button" className="ghost self-start" onClick={() => go('me/spend')} data-testid="status-cost-link">{t('ui.see_spending')} ›</button>
       <Diagnostics />
     </div>
   );
 }
 
 /* ---------------- 审计日志 ---------------- */
-export function AuditPage() {
+export function AuditPage({ initialKind = '', kinds: fixedKinds, outcome }: { initialKind?: AuditKind | ''; kinds?: AuditKind[]; outcome?: 'failed' } = {}) {
   const { t } = useT();
-  const [kind, setKind] = useState<AuditKind | ''>('');
+  const [kind, setKind] = useState<AuditKind | ''>(initialKind);
   const [actor, setActor] = useState<'' | 'user' | 'agent' | 'system'>('');
   const [text, setText] = useState('');
   const [from, setFrom] = useState('');
-  const f: AuditFilter = { ...(kind ? { kinds: [kind] } : {}), ...(actor ? { actor } : {}), ...(text.trim() ? { text: text.trim() } : {}), ...(from ? { from: `${from}T00:00:00` } : {}) };
-  const { data, error, reload } = useAsync(() => listAudit(f), ['audit'], [kind, actor, text, from]);
+  const f: AuditFilter = { ...(outcome ? { outcome } : {}), ...(kind ? { kinds: [kind] } : fixedKinds ? { kinds: fixedKinds } : {}), ...(actor ? { actor } : {}), ...(text.trim() ? { text: text.trim() } : {}), ...(from ? { from: `${from}T00:00:00` } : {}) };
+  const { data, error, reload } = useAsync(() => listAudit(f), ['audit'], [kind, actor, text, from, (fixedKinds ?? []).join()]);
   const exp = async (fmt: 'csv' | 'jsonl') => {
     const list = data ?? [];
     download(`audit-${new Date().toISOString().slice(0, 10)}.${fmt}`, fmt === 'csv' ? `\uFEFF${auditToCsv(list)}` : auditToJsonl(list), fmt === 'csv' ? 'text/csv' : 'application/x-ndjson');
@@ -89,7 +91,7 @@ export function AuditPage() {
 }
 
 /* ---------------- 设置：花钱阈值、实验开关、Key 共用方式 ---------------- */
-export function SettingsV9Page() {
+export function SettingsV9Page({ part = 'all' }: { part?: 'all' | 'spend' | 'flags' } = {}) {
   const { t } = useT();
   const { data: prefs, reload } = useAsync(getPrefs, ['kv:prefs']);
   const [perCall, setPerCall] = useState<string | null>(null);
@@ -109,11 +111,10 @@ export function SettingsV9Page() {
     setPerCall(null); setPerDay(null); show(t('ui.saved_applies_to_the_next_2'));
   };
   const setFlag = async (id: string, on: boolean) => { await setPrefs({ flags: { ...(prefs.flags ?? {}), [id]: on } }); await audit({ kind: 'flag_change', actor: 'user', summary: `${on ? '打开' : '关闭'}实验功能 ${id}`, outcome: 'ok' }); reload(); };
-  const setKeyPolicy = async (p: 'account' | 'per-role') => { await setPrefs({ keyPolicy: p }); const m = await getModelsV3(); m.keyPolicy = { scope: p }; await saveModelsV3(m); await audit({ kind: 'setting_change', actor: 'user', summary: `Key 共用方式：${p === 'account' ? '同一服务商一个 Key' : '每类单独填写'}`, outcome: 'ok' }); reload(); };
   return (
     <div className="page page-narrow flex flex-col gap-3" data-testid="settings-v9">
       {toast}
-      <Section title={t('ui.ask_before_spending')} testId="spend">
+      {part !== 'flags' && <><Section title={t('ui.ask_before_spending')} testId="spend">
         <div className="form-row">
           <label className="field"><span>{t('ui.per_call_estimate_reaches')}</span><input inputMode="decimal" value={perCall ?? String(spend.perCallConfirmYuan)} onChange={(e) => setPerCall(e.target.value)} data-testid="spend-call" /></label>
           <label className="field"><span>{t('ui.daily_total_reaches')}</span><input inputMode="decimal" value={perDay ?? String(spend.perDayConfirmYuan)} onChange={(e) => setPerDay(e.target.value)} data-testid="spend-day" /></label>
@@ -122,13 +123,9 @@ export function SettingsV9Page() {
         {err && <Problem title={err} advice={t('ui.fix_it_then_save')} />}
         <button type="button" className="primary self-start" onClick={() => void saveSpend()} data-testid="spend-save">{t('ui.save')}</button>
       </Section>
-      <SpendGuardSection />
-      <Section title={t('ui.key_sharing')}>
-        {([['account', '同一服务商一个 Key，各能力通用（默认）', '例如百炼填一次，文本、生图、配音、转写都能用；某一类仍可单独改'], ['per-role', '每类单独填写', '每个能力页都要填自己的地址与 Key']] as const).map(([v, l, h]) => (
-          <label key={v} className="list-row cursor-pointer"><input type="radio" name="keypolicy" checked={(prefs.keyPolicy ?? 'account') === v} onChange={() => void setKeyPolicy(v)} /><span className="row-text"><span className="row-label">{t(l)}</span><span className="row-hint">{t(h)}</span></span></label>
-        ))}
-      </Section>
-      <GroupList title={t('ui.experimental_features')}>
+      <SpendGuardSection /></>}
+
+      {part !== 'spend' && <><GroupList title={t('ui.experimental_features')}>
         {FLAGS.list().map((f) => (
           <li key={f.id}><label className={`list-row ${f.stage === 'reserved' ? 'static' : 'cursor-pointer'}`}>
             <input type="checkbox" checked={flagOn(f.id, ov)} disabled={f.stage === 'reserved'} onChange={(e) => void setFlag(f.id, e.target.checked)} aria-label={f.label} data-testid={`flag-${f.id}`} />
@@ -136,7 +133,7 @@ export function SettingsV9Page() {
           </label></li>
         ))}
       </GroupList>
-      <Note>{t('ui.switches_cant_relax_hard_boundaries')}</Note>
+      <Note>{t('ui.switches_cant_relax_hard_boundaries')}</Note></>}
     </div>
   );
 }
