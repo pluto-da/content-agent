@@ -103,12 +103,12 @@ function CoverageStrip({ s, go }: { s: ModelsStateV3; go: (to: string) => void }
         {CAPS.map((c) => {
           const by = cov[c.id];
           return (
-            <li key={c.id}>
-              <button type="button" className={`cap-cell w-full !min-h-14 !flex-col !items-start !justify-center !gap-0.5 !text-left ${by ? 'on' : 'off'}`} data-testid={`cap-${c.id}`} data-on={by ? '1' : '0'}
-                title={by ? `${t(c.label)}：${displayModel(by.entry)} · ${by.account.label}` : `${t(c.label)}：${t('ui.add_one')}`}
+            <li key={c.id} className="min-w-0">
+              <button type="button" className={`cap-cell w-full min-w-0 !whitespace-normal !min-h-14 !flex-col !items-start !justify-center !gap-0.5 !text-left ${by ? 'on' : 'off'}`} data-testid={`cap-${c.id}`} data-on={by ? '1' : '0'}
+                title={by ? `${t(c.label)}${t('ui.colon')}${displayModel(by.entry)} · ${by.account.label}` : `${t(c.label)}${t('ui.colon')}${t('ui.add_one')}`}
                 onClick={() => go(by ? `me/models/${c.role}` : `me/models/connect?cap=${c.role}`)}>
                 <span className="flex items-center gap-1 text-[14px] font-medium"><Icon name={c.icon} size={16} />{t(c.label)}</span>
-                <span className="line-clamp-2 break-all text-[12px] text-muted">{by ? `${displayModel(by.entry)}` : `${t('ui.add_one')} ›`}</span>
+                <span className="line-clamp-2 w-full break-all text-[12px] text-muted">{by ? `${displayModel(by.entry)}` : `${t('ui.add_one')} ›`}</span>
               </button>
             </li>
           );

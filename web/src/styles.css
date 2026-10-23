@@ -577,7 +577,7 @@ button, .button-like { border-radius: 10px; }
 .list-row:active:not(.static) { transform: none !important; }
 .row-ico { display: grid; place-items: center; width: 22px; color: var(--text-2); }
 .row-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
-.row-label { font-size: 16px; line-height: 1.35; color: var(--text); }
+.row-label { font-size: 16px; line-height: 1.35; color: var(--text); white-space: normal; overflow-wrap: anywhere; }
 .row-label.danger { color: var(--bad); }
 .row-hint { font-size: 13px; line-height: 1.45; color: var(--muted); white-space: normal; }
 .row-value { font-size: 14px; color: var(--muted); white-space: nowrap; }
@@ -750,3 +750,15 @@ button:active:not(:disabled), .button-like:active { transform: scale(.97); trans
 .v1-ver { display: inline-block; width: 10px; height: 18px; border-radius: 4px; margin-right: 2px; background: var(--accent); }
 .v1-ver[data-drop="1"] { background: color-mix(in srgb, var(--fg) 18%, transparent); outline: 1px dashed var(--muted); }
 .v1-ver[data-forever="1"] { background: var(--ok, #2f9e44); }
+/* 1.1.0 自审：分段标签不被压扁（窄屏横向滚动）；带分段控件的设置行在窄屏换行而不是把标签挤成一字一行 */
+.tabs button { flex-shrink: 0; white-space: nowrap; }
+.list-row.flex-wrap > .row-text { flex: 1 1 13rem; }
+/* 1.1.0 自审：英文界面拉丁字体在前，避免中文字体把 ’ 渲染成全角（“Today’ s”） */
+html:lang(en) { --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "DejaVu Sans", Arial, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Microsoft YaHei UI", "Noto Sans CJK SC", "Source Han Sans SC", system-ui, sans-serif; }
+/* 1.1.0 自审：分段控件不换成上下两行（英文“Platforms & apps / Data & trend sources”曾被折成竖排），放不下时横向滚动 */
+.seg button { white-space: nowrap; }
+.seg.seg-nowrap { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.seg.seg-nowrap::-webkit-scrollbar { display: none; }
+.seg.seg-nowrap button { flex-shrink: 0; }
+/* 1.1.0 自审：输入框占位文字只占一行（英文手机上“Message the Agent…”曾折成两行被裁） */
+textarea[data-testid="agent-input"]::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -8,7 +8,7 @@ import { CENTERS, center } from '../data/platforms';
 import { canClearBuiltin, clearAllBuiltin, clearBuiltin } from '../builtin';
 import { getPrefs, setPrefs, usageToday, type Prefs, type UsageDay } from '../local/store';
 import { useLocalApps, OS_LABEL } from '../format';
-import { Busy, EmptyState, ErrorNext, GroupList, ListRow, Problem, useToast } from '../ui';
+import { Busy, ErrorNext, GroupList, ListRow, Problem, useToast } from '../ui';
 import { RolesPage } from './me/v9/roles';
 import { AgentSettingsPage } from './me/v9/agentfiles';
 import { StatusPage, RemindersPage, SettingsV9Page } from './me/v9/ops';
@@ -120,7 +120,7 @@ function PlatformsSub({ go, query }: { go: (to: string) => void; query?: Record<
   );
   return (
     <div className="flex flex-col" data-testid="platforms-page">
-      <div className="page page-narrow !pb-0"><div className="seg" role="group" aria-label={t('ui.platforms_and_apps')}>{([['apps', 'ui.platforms_and_apps'], ['sources', 'ui.data_sources_and_trend_sources']] as const).map(([v, l]) => <button key={v} type="button" aria-pressed={tab === v} onClick={() => setTab(v)} data-testid={`platforms-tab-${v}`}>{t(l)}</button>)}</div></div>
+      <div className="page page-narrow !pb-0"><div className="seg seg-nowrap" role="group" aria-label={t('ui.platforms_and_apps')}>{([['apps', 'ui.platforms_and_apps'], ['sources', 'ui.data_sources_and_trend_sources']] as const).map(([v, l]) => <button key={v} type="button" aria-pressed={tab === v} onClick={() => setTab(v)} data-testid={`platforms-tab-${v}`}>{t(l)}</button>)}</div></div>
       {tab === 'apps' ? body : <SourcesPage />}
     </div>
   );
@@ -163,7 +163,7 @@ function LogsSub() {
   return (
     <div className="page page-narrow flex flex-col gap-3">
       <ErrorNext error={err} action={t('ui.reload_2')} onAction={load} />
-      {logs && !logs.length && <div className="card !p-0"><EmptyState icon="tasks" title={t('ui.no_records_yet')} why={t('ui.results_and_failure_reasons_of')} /></div>}
+      {/* 1.1.0 自审：任务日志为空时不再单独显示“还没有记录”（上方审计记录已有内容时会自相矛盾；两者都空时由审计列表给空状态） */}
       {logs && logs.length > 0 && (
         <ul className="item-list">
           {logs.map((l, i) => (

@@ -129,3 +129,14 @@ describe('时间（Asia/Shanghai，相对日期由代码计算）', () => {
   it('解析不出返回 null（让 Agent 问）', () => { expect(parseWhenZh('过阵子', now)).toBeNull(); });
   it('3 点（已过）→ 明天 3 点', () => { expect(shDateTime(parseWhenZh('3点提醒我', now)!.at!)).toBe('2026-10-24 03:00'); });
 });
+
+describe('1.1.0 英文时间写法', () => {
+  it('tomorrow 9 am / in 30 minutes / every Monday 10:00 换成中文后解析', async () => {
+    const { parseWhenZh: p } = await import('../src/core/time.js');
+    const now = new Date('2026-10-24T05:00:00+08:00');
+    expect(p('tomorrow 9 am', now)?.at?.toISOString()).toBe('2026-10-25T01:00:00.000Z');
+    expect(p('in 30 minutes', now)?.at?.toISOString()).toBe('2026-10-23T21:30:00.000Z');
+    expect(p('every Monday 10:00', now)?.rrule).toBe('FREQ=WEEKLY;BYDAY=MO;BYHOUR=10;BYMINUTE=0');
+    expect(p('明早 9 点', now)?.at?.toISOString()).toBe('2026-10-25T01:00:00.000Z');
+  });
+});

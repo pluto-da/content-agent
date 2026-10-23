@@ -31,8 +31,19 @@ export interface ParsedWhen { at?: Date; rrule?: string; text: string }
  * 解析常见中文时间：今天/明天/后天/大后天 + 早上/上午/中午/下午/晚上 + N点[半|N分]；下周一…；每周一 9 点；N 分钟/小时后。
  * 解析不出来返回 null（由 Agent 问一个问题，不猜）。
  */
+/** 1.1.0：英文界面的常见写法先换成中文再解析（tomorrow 9 am / in 30 minutes / every Monday 10:00 / next Friday 3 pm）。 */
+export function enWhenToZh(input: string): string {
+  const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  let s = ` ${input.toLowerCase()} `;
+  s = s.replace(/\bin\s+(\d+)\s*(?:minutes?|mins?)\b/g, '$1分钟后').replace(/\bin\s+(\d+)\s*(?:hours?|hrs?)\b/g, '$1小时后');
+  s = s.replace(/\b(every|next)\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/g, (_, k: string, d: string) => `${k === 'every' ? '每' : '下'}周${'日一二三四五六'[DAYS.indexOf(d)]}`);
+  s = s.replace(/\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/g, (d: string) => `周${'日一二三四五六'[DAYS.indexOf(d)]}`);
+  s = s.replace(/\btomorrow\b/g, '明天').replace(/\btoday\b/g, '今天').replace(/\btonight\b/g, '今晚');
+  s = s.replace(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/g, (_, h: string, m: string | undefined, ap: string) => `${ap === 'am' ? '上午' : '下午'}${h}点${m ? `${m}分` : ''}`);
+  return s.trim();
+}
 export function parseWhenZh(input: string, now: Date): ParsedWhen | null {
-  const s = input.replace(/\s+/g, '');
+  const s = (/[a-z]/i.test(input) ? enWhenToZh(input) : input).replace(/\s+/g, '');
   const rel = /(\d+|[一二两三四五六七八九十]+)(分钟|小时)(以?后)/.exec(s);
   if (rel) {
     const n = cnToInt(rel[1]!);

@@ -33,7 +33,7 @@ const COMBOS = Object.keys(VPS).flatMap((vp) => ['light', 'dark'].flatMap((th) =
 const only = arg('only', '') ? arg('only', '').split(',') : COMBOS;
 
 /** 在页面里量布局问题（只看当前视口内可见元素）。 */
-function measure(minTarget) {
+function measure([minTarget, lang]) {
   const vis = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && +s.opacity !== 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth && !el.closest('[aria-hidden="true"],[inert],.sr-only'); };
   const name = (el) => `${el.tagName.toLowerCase()}${el.dataset.testid ? `[${el.dataset.testid}]` : ''}「${(el.innerText || el.getAttribute('aria-label') || el.value || '').trim().replace(/\s+/g, ' ').slice(0, 24)}」`;
   const overflow = document.documentElement.scrollWidth > innerWidth + 1;
@@ -65,7 +65,23 @@ function measure(minTarget) {
     const w = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left), h = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
     if (w > 4 && h > 4) overlap.push(`${name(a)} × ${name(b)}`);
   }
-  return { overflow, truncated: [...new Set(truncated)].slice(0, 12), small: [...new Set(small)].slice(0, 20), overlap: overlap.slice(0, 12) };
+  // 1.1.0 自审补充：文字溢出自身盒子却没被裁（如分段标签挤在一起）、被挤成一字一行的标签
+  const spill = [], squeezed = [];
+  for (const el of document.querySelectorAll('body *')) {
+    if (!vis(el) || el.closest('pre,textarea,code,.v9-editor,svg')) continue;
+    const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join('');
+    if (!own) continue;
+    const s = getComputedStyle(el); const r = el.getBoundingClientRect(); const fs = parseFloat(s.fontSize) || 14;
+    if (s.overflowX === 'visible' && s.textOverflow !== 'ellipsis' && el.scrollWidth > el.clientWidth + 2 && el.clientWidth > 0) spill.push(name(el));
+    if (own.length >= 4 && r.width < fs * 2.6 && r.height > fs * 3.2) squeezed.push(name(el));
+  }
+  // 英文界面里的中文（只报告，演示数据 / 用户内容 / BOUNDARIES.md 原文也会出现）
+  const cjk = [];
+  if (lang === 'en') {
+    const w = document.createTreeWalker(document.body, 4);
+    for (let n = w.nextNode(); n; n = w.nextNode()) { const t = n.textContent.trim(); if (/[\u4e00-\u9fff]/.test(t) && n.parentElement && vis(n.parentElement)) cjk.push(t.slice(0, 30)); }
+  }
+  return { spill: [...new Set(spill)].slice(0, 12), squeezed: [...new Set(squeezed)].slice(0, 12), cjk: [...new Set(cjk)].slice(0, 40), overflow, truncated: [...new Set(truncated)].slice(0, 12), small: [...new Set(small)].slice(0, 20), overlap: overlap.slice(0, 12) };
 }
 
 const browser = await chromium.launch({ executablePath: process.env.CHROME || undefined });
@@ -92,18 +108,18 @@ for (const combo of only) {
     await page.goto(URL0 + '#' + p); await page.waitForTimeout(800);
     const file = path.join(dir, `${p.replace(/\//g, '_')}.png`);
     await page.screenshot({ path: file });
-    const m = await page.evaluate(measure, vp === 'desktop' ? 24 : 44); // 触控（手机 / 平板）≥44px；桌面鼠标按 WCAG 2.2 2.5.8 ≥24px（deviations V11-09）
+    const m = await page.evaluate(measure, [vp === 'desktop' ? 24 : 44, lang]); // 触控（手机 / 平板）≥44px；桌面鼠标按 WCAG 2.2 2.5.8 ≥24px（deviations V11-09）
     const ax = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
     const cnt = (k) => ax.violations.filter((v) => v.impact === k).reduce((s, v) => s + v.nodes.length, 0);
     run.pages[p] = { shot: path.relative(path.resolve(OUT, '..'), file), ...m, axeCritical: cnt('critical'), axeSerious: cnt('serious'), axe: ax.violations.filter((v) => ['critical', 'serious'].includes(v.impact)).map((v) => `${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`), consoleErrors: consoleErrors.slice(ce0), pageErrors: pageErrors.slice(pe0) };
   }
   report.runs[combo] = run;
   const sum = (f) => Object.values(run.pages).reduce((s, x) => s + f(x), 0);
-  console.log(`${combo}: 溢出 ${sum((x) => +x.overflow)} 重叠 ${sum((x) => x.overlap.length)} 截断 ${sum((x) => x.truncated.length)} 小触控 ${sum((x) => x.small.length)} 控制台 ${sum((x) => x.consoleErrors.length)} 报错 ${sum((x) => x.pageErrors.length)} axe ${sum((x) => x.axeCritical)}/${sum((x) => x.axeSerious)}`);
+  console.log(`${combo}: 溢字 ${sum((x) => x.spill.length)} 挤压 ${sum((x) => x.squeezed.length)} 中文残留(报告) ${sum((x) => x.cjk.length)} 溢出 ${sum((x) => +x.overflow)} 重叠 ${sum((x) => x.overlap.length)} 截断 ${sum((x) => x.truncated.length)} 小触控 ${sum((x) => x.small.length)} 控制台 ${sum((x) => x.consoleErrors.length)} 报错 ${sum((x) => x.pageErrors.length)} axe ${sum((x) => x.axeCritical)}/${sum((x) => x.axeSerious)}`);
   await ctx.close();
 }
 await browser.close(); srv.close();
 const all = Object.values(report.runs).flatMap((r) => Object.values(r.pages));
-report.summary = { combos: Object.keys(report.runs).length, shots: all.length, overflow: all.filter((x) => x.overflow).length, overlap: all.reduce((s, x) => s + x.overlap.length, 0), truncated: all.reduce((s, x) => s + x.truncated.length, 0), smallTargets: all.reduce((s, x) => s + x.small.length, 0), consoleErrors: all.reduce((s, x) => s + x.consoleErrors.length, 0), pageErrors: all.reduce((s, x) => s + x.pageErrors.length, 0), axeCritical: all.reduce((s, x) => s + x.axeCritical, 0), axeSerious: all.reduce((s, x) => s + x.axeSerious, 0) };
+report.summary = { combos: Object.keys(report.runs).length, shots: all.length, spill: all.reduce((s, x) => s + (x.spill?.length ?? 0), 0), squeezed: all.reduce((s, x) => s + (x.squeezed?.length ?? 0), 0), cjkInEnReportOnly: all.reduce((s, x) => s + (x.cjk?.length ?? 0), 0), overflow: all.filter((x) => x.overflow).length, overlap: all.reduce((s, x) => s + x.overlap.length, 0), truncated: all.reduce((s, x) => s + x.truncated.length, 0), smallTargets: all.reduce((s, x) => s + x.small.length, 0), consoleErrors: all.reduce((s, x) => s + x.consoleErrors.length, 0), pageErrors: all.reduce((s, x) => s + x.pageErrors.length, 0), axeCritical: all.reduce((s, x) => s + x.axeCritical, 0), axeSerious: all.reduce((s, x) => s + x.axeSerious, 0) };
 if (PART) fs.writeFileSync(`/tmp/shots-v1.1-${PART}.json`, JSON.stringify(report)); else { fs.mkdirSync(path.dirname(RP), { recursive: true }); fs.writeFileSync(RP, JSON.stringify(report, null, 1)); }
 console.log('合计', JSON.stringify(report.summary));

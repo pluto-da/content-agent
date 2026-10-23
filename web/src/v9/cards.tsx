@@ -8,7 +8,7 @@ import { tr } from '../i18n';
 
 const Btn = ({ children, onClick, primary, testId }: { children: ReactNode; onClick: () => void; primary?: boolean; testId?: string }) => <button type="button" data-testid={testId} className={`!min-h-9 !px-3 !text-[14px] ${primary ? 'primary' : ''}`} onClick={onClick}>{children}</button>;
 /** 0.10.0：内置工具的中文名（0.9 运行时的卡片头部原来显示英文工具名）。 */
-export const V9_TITLES: Record<string, string> = { draft_write: '写稿', image_generate: '生图', image_edit: '改图', image_understand: '看图', speech_synthesize: '配音', speech_transcribe: '转写', video_generate: '生成视频', video_status: '查视频进度', reason_deep: '深度推理', library_search: '检索', hot_list: '看热点', publish_check: '发布前检查', reminder_create: '设提醒', reminder_cancel: '取消提醒', memory_propose: '记住偏好', memory_delete: '忘掉', drafts_delete: '删除草稿', models_status: '模型状态', revenue_summary: '收益汇总', system_file_propose: '修订建议', text_delegate: '子任务', self_check: '自检' };
+export const V9_TITLES: Record<string, string> = { draft_write: '写稿', image_generate: '生图', image_edit: '改图', image_understand: '看图', speech_synthesize: '配音', speech_transcribe: '转写', video_generate: '生成视频', video_status: '查视频进度', reason_deep: '深度思考', library_search: '检索', hot_list: '看热点', publish_check: '发布前检查', reminder_create: '设提醒', reminder_cancel: '取消提醒', memory_propose: '记住偏好', memory_delete: '忘掉', drafts_delete: '删除草稿', models_status: '模型状态', revenue_summary: '收益汇总', system_file_propose: '修订建议', text_delegate: '子任务', self_check: '自检' };
 type MediaItem = { id: string; dataUrl?: string; kind?: MediaRow['kind']; prompt?: string; aiLabel?: MediaRow['aiLabel'] };
 function Media({ item }: { item: MediaItem }) {
   const id = item.id;

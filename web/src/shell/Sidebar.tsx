@@ -112,11 +112,11 @@ export function Sidebar(p: SidebarProps) {
       </ul>
       {sorting && <button type="button" className="primary !my-2 !min-h-10 w-full" data-testid="sort-done" onClick={() => { setSorting(false); p.onReorder(order); }}>{tr('ui.done_2')}</button>}
       <div className={cn('flex shrink-0 flex-col gap-1 border-t border-line pt-2 pb-[calc(8px+var(--sa-bottom))]', !wide && 'items-center')}>
-        <button type="button" data-testid="side-add" aria-label={tr('ui.add_platform')} className={cn('!flex !min-h-11 !border-0 !bg-transparent !font-normal !text-side-fg', wide ? 'w-full !justify-start gap-3 !px-2 !text-[15px]' : 'h-12 w-14 !flex-col !justify-center !p-0 !text-[11px]')} onClick={p.onAdd}>
-          <span className="grid h-7 w-7 place-items-center rounded-[8px] border border-dashed border-line-strong"><Icon name="plus" size={16} /></span><span className={cn(wide && 'flex-1 text-left')}>{tr('ui.add_platform')}</span>
+        <button type="button" data-testid="side-add" aria-label={tr('ui.add_platform')} className={cn('!flex !min-h-11 !border-0 !bg-transparent !font-normal !text-side-fg', wide ? 'w-full !justify-start gap-3 !px-2 !text-[15px]' : 'min-h-12 w-14 !flex-col !justify-center !whitespace-normal !p-0 !py-1 !text-[11px]')} onClick={p.onAdd}>
+          <span className="grid h-7 w-7 place-items-center rounded-[8px] border border-dashed border-line-strong"><Icon name="plus" size={16} /></span><span className={cn(wide ? 'flex-1 text-left' : 'text-center leading-tight')}>{tr('ui.add_platform')}</span>
         </button>
         {fixed('agent', 'Agent', 'bot')}
-        {fixed('me', '我的', 'user')}
+        {fixed('me', tr('ui.me'), 'user')}
       </div>
 
       <Drawer open={!!menuFor} onOpenChange={(o) => { if (!o) setMenuFor(null); }}>

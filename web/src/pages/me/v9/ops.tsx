@@ -4,7 +4,7 @@
  */
 import { useState } from 'react';
 import { FLAGS, flagOn, AUDIT_KIND_LABEL, parseWhenZh, shDateTime, type AuditKind, type AuditFilter, type FlagOverrides } from '@content-agent/shared';
-import { useT } from '../../../i18n';
+import { useT, tr } from '../../../i18n';
 import { modelStats, listAudit, auditToCsv, auditToJsonl, audit } from '../../../v9/ops';
 import { exportBackup, restoreBackup, rollbackRestore, migrateLegacyBackup, BackupReadError } from '../../../v9/backup';
 import { listReminders, addReminder, cancelReminder, tick } from '../../../v9/reminders';
@@ -143,7 +143,7 @@ export function RemindersPage() {
   const { t } = useT();
   const { data, reload } = useAsync(listReminders, ['reminders']);
   const [text, setText] = useState('');
-  const [when, setWhen] = useState('明早 9 点');
+  const [when, setWhen] = useState(() => tr('ui.reminder_default_when'));
   const [err, setErr] = useState<string | null>(null);
   const [toast, show] = useToast();
   const add = async () => {
@@ -167,7 +167,7 @@ export function RemindersPage() {
       </Section>
       {data && !data.length && <div className="card !p-0"><EmptyState icon="bell" title={t('ui.no_reminders_yet')} why={t('ui.you_can_also_say_remind')} /></div>}
       {!!data?.length && <ul className="item-list" data-testid="rem-list">{data.map((r) => (
-        <li key={r.id}><StatusDot tone={r.status === 'scheduled' ? 'ok' : 'neutral'}>{t({ scheduled: '待提醒', fired: '已提醒', cancelled: '已取消' }[r.status])}</StatusDot><span className="flex min-w-0 flex-1 flex-col"><span className="item-title !text-[14px]">{r.text}</span><span className="item-meta">{r.at ? fmtTime(r.at) : ''}{r.rrule ? ` · ${t('ui.repeat')}` : ''}</span></span>{r.status === 'scheduled' && <button type="button" className="ghost" onClick={async () => { await cancelReminder(r.id); reload(); }}>{t('ui.cancel')}</button>}</li>
+        <li key={r.id}><span className="flex min-w-0 flex-1 flex-col"><span className="item-title !text-[14px]">{r.text}</span><span className="item-meta flex flex-wrap items-center gap-x-1"><StatusDot tone={r.status === 'scheduled' ? 'ok' : 'neutral'}>{t({ scheduled: '待提醒', fired: '已提醒', cancelled: '已取消' }[r.status])}</StatusDot><span>{r.at ? fmtTime(r.at) : ''}{r.rrule ? ` · ${t('ui.repeat')}` : ''}</span></span></span>{r.status === 'scheduled' && <button type="button" className="ghost" onClick={async () => { await cancelReminder(r.id); reload(); }}>{t('ui.cancel')}</button>}</li>
       ))}</ul>}
     </div>
   );

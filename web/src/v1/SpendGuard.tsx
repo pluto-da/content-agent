@@ -3,7 +3,7 @@
  * 规则在 shared/agent/policy.ts（代码强制）：超预算一定先问、不能“记住此类”；异常花费只提醒。
  */
 import { useState } from 'react';
-import { ROLE_IDS, roleLabel, readSpendGuard, type SpendGuard } from '@content-agent/shared';
+import { CAPS, ROLE_IDS, roleLabel, readSpendGuard, type SpendGuard } from '@content-agent/shared';
 import { useT } from '../i18n';
 import { Problem, useToast } from '../ui';
 import { useAsync, Section, Note } from '../pages/me/v9/common';
@@ -47,10 +47,11 @@ export function SpendGuardSection() {
         <label className="field"><span>{t('ui.monthly_budget_0_none')}</span><input inputMode="decimal" value={val('month', g.monthBudgetYuan)} onChange={set('month')} data-testid="guard-month" /></label>
       </div>
       <Note>{t('ui.once_the_monthly_budget_or')}</Note>
+      {/* 1.1.0：按用户看到的 8 个能力设日上限（不再列“快速小模型”“深度推理”等内部角色；旧角色上的上限原样保留） */}
       <details className="v1-details" data-testid="guard-caps">
         <summary>{t('ui.daily_caps_per_capability_empty')}</summary>
         <div className="grid gap-2 pt-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
-          {ROLE_IDS.map((r) => <label key={r} className="field"><span>{t(roleLabel(r))}{sum?.spentTodayByRole[r] ? ` · ${t('ui.today')} ¥${sum.spentTodayByRole[r]!.toFixed(3)}` : ''}</span><input inputMode="decimal" value={val(`cap.${r}`, g.roleDayCapYuan[r])} onChange={set(`cap.${r}`)} data-testid={`guard-cap-${r}`} aria-label={`${t(roleLabel(r))} ${t('ui.daily_cap')}`} /></label>)}
+          {CAPS.map((c) => c.role).map((r) => <label key={r} className="field"><span>{t(CAPS.find((c) => c.role === r)!.label)}{sum?.spentTodayByRole[r] ? ` · ${t('ui.today')} ¥${sum.spentTodayByRole[r]!.toFixed(3)}` : ''}</span><input inputMode="decimal" value={val(`cap.${r}`, g.roleDayCapYuan[r])} onChange={set(`cap.${r}`)} data-testid={`guard-cap-${r}`} aria-label={`${t(CAPS.find((c) => c.role === r)!.label)} ${t('ui.daily_cap')}`} /></label>)}
         </div>
       </details>
       <div className="form-row">

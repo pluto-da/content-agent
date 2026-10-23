@@ -178,7 +178,7 @@ export function MemoryPage() {
                 <div className="flex flex-col gap-2"><textarea rows={2} value={edit.text} onChange={(e) => setEdit({ ...edit, text: e.target.value })} /><input placeholder={t('ui.condition_optional')} value={edit.condition} onChange={(e) => setEdit({ ...edit, condition: e.target.value })} /><div className="flex gap-2"><button type="button" className="primary" onClick={() => void saveEdit()}>{t('ui.save')}</button><button type="button" onClick={() => setEdit(null)}>{t('ui.cancel')}</button></div></div>
               ) : <>
                 <span className="item-title !text-[15px]">{m.text}</span>
-                <span className="item-meta">{m.condition ? `${t('ui.condition')}：${m.condition} · ` : ''}{m.source === 'inferred' || m.confidence === 'inferred' ? t('ui.inferred') : m.source === 'user_edited' ? t('ui.edited_by_you') : t('ui.you_said')} · {String(m.createdAt ?? '').slice(0, 10)}</span>
+                <span className="item-meta">{m.condition ? `${t('ui.condition')}${t('ui.colon')}${m.condition} · ` : ''}{m.source === 'inferred' || m.confidence === 'inferred' ? t('ui.inferred') : m.source === 'user_edited' ? t('ui.edited_by_you') : t('ui.you_said')} · {String(m.createdAt ?? '').slice(0, 10)}</span>
                 <span className="flex gap-2">{id !== undefined && <><button type="button" className="ghost" onClick={() => setEdit({ row: id, text: m.text, condition: m.condition ?? '' })}>{t('ui.edit')}</button><button type="button" className="ghost danger" onClick={async () => { await db.del('memories', id); await audit({ kind: 'memory_change', actor: 'user', summary: `删除记忆：${m.text}`, outcome: 'ok' }); reload(); }}>{t('ui.delete')}</button></>}</span>
               </>}
             </li>

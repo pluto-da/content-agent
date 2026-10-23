@@ -223,7 +223,7 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
   const phoneTop = isPhone && (
     <header className="flex shrink-0 items-center gap-1 border-b border-line bg-canvas px-1 safe-top" style={{ height: 'calc(48px + var(--sa-top))' }} data-testid="phone-top">
       <button type="button" aria-label={tr('ui.open_platform_sidebar')} data-testid="open-side" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => setPhoneSide(true)}><Icon name="menu" size={20} /></button>
-      <h1 className="min-w-0 flex-1 truncate text-center text-[16px]">{route.space === 'me' ? '我的' : route.space === 'p' ? target?.label ?? '' : a.convs.find((c) => c.id === a.cid)?.title ?? '超级工作台'}</h1>
+      <h1 className="min-w-0 flex-1 truncate text-center text-[16px]">{route.space === 'me' ? tr('ui.me') : route.space === 'p' ? target?.label ?? '' : a.convs.find((c) => c.id === a.cid)?.title ?? tr('ui.super_workbench')}</h1>
       {header}
     </header>
   );

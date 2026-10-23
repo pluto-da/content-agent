@@ -3,6 +3,7 @@ import { startReminderScheduler } from './v9/reminders';
 import { startCleanupTask } from './v9/media/store';
 import { ReminderBanner } from './v10/ReminderBanner';
 import { apiMode } from './api';
+import { setLocale } from '@content-agent/shared';
 import { LangContext, translate, setUiLang, type Lang, tr } from './i18n';
 import { Icon } from './icons';
 import { Loading, prefersReducedMotion } from './ui';
@@ -140,7 +141,7 @@ export function App() {
   }, [theme]);
   // 1.1.0：一次性迁移（写作助手覆盖 → 技能修订、画像 → user/profile.md），幂等，失败不阻断启动
   useEffect(() => { void migrateV11().catch(() => {}); }, []);
-  useEffect(() => { localStorage.setItem('ca.lang', lang); document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en'; }, [lang]);
+  useEffect(() => { localStorage.setItem('ca.lang', lang); document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en'; setLocale(lang === 'zh' ? 'zh-CN' : 'en'); document.title = translate(lang, 'ui.super_workbench'); }, [lang]);
 
   // 旧 hash 兼容：0.7.0 六页、0.5.0、#settings/*、0.2.x 地址替换为 0.8.0 地址（不新增历史记录）。
   useEffect(() => {
@@ -170,7 +171,6 @@ export function App() {
     window.addEventListener('keydown', on);
     return () => window.removeEventListener('keydown', on);
   }, []);
-  useEffect(() => { document.title = '超级工作台'; }, []);
   // 0.9.0 本机提醒：App 打开期间每 30 秒检查一次；只发本机通知，不执行任何动作（ADR-009）
   useEffect(() => (import.meta.env.MODE === 'test' ? undefined : startReminderScheduler()), []);
   // 1.0 存储治理：媒体配额检查（启动 15 秒后、之后每 6 小时；默认只提醒，打开自动清理才删）
@@ -191,7 +191,7 @@ export function App() {
 
   const meContent = route.space === 'me' ? (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <header className="app-top sticky top-0 z-20 flex shrink-0 items-center gap-2 bg-canvas px-2 sm:px-6" style={{ minHeight: isPhone ? 48 : 64 }} data-testid="topbar">
+      <header className="app-top sticky top-0 z-20 flex shrink-0 items-center gap-2 bg-canvas px-2 py-2 sm:px-6" style={{ minHeight: isPhone ? 48 : 64 }} data-testid="topbar">
         {back ? <Button variant="ghost" size="icon-lg" aria-label={t('ui.back')} onClick={back}><Icon name="arrowLeft" size={20} /></Button> : null}
         <div className="min-w-0 flex-1">
           <h1 className={isPhone ? 'truncate text-[18px]' : 'truncate text-[20px]'}>{t(meSubItem?.label ?? '我的')}</h1>
