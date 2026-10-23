@@ -5,6 +5,7 @@
  * 密钥只在请求头里出现，不写日志、不进错误信息。
  */
 import { classifyHttpError, classifyThrown, splitReasoning, type FriendlyError, type ModelErrorKind } from '@content-agent/shared';
+import { isMockURL, mockResponse } from './mockLlm';
 import { presetOf, type Protocol } from '../data/providers';
 import { runtime } from '../runtime';
 
@@ -30,6 +31,7 @@ export const maskKey = (k: string) => (k ? `••••${k.slice(-4)}` : '');
 /** 地址自检：常见填错直接提示，不发请求。 */
 export function checkBaseURL(url: string): FriendlyError | null {
   const u = url.trim();
+  if (isMockURL(u)) return null; // 1.1.0：本地模拟服务商（mock://local）
   if (!u) return { kind: 'address', reason: '地址没填', advice: '填服务商文档里的 Base URL，例如 https://api.xiaomimimo.com/v1' };
   if (!/^https?:\/\//i.test(u)) return { kind: 'address', reason: '地址不对', advice: '地址要以 https:// 开头' };
   if (/\/chat\/completions\/?$|\/messages\/?$/.test(u)) return { kind: 'address', reason: '地址多写了一段', advice: '只填基础地址（一般以 /v1 结尾），不要带 /chat/completions' };
@@ -45,6 +47,7 @@ export async function timedFetch(url: string, init: RequestInit, timeoutMs: numb
   const outer = init.signal;
   if (outer) { if (outer.aborted) ctl.abort(); else outer.addEventListener('abort', () => ctl.abort(), { once: true }); }
   try {
+    if (isMockURL(url)) return mockResponse(url, init);
     return await fetch(url, { ...init, signal: ctl.signal });
   } catch (e) {
     if (outer?.aborted) throw new DOMException('已停止', 'AbortError');
@@ -61,7 +64,7 @@ export async function chat(cfg: ProviderConfig, messages: ChatMsg[], opts: ChatO
   if (bad) throw new ModelError(bad);
   if (!cfg.model.trim()) throw new ModelError({ kind: 'model', reason: '还没填模型名', advice: '从下拉里选一个模型，或手动输入服务商文档里的模型名' });
   const preset = presetOf(cfg.id);
-  if (!cfg.apiKey.trim() && !preset?.noKey) throw new ModelError({ kind: 'key', reason: '还没填 Key', advice: '到服务商后台复制 API Key 粘贴进来' });
+  if (!cfg.apiKey.trim() && !preset?.noKey && !isMockURL(cfg.baseURL)) throw new ModelError({ kind: 'key', reason: '还没填 Key', advice: '到服务商后台复制 API Key 粘贴进来' });
   const started = Date.now();
   const root = trim(cfg.baseURL);
   const timeoutMs = opts.timeoutMs ?? 90000;

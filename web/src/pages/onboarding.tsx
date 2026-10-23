@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react';
 import { useT } from '../i18n';
 import { Icon } from '../icons';
 import { CENTERS } from '../data/platforms';
-import { PROVIDERS } from '../data/providers';
-import type { ProviderConfig } from '../local/llm';
-import { getModels, getPrefs, newProviderConfig, setPrefs } from '../local/store';
+import { getModelsV3, getPrefs, setPrefs } from '../local/store';
 import { useLocalApps } from '../format';
-import { ProviderForm } from '../components/ProviderForm';
+import { ConnectWizard } from '../v11/ModelsHub';
+import { Note } from './me/v9/common';
 import { useAddApp } from '../components/addAppContext';
 
 /**
@@ -19,23 +18,13 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
   const apps = useLocalApps(version);
   const [step, setStep] = useState(1);
   const [first, setFirst] = useState('看看今天各平台热点，给我 3 个选题');
-  const [prov, setProv] = useState('mimo');
-  const [cfg, setCfg] = useState<ProviderConfig | null>(null);
   const [connected, setConnected] = useState(false);
   const [plats, setPlats] = useState<string[]>([]);
   const [askFor, setAskFor] = useState<string | null>(null);
   useEffect(() => {
-    void getModels().then((m) => {
-      const c = m.providers.find((p) => p.id === 'mimo') ?? newProviderConfig('mimo');
-      setCfg(c); if (m.providers.some((p) => p.check?.ok)) setConnected(true);
-    });
+    void getModelsV3().then((m) => { if (m.main) setConnected(true); });
     void getPrefs().then((p) => setPlats(p.platforms));
   }, []);
-  const pickProvider = async (id: string) => {
-    setProv(id); setConnected(false);
-    const m = await getModels();
-    setCfg(m.providers.find((p) => p.id === id) ?? newProviderConfig(id));
-  };
   const finish = async () => { await setPrefs({ onboarded: true, platforms: plats }); go('agent'); };
   const registered = (id: string) => !!apps.data?.apps.some((a) => a.platform === id);
   const toggle = (id: string) => {
@@ -60,10 +49,8 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
               <h1>{t('ui.super_workbench_one_agent_to')}</h1>
               <p className="sub !text-[15px]">{t('ui.step_1_connect_a_writing')}</p>
             </div>
-            <div className="provider-grid" role="group" aria-label={t('ui.choose_provider')}>
-              {PROVIDERS.filter((p) => p.common).map((p) => <button key={p.id} type="button" aria-pressed={prov === p.id} onClick={() => void pickProvider(p.id)}>{p.label}</button>)}
-            </div>
-            {cfg && <div className="card"><ProviderForm key={cfg.id} initial={cfg} compact onConnected={() => setConnected(true)} /></div>}
+            {/* 1.1.0：与“我的 → 模型 → 接入第一个模型”同一个三步向导（选服务商 → 填 Key → 选模型），不再有第二套接入表单 */}
+            {connected ? <Note>{t('ui.model_connected_next')}</Note> : <ConnectWizard go={go} cap={null} embedded onDone={() => { setConnected(true); setStep(2); }} />}
             <p className="m-0 text-[13px] text-muted">{t('ui.keys_stay_on_this_device')}</p>
             <div className="onb-actions flex gap-2">
               <button type="button" className="primary !min-h-12 flex-1" disabled={!connected} onClick={() => setStep(2)} data-testid="onb-next-1">{t('ui.next_step')}</button>

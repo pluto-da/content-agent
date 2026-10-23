@@ -1353,4 +1353,9 @@ export const ZH_UI: Record<string, string> = {
   'ui.adapted_the_original_is_kept': '已适配，母稿保留',
   'ui.adapt': '适配',
   'ui.free_writing': '自由创作',
+  'ui.model_connected_next': '模型已接入，点“下一步”继续。',
+  'ui.starter_hot': '看看今天各平台热点',
+  'ui.starter_free_write': '把一个想法自由写成一篇短文',
+  'ui.starter_metrics': '这周数据怎么样',
+  'ui.prepare_publish_draft': '准备发布草稿',
 };

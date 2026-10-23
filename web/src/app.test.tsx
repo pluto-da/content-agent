@@ -259,7 +259,7 @@ describe('A1 无服务端', () => {
     render(<App />);
     expect(await screen.findByTestId('hero-title', {}, { timeout: 8000 })).toBeTruthy();
     expect(screen.getByTestId('definition').textContent).toBe('一个 Agent 帮你管理各大平台：找热点、写内容、准备发布、记录效果。发布由你本人点击。');
-    expect(screen.getAllByTestId('starter').map((b) => b.textContent)).toEqual(['看看今天各平台热点', '把一个想法写成小红书笔记', '这周数据怎么样']);
+    expect(screen.getAllByTestId('starter').map((b) => b.textContent)).toEqual(['看看今天各平台热点', '把一个想法自由写成一篇短文', '这周数据怎么样']);
     expect(screen.getByTestId('agent-input')).toBeTruthy();
     await waitFor(() => expect(location.hash).toBe('#agent'));
   }, 20000);

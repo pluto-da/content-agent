@@ -1353,4 +1353,9 @@ export const EN_UI: Record<string, string> = {
   'ui.adapted_the_original_is_kept': 'Adapted; the original is kept',
   'ui.adapt': 'Adapt',
   'ui.free_writing': 'Free writing',
+  'ui.model_connected_next': 'Model connected. Tap “Next” to continue.',
+  'ui.starter_hot': 'Show today’s trending topics',
+  'ui.starter_free_write': 'Freely write a short piece from an idea',
+  'ui.starter_metrics': 'How did this week go?',
+  'ui.prepare_publish_draft': 'Prepare to publish draft',
 };

@@ -1,7 +1,7 @@
 {
   "$schema": "model-deprecations.schema.json",
   "version": 1,
-  "checkedAt": "2026-10-22",
+  "checkedAt": "2026-10-24",
   "items": [
     {
       "model": "deepseek-chat",
@@ -57,6 +57,26 @@
         "kimi-k3"
       ],
       "url": "https://platform.kimi.com/docs/models"
+    },
+    {
+      "model": "MiniMax-M2.5",
+      "vendorHint": "minimax",
+      "date": "2026-11-18",
+      "replacements": [
+        "MiniMax-M3.1-Flash",
+        "MiniMax-M3"
+      ],
+      "url": "https://platform.minimaxi.com/docs/faq/models"
+    },
+    {
+      "model": "MiniMax-M2.7",
+      "vendorHint": "minimax",
+      "date": "2026-11-18",
+      "replacements": [
+        "MiniMax-M3.1-Flash",
+        "MiniMax-M3"
+      ],
+      "url": "https://platform.minimaxi.com/docs/faq/models"
     }
   ]
 }

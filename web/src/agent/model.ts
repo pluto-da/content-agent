@@ -8,6 +8,7 @@
 import { classifyHttpError, createStreamAccumulator, looksLikeToolsUnsupported, splitReasoning, type ToolCallAcc } from '@content-agent/shared';
 import { presetOf } from '../data/providers';
 import { checkBaseURL, ModelError, timedFetch, type ProviderConfig } from '../local/llm';
+import { isMockURL } from '../local/mockLlm';
 import { nativeStream, nativeStreamAvailable } from '../local/streamHttp';
 import { runtime } from '../runtime';
 
@@ -127,9 +128,9 @@ export async function chatAgent(cfg: ProviderConfig, messages: AgentMsg[], o: Ag
   const bad = checkBaseURL(cfg.baseURL);
   if (bad) throw new ModelError(bad);
   if (!cfg.model.trim()) throw new ModelError({ kind: 'model', reason: '还没填模型名', advice: '到“我的 → 模型”选一个模型' });
-  if (!cfg.apiKey.trim() && !presetOf(cfg.id)?.noKey) throw new ModelError({ kind: 'key', reason: '还没填 Key', advice: '到服务商后台复制 API Key 粘贴进来' });
+  if (!cfg.apiKey.trim() && !presetOf(cfg.id)?.noKey && !isMockURL(cfg.baseURL)) throw new ModelError({ kind: 'key', reason: '还没填 Key', advice: '到服务商后台复制 API Key 粘贴进来' });
   const started = Date.now();
-  const mode = o.stream === false ? 'none' : await streamMode();
+  const mode = o.stream === false || isMockURL(cfg.baseURL) ? 'none' : await streamMode();
   const withTools = !!o.tools?.length;
   const timeoutMs = o.timeoutMs ?? 180000;
 

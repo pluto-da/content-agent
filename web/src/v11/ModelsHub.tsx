@@ -211,13 +211,13 @@ function Advanced({ s, go, open }: { s: ModelsStateV3; go: (to: string) => void;
 }
 
 /* ---------------- 接入一个模型：选服务商 → 填 Key → 自动拉取模型列表并推荐 ---------------- */
-const EXAMPLES: Record<string, string> = { mimo: 'mimo-v2.5', dashscope: 'qwen3.7-plus', deepseek: 'deepseek-v4-flash', zhipu: 'glm-4.7-flash', ark: 'doubao-seed-1.6', kimi: 'kimi-k2.5', minimax: 'MiniMax-M2', mock: 'mock-omni' };
+const EXAMPLES: Record<string, string> = { mimo: 'mimo-v2.6-flash', dashscope: 'qwen3.7-plus', deepseek: 'deepseek-flash', zhipu: 'glm-5.3-flash', ark: 'doubao-seed-2-1-lite-260915', kimi: 'kimi-k2.6', minimax: 'MiniMax-M3.1-Flash', mock: 'mock-omni' }; // 2026-10-24 按 docs/models-v1.1.md 核对
 /** 推荐：优先覆盖所需能力；对话类优先“对话+思考+看图”都有、且不是省钱小型号的那个。 */
 export function recommend(vendor: string, ids: string[], need?: RoleId): string | null {
   const scored = ids.map((id) => { const r = inferRoles(vendor, id); const score = (need && r.includes(need) ? 100 : 0) + (r.includes('chat') ? 10 : 0) + (r.includes('reason') ? 4 : 0) + (r.includes('vision') ? 4 : 0) - (r.includes('fast') ? 3 : 0) - (/preview|beta|exp/i.test(id) ? 2 : 0); return { id, score }; });
   return scored.sort((a, b) => b.score - a.score)[0]?.id ?? null;
 }
-export function ConnectWizard({ go, cap }: { go: (to: string) => void; cap: RoleId | null }) {
+export function ConnectWizard({ go, cap, onDone, embedded }: { go: (to: string) => void; cap: RoleId | null; onDone?: () => void; embedded?: boolean }) {
   const { t } = useT();
   const all = useMemo(() => ADAPTERS.list(), []);
   const vendors = cap ? all.filter((v) => vendorsFor(cap, all).includes(v.id)) : all.filter((v) => v.id !== 'mock');
@@ -261,12 +261,12 @@ export function ConnectWizard({ go, cap }: { go: (to: string) => void; cap: Role
       await saveModelsV3(cur);
       await audit({ kind: 'setting_change', actor: 'user', summary: `接入模型 ${pick}（${a.label}，自动识别：${roles.join('、')}）`, outcome: 'ok' });
       void probe(a.id, r.entry.id).catch(() => {});
-      go('me/models');
+      if (onDone) onDone(); else go('me/models');
     } finally { setBusy(false); }
   };
   return (
     <div className="page page-narrow flex flex-col gap-3" data-testid="connect-wizard">
-      <BackBar label={t('ui.connect_a_model')} onBack={() => (step === 1 ? go('me/models') : step === 2 ? setVendor(null) : go('me/models'))} />
+      {!embedded ? <BackBar label={t('ui.connect_a_model')} onBack={() => (step === 1 ? go('me/models') : step === 2 ? setVendor(null) : go('me/models'))} /> : step === 2 ? <button type="button" className="ghost self-start" onClick={() => setVendor(null)}>‹ {t('ui.choose_provider')}</button> : null}
       <ol className="steps m-0 flex list-none gap-2 p-0 text-[13px] text-muted" aria-label={t('ui.steps')}>
         {[t('ui.choose_provider'), t('ui.enter_key'), t('ui.choose_model')].map((x, i) => <li key={x} aria-current={step === i + 1 ? 'step' : undefined} className={step === i + 1 ? 'font-semibold text-fg' : ''}>{i + 1}. {x}</li>)}
       </ol>

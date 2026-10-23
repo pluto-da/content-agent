@@ -1,5 +1,6 @@
 /** 本机设置：模型配置、写作助手覆盖、热点源、用量与日志。全部在本机（IndexedDB），密钥不进日志与默认备份。 */
 import { db, emitStoreChange } from './db';
+import { isMockURL } from './mockLlm';
 import type { ProviderConfig } from './llm';
 import { presetOf } from '../data/providers';
 import { resolveModel, addModelEntry, emptyModelsV3, findSecrets, legacyVendor, ModelsMigrator, normalizeModelName, removeModelEntry, type LegacyProvider, type ModelsStateV2, type ModelsStateV3, type ProviderAccount } from '@content-agent/shared';
@@ -138,6 +139,7 @@ export async function removeProvider(id: string): Promise<ModelsState> {
  */
 export function isConfigured(p: ProviderConfig): boolean {
   if (p.apiKey?.trim()) return true;
+  if (isMockURL(p.baseURL)) return true; // 1.1.0：本地模拟服务商不需要 Key
   if (presetOf(p.id)?.noKey) return !!p.baseURL?.trim();
   return !!p.check?.ok;
 }

@@ -29,7 +29,8 @@ import { tr } from '../i18n';
 
 const Write = lazy(() => import('../pages/write').then((m) => ({ default: m.Write })));
 
-export const STARTERS = ['看看今天各平台热点', '把一个想法写成小红书笔记', '这周数据怎么样'];
+/** 1.1.0：第二个起手式改为自由创作（不预设平台）；文案走 i18n id。 */
+export const STARTERS = ['ui.starter_hot', 'ui.starter_free_write', 'ui.starter_metrics'] as const;
 export const DEFINITION = '一个 Agent 帮你管理各大平台：找热点、写内容、准备发布、记录效果。发布由你本人点击。';
 
 /* ---------- 极简 Markdown（不使用 innerHTML） ---------- */
@@ -193,7 +194,8 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
     const ask = route.query?.ask;
     if (ask === 'hot') setText('看看今天的热点');
     else if (ask === 'metrics') setText('这周数据怎么样');
-  }, [route.query?.ask]);
+    else if (ask === 'publish' && /^\d+$/.test(route.query?.draft ?? '')) setText(`${tr('ui.prepare_publish_draft')} #${route.query!.draft}`); // 1.1.0：编辑器“去发布”→ 预填，由用户发送
+  }, [route.query?.ask, route.query?.draft]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { endRef.current?.scrollIntoView?.({ block: 'end' }); }, [a.msgs.length, a.running]);
   // 抽屉 / 下拉打开时收起原生网页（避免被原生视图挡住）
   useEffect(() => (sessionsOpen || modelOpen || plusOpen || delId !== null ? overlayManager.push() : undefined), [sessionsOpen, modelOpen, plusOpen, delId]);
@@ -245,7 +247,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
           <h2 className="text-[22px]" data-testid="hero-title">{tr('ui.super_workbench')}</h2>
           <p className="mt-1 text-[15px] text-fg-2" data-testid="definition">{DEFINITION}</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            {STARTERS.map((s) => <button key={s} type="button" className="!min-h-10 !rounded-full !px-4 !text-[14px] !font-normal" data-testid="starter" onClick={() => void a.send(s)}>{s}</button>)}
+            {STARTERS.map((s) => <button key={s} type="button" className="!min-h-10 !rounded-full !px-4 !text-[14px] !font-normal" data-testid="starter" onClick={() => void a.send(tr(s))}>{tr(s)}</button>)}
           </div>
         </>
       )}

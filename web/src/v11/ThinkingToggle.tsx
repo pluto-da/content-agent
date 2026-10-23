@@ -10,8 +10,8 @@ export function ThinkingToggle() {
   const on = s.advanced?.thinking === 'on';
   const flip = async () => { const cur = await getModelsV3(); await saveModelsV3({ ...cur, advanced: { ...cur.advanced, thinking: on ? 'off' : 'on' } }); };
   return (
-    <button type="button" aria-pressed={on} aria-label={tr('ui.deep_thinking')} title={tr('ui.deep_thinking')} data-testid="thinking-toggle" className={`!min-h-11 !rounded-full !px-3 !text-[13px] ${on ? 'primary' : ''}`} onClick={() => void flip()}>
-      <Icon name="compass" size={16} /><span className="ml-1">{tr('ui.deep_thinking')}</span>
+    <button type="button" aria-pressed={on} aria-label={tr('ui.deep_thinking')} title={tr('ui.deep_thinking')} data-testid="thinking-toggle" className={`!min-h-11 !min-w-11 !rounded-full !px-3 max-sm:!px-0 !text-[13px] ${on ? 'primary' : ''}`} onClick={() => void flip()}>
+      <Icon name="compass" size={16} /><span className="ml-1 max-sm:sr-only">{tr('ui.deep_thinking')}</span>
     </button>
   );
 }

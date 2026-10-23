@@ -196,7 +196,7 @@ function Accounts({ go }: { go: (to: string) => void }) {
 }
 
 /* ---------------- 账号详情：模型名（手填 / 获取列表）、能力勾选、测试 ---------------- */
-const EXAMPLES: Record<string, string> = { mimo: 'mimo-v2.5', dashscope: 'qwen3.7-plus', deepseek: 'deepseek-v4-pro', zhipu: 'glm-4.7-flash', ark: 'ep-2026…', kimi: '点“获取列表”选择', mock: 'Mock/Model:v1.0' };
+const EXAMPLES: Record<string, string> = { mimo: 'mimo-v2.6-flash', dashscope: 'qwen3.7-plus', deepseek: 'deepseek-flash', zhipu: 'glm-4.7-flash', ark: 'ep-2026…', kimi: '点“获取列表”选择', mock: 'Mock/Model:v1.0' };
 function AccountDetail({ accountId, go }: { accountId: string; go: (to: string) => void }) {
   const { t } = useT();
   const { data: s } = useModelsV3();

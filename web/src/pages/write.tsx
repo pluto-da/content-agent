@@ -151,7 +151,7 @@ function Editor({ id, go, onChanged }: { id: number; go: (to: string) => void; o
 
       <div className="flex flex-wrap gap-2 border-t border-line pt-4">
         {d.status === 'pending' && <button type="button" className="primary" disabled={!!busy} data-testid="approve" onClick={() => void act(t('ui.working'), async () => { if (dirty) await save(); await setStatus(id, 'approved'); await reload(); }, t('ui.approved_publish_it_from_go'))}>{t('ui.approve')}</button>}
-        {d.status === 'approved' && <button type="button" className="primary" onClick={() => go('publish')}>{t('ui.go_publish')}</button>}
+        {d.status === 'approved' && <button type="button" className="primary" onClick={() => go(`agent?ask=publish&draft=${id}`)} data-testid="editor-go-publish">{t('ui.go_publish')}</button>}
         {d.status === 'rejected' && <button type="button" className="primary" onClick={() => void act(t('ui.working'), async () => { await setStatus(id, 'pending'); await reload(); }, t('ui.moved_back_to_pending_review'))}>{t('ui.move_back_to_pending')}</button>}
         <button type="button" disabled={!dirty || !!busy} onClick={() => void act(t('ui.saving'), async () => { await save(); await reload(); }, t('ui.saved'))}>{t('ui.save_changes')}</button>
         {d.status === 'approved' && <button type="button" className="ghost" onClick={() => void act(t('ui.working'), async () => { await setStatus(id, 'pending'); await reload(); }, t('ui.moved_back_to_pending_review'))}>{t('ui.move_back_to_pending')}</button>}

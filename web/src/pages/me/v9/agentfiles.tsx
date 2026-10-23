@@ -80,7 +80,7 @@ function FileEditor({ path, onBack }: { path: string; onBack: () => void }) {
       const r = await v.write(path, next, { author: 'user', expectedVersion: f.version, note: why });
       const d = applyChanged(diffLines(f.content, next));
       await audit({ kind: 'system_file_change', actor: 'user', summary: `${why}：${path} v${f.version}→v${r.version}（+${d.added}/-${d.removed}）`, target: path, outcome: 'ok' });
-      setText(null); setConfirm(null); reload(); show(`${t('ui.saved')} v${r.version}${t('ui.applies_to_the_next_run')}`);
+      setText(null); setConfirm(null); setView(null); reload(); show(`${t('ui.saved')} v${r.version}${t('ui.applies_to_the_next_run')}`);
     } catch (e) { setErr((e as Error).message); setConfirm(null); }
   };
   return (
