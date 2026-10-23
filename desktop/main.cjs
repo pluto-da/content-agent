@@ -84,7 +84,9 @@ async function startServer() {
   const port = await freePort();
   const res = app.isPackaged ? process.resourcesPath : path.resolve(__dirname, '..');
   dataDir = path.join(app.getPath('userData'), 'data');
-  server = fork(path.join(res, 'server', 'dist', 'index.js'), [], {
+  // 1.0：安装包里是 esbuild 打成单文件的 server/dist/index.mjs（不带 node_modules）；开发时用 tsc 输出的 index.js
+  const entry = ['index.mjs', 'index.js'].map((f) => path.join(res, 'server', 'dist', f)).find((f) => fs.existsSync(f));
+  server = fork(entry, [], {
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', PORT: String(port), HOST: '127.0.0.1', CA_DATA_DIR: dataDir, CA_WEB_DIST: path.join(res, 'web', 'dist'), CA_AGENT_DEFAULTS: path.join(res, 'agent') },
     stdio: 'inherit',
   });
@@ -191,6 +193,8 @@ async function createWindow() {
   ipcMain.handle('browser:clear', guard(async (o) => { const id = o && o.platform; await bv.clear({ platform: id }, session); if (validId(id)) { state[id] = { loggedOut: true, hadSession: false }; saveStateNow(); } return true; }));
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   await win.loadURL(`${origin}/`);
+  // 1.0 安装包冒烟（只在 CI 设置 CA_SMOKE_DIR 时运行）
+  if (process.env.CA_SMOKE_DIR) require('./smoke.cjs').runSmoke({ app, win, origin, safeStorage, session, dataDir });
 }
 
 let quitting = false;

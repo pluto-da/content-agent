@@ -64,6 +64,7 @@ async function main(): Promise<void> {
   // @ts-expect-error 纯 JS 模块
   const common = await import('../scripts/real-common.mjs') as { mimoEnv(): { injected: boolean; key: string; baseURL: string; proxy?: string; clean(s: string): string }; nodeTransport(p?: string): import('../shared/src/index.js').Transport; mimoState(m: Record<string, string>, b: string): { state: import('../shared/src/index.js').ModelsStateV3 } };
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const TAG = process.env.JUDGE_TAG ?? 'v11'; // 1.0：JUDGE_TAG=v1 → evals/real/judge-v1.json，原 v11 报告保留
   const cacheDir = join(root, 'out', 'judge-v11', 'cache');
   mkdirSync(cacheDir, { recursive: true });
   const reportOnly = process.argv.includes('--report');
@@ -120,7 +121,7 @@ async function main(): Promise<void> {
   const allCached = [...answers, ...live, ...goods, ...bads, ...repeats].filter(Boolean) as Cached[];
   const costAll = allCached.reduce((s, x) => s + (x.cost ?? 0), 0);
   const report = {
-    version: '0.11.0', at: new Date().toISOString(), judgeModel: JUDGE_MODEL, judgeTemperature: 0, generatorModel: JUDGE_MODEL, generatorSystem: 'assemblePrefix(DEFAULT_FILES)（App 默认 VFS 系统前缀）+ 评测说明（不给工具）',
+    version: TAG === 'v11' ? '0.11.0' : '1.0.0', at: new Date().toISOString(), judgeModel: JUDGE_MODEL, judgeTemperature: 0, generatorModel: JUDGE_MODEL, generatorSystem: 'assemblePrefix(DEFAULT_FILES)（App 默认 VFS 系统前缀）+ 评测说明（不给工具）',
     complete: done, pending,
     live: { judged: livePass + liveFail, pass: livePass, fail: liveFail, failed: rows.filter((r) => r.liveVerdict?.pass === false).map((r) => ({ id: r.id, reason: r.liveVerdict!.reason })) },
     agreement: {
@@ -136,15 +137,15 @@ async function main(): Promise<void> {
   if (shared.findSecrets(text).length) throw new Error('报告疑似含密钥，未写盘');
   const outDir = join(root, 'evals', 'real');
   mkdirSync(outDir, { recursive: true });
-  writeFileSync(join(outDir, 'judge-v11.json'), text);
-  writeFileSync(join(root, 'out', 'judge-v11', 'judge-v11.json'), text);
+  writeFileSync(join(outDir, `judge-${TAG}.json`), text);
+  writeFileSync(join(root, 'out', 'judge-v11', `judge-${TAG}.json`), text);
   const md = [
     '# 行为评测判官 · 人工抽检表（0.11.0）', '',
     `抽检 20%：${sample.length} / ${JUDGE_CASES.length} 条（按编号哈希固定抽取，与判官结论无关）。判官：${JUDGE_MODEL}，temperature 0。`, '',
     '**由谁做：用户本人（待用户抽检）。** 请在每条“人工结论”填 通过 / 不通过，全部填完后把这份文件发回，即可算出判官与人工的一致率（目标 ≥ 90%）。', '',
     ...sample.flatMap((id) => { const r = rows.find((x) => x.id === id)!; const c = JUDGE_CASES.find((x) => x.id === id)!; return [`## ${id} ${c.title}`, '', `- 评分标准：${c.rubric}`, `- 用户最后一句：${c.user.replace(/\n+/g, ' ')}`, '- 被测回复：', '', '```', (r.answer ?? '（未生成）').trim(), '```', '', `- 判官结论：${r.liveVerdict ? (r.liveVerdict.pass ? '通过' : '不通过') : '（未判）'}（${r.liveVerdict?.reason ?? ''}）`, '- 人工结论：＿＿＿＿（通过 / 不通过）', '']; }),
   ].join('\n');
-  writeFileSync(join(outDir, 'judge-sample-v11.md'), md);
+  writeFileSync(join(outDir, `judge-sample-${TAG}.md`), md);
   process.stdout.write(`${done ? '完成' : `未完成（还差 ${pending} 次调用，再运行一次接着跑）`}：live 通过 ${livePass} / 不通过 ${liveFail}；对照一致率 ${ctrl.rate}（${ctrl.agree}/${ctrl.n}）；规则一致率 ${ruleAgree.rate}（${ruleAgree.agree}/${ruleAgree.n}）；重复一致 ${repeatAgree.rate}（${repeatAgree.agree}/${repeatAgree.n}）；本次 ¥${report.cost.yuanThisRun}，累计 ¥${report.cost.yuanAllCached}，请求 ${calls}，缓存 ${cacheHits}\n`);
 }
 

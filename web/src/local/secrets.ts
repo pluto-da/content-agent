@@ -34,7 +34,7 @@ export async function secretTails(): Promise<Record<string, { tail: string; encr
 export async function secretStorageInfoAsync(): Promise<{ where: string; risk?: string; warn?: string }> {
   const be = await activeBackend();
   const base = secretStorageInfo();
-  const where = be.id === 'android-keystore' ? '安卓硬件密钥库（AndroidKeyStore，密钥不出安全芯片）' : be.id === 'electron-safeStorage' ? '系统钥匙串（Electron safeStorage）' : base.where;
+  const where = be.id === 'android-keystore' ? '安卓硬件密钥库（AndroidKeyStore，密钥不出安全芯片）' : be.id === 'ios-keychain' ? 'iOS 钥匙串（Keychain，仅本机、不随 iCloud 同步）' : be.id === 'electron-safeStorage' ? '系统钥匙串（Electron safeStorage）' : base.where;
   return { ...base, where, warn: backendFallbackReason() ?? undefined };
 }
 export function secretStorageInfo(): { where: string; risk?: string } {

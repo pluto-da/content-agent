@@ -6,8 +6,9 @@
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
-    "dist:win": "electron-builder --win nsis",
-    "dist:mac": "electron-builder --mac dmg"
+    "stage": "node ../scripts/stage-desktop.mjs",
+    "dist:win": "electron-builder --win nsis --x64 --publish never",
+    "dist:mac": "electron-builder --mac dmg --publish never"
   },
   "devDependencies": {
     "electron": "^39.0.0",
@@ -16,16 +17,51 @@
   "build": {
     "appId": "local.contentagent.desktop",
     "productName": "超级工作台",
-    "directories": { "output": "release" },
-    "files": ["main.cjs", "preload.cjs", "browser-views.cjs", "package.json"],
-    "extraResources": [
-      { "from": "../server/dist", "to": "server/dist" },
-      { "from": "../server/node_modules", "to": "server/node_modules", "filter": ["**/*"] },
-      { "from": "../node_modules", "to": "node_modules", "filter": ["**/*"] },
-      { "from": "../web/dist", "to": "web/dist" },
-      { "from": "../agent", "to": "agent" }
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "browser-views.cjs",
+      "smoke.cjs",
+      "package.json"
     ],
-    "win": { "target": "nsis" },
-    "mac": { "target": "dmg", "category": "public.app-category.productivity" }
+    "extraResources": [
+      {
+        "from": "stage/server",
+        "to": "server"
+      },
+      {
+        "from": "stage/web",
+        "to": "web"
+      },
+      {
+        "from": "stage/agent",
+        "to": "agent"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "signAndEditExecutable": false
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "artifactName": "content-agent-${version}-${os}-${arch}.${ext}",
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "content-agent-${version}-win-${arch}-setup.${ext}"
+    },
+    "dmg": {
+      "artifactName": "content-agent-${version}-mac-${arch}.${ext}"
+    },
+    "executableName": "content-agent"
   }
 }

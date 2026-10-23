@@ -13,3 +13,5 @@ mobile/ios/
 out/
 !web/src/data/
 !agent/v9/defaults/data/
+desktop/stage/
+mobile/ios-build/

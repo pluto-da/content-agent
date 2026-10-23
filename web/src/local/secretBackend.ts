@@ -2,6 +2,7 @@
  * 可插拔的 Key 加密后端（0.10.0，ADR-011）。所有 Key（模型服务商 Key、数据源凭证）都经这里加密后才写进 IndexedDB。
  * - webcrypto：WebCrypto AES-GCM，加密密钥是不可导出的 CryptoKey（0.8–0.9 的实现，网页版与兜底）；
  * - android-keystore：原生插件 SecureKeys，主密钥生成在 AndroidKeyStore（StrongBox 可用时优先）里，WebView 只拿到加解密结果；
+ * - ios-keychain（1.0）：iOS App 原生插件 SecureKeys（Swift，CryptoKit AES-256-GCM），主密钥存在 iOS 钥匙串（kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly，不随 iCloud 同步、不进备份）；
  * - electron-safeStorage：桌面 App 用系统钥匙串（Windows DPAPI / macOS Keychain / Linux libsecret）；Linux 只有 basic_text 时视为不可用。
  * 每条密文记下自己的后端（Sealed.b），解密按条分派，所以迁移中途失败也不会丢 Key。
  * 迁移：首次在 App 里用到 Key 时，把旧 WebCrypto 密文一次性解开 → 用新后端加密 → 逐条回读校验 → 一次写回 → 删除旧 WebCrypto 密钥。
@@ -12,7 +13,7 @@ import { registerPlugin } from '@capacitor/core';
 import { db } from './db';
 import { runtime, electronBridge } from '../runtime';
 
-export type BackendId = 'webcrypto' | 'android-keystore' | 'electron-safeStorage';
+export type BackendId = 'webcrypto' | 'android-keystore' | 'ios-keychain' | 'electron-safeStorage';
 export interface Sealed { iv: string; data: string; plain?: boolean; tail: string; b?: BackendId }
 export interface HardwareInfo { hasKey?: boolean; isInsideSecureHardware?: boolean; securityLevel?: string; strongBox?: boolean; strongBoxFeature?: boolean; userAuthRequired?: boolean; sdk?: number; error?: string; storageBackend?: string }
 export interface SecretBackend {
@@ -87,6 +88,20 @@ export const androidKeystoreBackend: SecretBackend = {
   async info(create) { try { return await SecureKeys.info({ create: !!create, requireAuth: requireAuthPref }); } catch (e) { return { error: String((e as Error)?.message ?? e) }; } },
 };
 
+/* ---------------- ios-keychain（1.0：同名原生插件 SecureKeys 的 iOS 实现，见 mobile/native/ios/App/SecureKeysPlugin.swift） ---------------- */
+export const iosKeychainBackend: SecretBackend = {
+  id: 'ios-keychain',
+  async available() {
+    const cap = (globalThis as unknown as { Capacitor?: { getPlatform?: () => string; isPluginAvailable?: (n: string) => boolean } }).Capacitor;
+    if (runtime() !== 'capacitor' || cap?.getPlatform?.() !== 'ios') return false;
+    if (cap.isPluginAvailable && !cap.isPluginAvailable('SecureKeys')) return false;
+    try { return (await SecureKeys.info({})).available === true; } catch { return false; }
+  },
+  async encrypt(plain) { try { return await SecureKeys.encrypt({ plaintext: plain }); } catch (e) { throw nativeErr(e); } },
+  async decrypt(s) { try { return (await SecureKeys.decrypt({ iv: s.iv, data: s.data })).plaintext; } catch (e) { throw nativeErr(e); } },
+  async info(create) { try { return await SecureKeys.info({ create: !!create }); } catch (e) { return { error: String((e as Error)?.message ?? e) }; } },
+};
+
 /* ---------------- electron-safeStorage ---------------- */
 interface SafeBridge { available(): Promise<{ ok: boolean; backend?: string }>; encrypt(s: string): Promise<string>; decrypt(b: string): Promise<string> }
 const safe = (): SafeBridge | undefined => (typeof window === 'undefined' ? undefined : (electronBridge() as unknown as { safeStorage?: SafeBridge } | undefined)?.safeStorage);
@@ -98,7 +113,7 @@ export const electronSafeStorageBackend: SecretBackend = {
   async info() { const s = safe(); const a = s ? await s.available().catch(() => ({ ok: false, backend: undefined })) : { ok: false, backend: undefined }; return { isInsideSecureHardware: undefined, securityLevel: 'os_keychain', storageBackend: a.backend }; },
 };
 
-const BACKENDS: Record<BackendId, SecretBackend> = { webcrypto: webcryptoBackend, 'android-keystore': androidKeystoreBackend, 'electron-safeStorage': electronSafeStorageBackend };
+const BACKENDS: Record<BackendId, SecretBackend> = { webcrypto: webcryptoBackend, 'android-keystore': androidKeystoreBackend, 'ios-keychain': iosKeychainBackend, 'electron-safeStorage': electronSafeStorageBackend };
 export const backendById = (id: BackendId | undefined): SecretBackend => BACKENDS[id ?? 'webcrypto'] ?? webcryptoBackend;
 
 /** 本运行环境首选的后端（不检查可用性）。 */
@@ -106,7 +121,7 @@ export function preferredBackend(): BackendId {
   const r = typeof window === 'undefined' ? 'web' : runtime();
   if (r === 'capacitor') {
     const p = (globalThis as unknown as { Capacitor?: { getPlatform?: () => string } }).Capacitor?.getPlatform?.();
-    return p === 'android' ? 'android-keystore' : 'webcrypto';
+    return p === 'android' ? 'android-keystore' : p === 'ios' ? 'ios-keychain' : 'webcrypto';
   }
   if (r === 'electron') return 'electron-safeStorage';
   return 'webcrypto';
@@ -149,7 +164,7 @@ async function choose(): Promise<SecretBackend> {
   const want = backendById(preferredBackend());
   if (want.id === 'webcrypto') return webcryptoBackend;
   if (!(await want.available())) {
-    fallbackReason = want.id === 'android-keystore' ? '这台手机上没有找到硬件密钥插件（SecureKeys），继续用 WebCrypto 加密' : '系统钥匙串不可用，继续用 WebCrypto 加密';
+    fallbackReason = want.id === 'android-keystore' ? '这台手机上没有找到硬件密钥插件（SecureKeys），继续用 WebCrypto 加密' : want.id === 'ios-keychain' ? '这台 iPhone 上没有找到钥匙串插件（SecureKeys），继续用 WebCrypto 加密' : '系统钥匙串不可用，继续用 WebCrypto 加密';
     return webcryptoBackend;
   }
   const st = await migrationState();
@@ -164,7 +179,7 @@ async function choose(): Promise<SecretBackend> {
     return want;
   } catch (e) {
     const reason = (e as Error)?.message ?? String(e);
-    fallbackReason = `迁移到${want.id === 'android-keystore' ? '硬件密钥库' : '系统钥匙串'}没有成功：${reason}。已继续用 WebCrypto 加密，Key 不受影响，可在“诊断”里重试`;
+    fallbackReason = `迁移到${want.id === 'android-keystore' ? '硬件密钥库' : want.id === 'ios-keychain' ? 'iOS 钥匙串' : '系统钥匙串'}没有成功：${reason}。已继续用 WebCrypto 加密，Key 不受影响，可在“诊断”里重试`;
     await db.setKV(STATE_KV, { status: 'failed', from: 'webcrypto', to: want.id, at: new Date().toISOString(), reason } satisfies MigrationState);
     return webcryptoBackend;
   }
@@ -215,7 +230,7 @@ export async function setRequireAuth(on: boolean): Promise<{ ok: boolean; reason
 export async function loadRequireAuthPref(): Promise<void> { requireAuthPref = !!(await migrationState()).requireAuth; }
 
 export interface KeyStorageDiag { preferred: BackendId; active: BackendId; label: string; hardware: HardwareInfo; migration: MigrationState; fallbackReason: string | null; undecryptable: string[] }
-const LABEL: Record<BackendId, string> = { webcrypto: 'WebCrypto（AES-GCM，加密密钥不可导出）', 'android-keystore': 'Android 硬件密钥库（AndroidKeyStore，AES-256-GCM）', 'electron-safeStorage': '系统钥匙串（Electron safeStorage）' };
+const LABEL: Record<BackendId, string> = { webcrypto: 'WebCrypto（AES-GCM，加密密钥不可导出）', 'android-keystore': 'Android 硬件密钥库（AndroidKeyStore，AES-256-GCM）', 'ios-keychain': 'iOS 钥匙串（Keychain，AES-256-GCM，仅本机）', 'electron-safeStorage': '系统钥匙串（Electron safeStorage）' };
 export async function keyStorageDiag(): Promise<KeyStorageDiag> {
   const be = await activeBackend();
   return { preferred: preferredBackend(), active: be.id, label: LABEL[be.id], hardware: await be.info(be.id === 'android-keystore'), migration: await migrationState(), fallbackReason, undecryptable: [...undecryptable] };

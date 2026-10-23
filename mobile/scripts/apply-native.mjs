@@ -15,16 +15,20 @@
  *    以符合 Google Play 包可见性政策）；增加 FileProvider（分享草稿素材用）。
  *  - 额外包名：环境变量 CA_EXTRA_PACKAGES="com.a.b,com.c.d"。
  * iOS：
- *  - 复制 LocalAppsPlugin.swift、MainViewController.swift 到 ios/App/App/（首次需在 Xcode 中把这两个文件加入 App target）；
+ *  - 复制 LocalAppsPlugin.swift、MainViewController.swift、SecureKeysPlugin.swift（1.0 ios-keychain）到 ios/App/App/，并用 scripts/ios-add-files.rb（xcodeproj gem）加入 App target；
+ *  - 1.0：MARKETING_VERSION / CURRENT_PROJECT_VERSION 与 package.json 同步（1.0.0 → 10000）；
  *  - Info.plist 增加 LSApplicationQueriesSchemes；Main.storyboard 的控制器类改为 MainViewController。
  * 用法：node scripts/apply-native.mjs [android|ios]（在 mobile/ 目录下）。
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const native = join(root, 'native');
+const here = join(root, 'scripts');
+function versionInfo() { const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version; const m = /^(\d+)\.(\d+)\.(\d+)/.exec(version ?? ''); return { version, code: m ? Number(m[1]) * 10000 + Number(m[2]) * 100 + Number(m[3]) : 1 }; }
 
 export const KNOWN_PACKAGES = ['com.ss.android.ugc.aweme', 'com.xingin.xhs', 'com.tencent.mm', 'com.zhihu.android', 'com.taobao.idlefish', 'com.twitter.android', 'tv.danmaku.bili', 'com.smile.gifmaker'];
 export const KNOWN_SCHEMES = ['snssdk1128', 'xhsdiscover', 'weixin', 'zhihu', 'fleamarket', 'twitter', 'bilibili', 'kwai'];
@@ -125,7 +129,15 @@ function android() {
 function ios() {
   const app = join(root, 'ios', 'App', 'App');
   if (!existsSync(app)) { console.log('跳过 iOS：先在 macOS 上运行 npx cap add ios'); return; }
-  for (const f of ['LocalAppsPlugin.swift', 'MainViewController.swift']) cpSync(join(native, 'ios', 'App', f), join(app, f));
+  const { version, code } = versionInfo();
+  const SWIFT = ['LocalAppsPlugin.swift', 'MainViewController.swift', 'SecureKeysPlugin.swift'];
+  for (const f of SWIFT) cpSync(join(native, 'ios', 'App', f), join(app, f));
+  // 1.0：把 Swift 文件加入 App target（xcodeproj gem，macOS runner 自带 CocoaPods 依赖它）；没有 gem 时提示手动加入
+  try { execFileSync('ruby', [join(here, 'ios-add-files.rb'), join(root, 'ios', 'App', 'App.xcodeproj'), ...SWIFT], { stdio: 'inherit' }); }
+  catch { console.log('提示：未能自动加入 App target（需要 ruby + xcodeproj gem），请在 Xcode 中手动加入：' + SWIFT.join('、')); }
+  // 版本号：CFBundleShortVersionString = x.y.z，CFBundleVersion = versionCode（与安卓同规则）
+  const pbx = join(root, 'ios', 'App', 'App.xcodeproj', 'project.pbxproj');
+  if (existsSync(pbx)) writeFileSync(pbx, readFileSync(pbx, 'utf8').replace(/MARKETING_VERSION = [^;]+;/g, `MARKETING_VERSION = ${version};`).replace(/CURRENT_PROJECT_VERSION = [^;]+;/g, `CURRENT_PROJECT_VERSION = ${code};`));
   const plistPath = join(app, 'Info.plist');
   let p = readFileSync(plistPath, 'utf8');
   p = p.replace(/\s*<key>LSApplicationQueriesSchemes<\/key>\s*<array>[\s\S]*?<\/array>/, '');
@@ -137,7 +149,7 @@ function ios() {
     const s = readFileSync(sb, 'utf8').replace(/customClass="CAPBridgeViewController" customModule="Capacitor"/, 'customClass="MainViewController" customModule="App" customModuleProvider="target"');
     writeFileSync(sb, s);
   }
-  console.log('iOS：已复制 Swift 文件并写入 LSApplicationQueriesSchemes。首次请在 Xcode 中把 LocalAppsPlugin.swift、MainViewController.swift 加入 App target。');
+  console.log(`iOS：已复制 Swift 文件（${SWIFT.join('、')}）、写入 LSApplicationQueriesSchemes、版本 ${version} (${code})。`);
 }
 
 const which = process.argv[2];
