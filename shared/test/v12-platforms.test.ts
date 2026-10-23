@@ -14,7 +14,7 @@ describe('E11 自定义平台', () => {
     expect(im.ok).toBe(true); expect(im.manifest?.name).toBe('少数派'); expect(im.skill).toMatch(/写法/);
   });
   it('能力与内置平台完全一致，且没有自动发布 / 互动', () => {
-    for (const t of PLATFORM_TEMPLATES) expect(t.capabilities).toEqual([...PLATFORM_CAPABILITIES]);
+    for (const t of PLATFORM_TEMPLATES) { expect(t.capabilities).toEqual([...PLATFORM_CAPABILITIES]); expect(validatePlatform(t)).toEqual([]); expect(checkName(platformPath(t.id))).toBeNull(); }
     expect(PLATFORM_CAPABILITIES.join()).not.toMatch(/publish|post|comment|like|follow/);
     const m = platformFromTemplate('weibo', { id: 'wb2' });
     expect(validatePlatform({ ...m, capabilities: [...m.capabilities, 'auto_publish' as never] }).join()).toMatch(/硬边界/);

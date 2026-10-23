@@ -74,6 +74,8 @@ export async function restoreBackup(zipBytes: Uint8Array, o: { conflict?: 'local
     }
   }
   if (Object.keys(legacy).length) await importLegacyV11(legacy as Parameters<typeof importLegacyV11>[0]);
+  // 1.2.0：恢复后补齐超级 Agent 控制平面（幂等；恢复的是 1.2 备份则原样保留）
+  await (await import('../v12/migrate')).migrateV12().catch(() => undefined);
   await audit({ kind: 'restore', actor: 'user', summary: `恢复备份（${manifest.appVersion}，${manifest.exportedAt.slice(0, 10)}）：文件 ${nf}、集合 ${nc}、设置 ${nk}；Key 需要重新填写`, outcome: 'ok' });
   return { manifest, errors: [], restored: { files: nf, collections: nc, kv: nk }, snapshot };
 }

@@ -26,7 +26,7 @@ export interface PlatformManifest {
   forms: ContentForm[]; spec: PlatformSpec; checklist: string[]; metrics: Record<string, string>; hotSources: string[];
   capabilities: PlatformCapability[]; source: 'builtin' | 'user'; readonly: boolean; createdBy: 'user' | 'super'; template?: string; version: number;
 }
-export const PLATFORM_ID = /^[a-z][a-z0-9_-]{1,39}$/;
+export const PLATFORM_ID = /^[a-z][a-z0-9_-]{0,39}$/;
 export const platformPath = (id: string): string => `platforms/${id}/PLATFORM.md`;
 
 const U = (note?: string): SpecField => ({ value: null, verified: false, ...(note ? { note } : {}) });
