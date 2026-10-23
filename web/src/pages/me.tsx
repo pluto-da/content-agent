@@ -32,7 +32,7 @@ export function Me({ sub, id, go, lay, theme, setTheme, lang, setLang }: { sub: 
     case 'revenue': return <RevenuePage />;
     case 'growth': return <GrowthPage />;
     case 'reminders': return <RemindersPage />;
-    case 'status': return <StatusPage go={go} />;
+    case 'status': return <StatusPage go={go} id={id} />;
     case 'audit': return <AuditPage />;
     case 'settings': return <SettingsV9Page />;
     case 'platforms': return <PlatformsSub go={go} />;

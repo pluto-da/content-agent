@@ -1,5 +1,6 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { startReminderScheduler } from './v9/reminders';
+import { ReminderBanner } from './v10/ReminderBanner';
 import { apiMode } from './api';
 import { LangContext, translate, type Lang } from './i18n';
 import { Icon } from './icons';
@@ -205,6 +206,7 @@ export function App() {
 
   return (
     <LangContext.Provider value={{ lang, t }}>
+      <ReminderBanner />
       <AddAppContext.Provider value={addCtx}>
         <TooltipProvider delayDuration={200}>
           <a className="skip" href="#main">跳到主要内容</a>

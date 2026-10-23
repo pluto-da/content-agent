@@ -11,7 +11,7 @@ import {
 import { useT } from '../../../i18n';
 import type { Layout } from '../../../nav';
 import { saveModelsV3, getModelsV3 } from '../../../local/store';
-import { setSecret, deleteSecret, secretTails, secretStorageInfo } from '../../../local/secrets';
+import { setSecret, deleteSecret, secretTails, secretStorageInfo, secretStorageInfoAsync, undecryptableSecrets } from '../../../local/secrets';
 import { call, probe, fetchList, saveMedia } from '../../../v9/models';
 import { modelStats } from '../../../v9/ops';
 import { addInbox } from '../../../agent/store';
@@ -257,7 +257,8 @@ function Accounts({ go }: { go: (to: string) => void }) {
   const [url, setUrl] = useState('');
   const [key, setKey] = useState('');
   const [err, setErr] = useState<string | null>(null);
-  const info = secretStorageInfo();
+  const info: { where: string; risk?: string; warn?: string } = useAsync(secretStorageInfoAsync, ['kv:secrets']).data ?? secretStorageInfo();
+  const broken = useAsync(undecryptableSecrets, ['kv:secrets']).data ?? [];
   const add = async () => {
     setErr(null);
     const baseURL = (url || ad?.defaultBaseURL || '').trim();
@@ -281,6 +282,8 @@ function Accounts({ go }: { go: (to: string) => void }) {
       <BackBar label={t('账号与 Key')} onBack={() => go('me/models')} />
       <Note>{t('同一服务商一个 Key，默认各能力通用（例如百炼填一次，文本、生图、配音、转写都能用）；某一类要单独的 Key，在那一类的页面里填。')}</Note>
       <Note>{t('存放位置')}：{t(info.where)}{info.risk ? ` · ${t(info.risk)}` : ''}</Note>
+      {info.warn && <Note tone="warn">{t(info.warn)}</Note>}
+      {!!broken.length && <Problem testId="keys-undecryptable" title={`${broken.length} ${t('个 Key 在这台设备上解不开')}`} advice={t('卸载重装、换手机或恢复了别的设备的数据后属于正常情况（硬件密钥不会跟着走）。请在对应服务商里重新填写 Key。')} />}
       <GroupList title={t('已添加的服务商')}>
         {!s.accounts.length && <li className="p-4 text-[14px] text-muted">{t('还没有。下面添加一家，或用“常用服务快速连接”。')}</li>}
         {s.accounts.map((a) => <ListRow key={a.id} label={a.label} hint={`${adapterOf(a.vendor)?.label ?? a.vendor} · ${a.models.length} ${t('个模型名')} · ${a.hasKey ? `Key ••••${tails[a.secretRef ?? '']?.tail ?? a.keyTail ?? ''}` : t('没有 Key')}`} onClick={() => go(`me/models/acc-${a.id}`)} testId={`acc-${a.vendor}`} />)}

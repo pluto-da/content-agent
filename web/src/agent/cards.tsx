@@ -11,7 +11,7 @@ import { saveProfile, type CardData } from './store';
 import { toolByName } from './tools';
 import { db } from '../local/db';
 
-import { V9Body } from '../v9/cards';
+import { V9Body, V9_TITLES } from '../v9/cards';
 export interface CardActions {
   ask: (text: string) => void;
   retry?: () => void;
@@ -34,7 +34,7 @@ export function ToolCard({ card, actions }: { card: CardData; actions: CardActio
   // 收起时保留内容到过渡结束（高度过渡），第一次展开前不渲染
   const [ever, setEver] = useState(false);
   const spec = toolByName(card.tool);
-  const label = spec?.label ?? card.tool;
+  const label = spec?.label ?? V9_TITLES[card.tool] ?? card.tool;
   return (
     <section className="tool-card my-2 rounded-[12px] border border-line bg-surface" data-testid={`card-${card.type === 'tool' ? card.tool : card.type}`} data-status={card.status} aria-label={label}>
       <header className="flex min-h-10 items-center gap-2 border-b border-line px-3 text-[13px] text-muted">

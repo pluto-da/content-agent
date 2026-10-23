@@ -3,6 +3,7 @@
  * 对外暴露与 0.8 runTurn 相同的事件接口（message / delta / card / confirm / done / mode），AgentPanel 不用改交互；
  * 特性开关 agent.runtime.v9 关闭时退回 0.8 循环（应急）。
  */
+import { syncNativeSchedule } from './reminders';
 import {
   AgentRuntime, LockManager, ToolRegistry, callError, createBuiltinTools, assemblePrefix, loadSemiotics, routeSkill, skillMeta, skillsDirectory, readLimits, flagOn, redact, findSecrets,
   proposeMemory as ruleProposeMemory, searchMemory, forget, computeAttribution, summarize, knownNumbers, validateProposal, proposalFile, bm25Search, configuredRoles, ROLE_IDS, sha256,
@@ -93,8 +94,8 @@ const services: ToolServices = {
   async listDrafts() { return (await db.all('drafts')).map((d) => ({ id: String(d.id), platform: String(d.platform ?? ''), title: String(d.title ?? ''), body: String(d.body ?? '') })); },
   async deleteDrafts(ids) { let n = 0; for (const id of ids) { const row = await db.get('drafts', Number(id)); if (row) { await db.del('drafts', row.id); n++; } } await audit({ kind: 'tool_call', actor: 'user', summary: `删除草稿 ${n} 篇（已确认）`, tool: 'drafts_delete', outcome: 'ok' }); return n; },
   async hot() { return { items: [], unavailable: [] }; },
-  async addReminder(r) { const row = await db.insert('reminders', { ...r, status: 'scheduled' }); window.dispatchEvent(new CustomEvent('ca:reminders')); return { id: `rem-${row.id}` }; },
-  async cancelReminder(t) { const rows = await db.all('reminders'); const hit = rows.find((x) => `rem-${x.id}` === t || String(x.text ?? '').includes(t)); if (!hit) return 0; await db.update('reminders', hit.id, { status: 'cancelled' }); return 1; },
+  async addReminder(r) { const row = await db.insert('reminders', { ...r, status: 'scheduled' }); window.dispatchEvent(new CustomEvent('ca:reminders')); void syncNativeSchedule().catch(() => undefined); return { id: `rem-${row.id}` }; },
+  async cancelReminder(t) { const rows = await db.all('reminders'); const hit = rows.find((x) => `rem-${x.id}` === t || String(x.text ?? '').includes(t)); if (!hit) return 0; await db.update('reminders', hit.id, { status: 'cancelled' }); void syncNativeSchedule().catch(() => undefined); return 1; },
   async proposeMemory(text, o) {
     const p = ruleProposeMemory(text, { source: 'user_said', condition: o.condition });
     if (!p.ok) return { ok: false, reason: p.reason };

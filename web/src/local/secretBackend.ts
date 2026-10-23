@@ -68,7 +68,10 @@ interface SecureKeysPlugin {
   decrypt(o: { iv: string; data: string }): Promise<{ plaintext: string }>;
   reset(): Promise<{ ok: boolean }>;
 }
-export const SecureKeys = registerPlugin<SecureKeysPlugin>('SecureKeys');
+export type { SecureKeysPlugin };
+let SecureKeys: SecureKeysPlugin = registerPlugin<SecureKeysPlugin>('SecureKeys');
+/** 测试用：注入假的原生插件。 */
+export function setSecureKeysForTest(p: SecureKeysPlugin | null): void { SecureKeys = p ?? registerPlugin<SecureKeysPlugin>('SecureKeys'); }
 let requireAuthPref = false;
 const nativeErr = (e: unknown): SecretError => { const x = e as { code?: string; message?: string }; return new SecretError(x?.message ?? String(e), x?.code ?? 'NATIVE_ERROR'); };
 export const androidKeystoreBackend: SecretBackend = {

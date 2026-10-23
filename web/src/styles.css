@@ -659,7 +659,9 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), select { min-heig
     select, input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']) { min-height: 44px !important; }
     a[href] { display: inline-flex; align-items: center; min-height: 44px !important; }
     /* 正文里的链接（Agent 回复的 Markdown）保持行内，不撑开行高 */
-    [data-testid='msg-agent'] a[href], .prose a[href] { display: inline; min-height: 0 !important; }
+    [data-testid='msg-agent'] a[href]:not(.button), .prose a[href]:not(.button) { display: inline; min-height: 0 !important; }
+    /* 0.10.0：卡片里的按钮式链接（去接模型 / 去确认）保持 44px 触控 */
+    a.button[href] { display: inline-flex; min-height: 44px !important; }
   }
 }
 

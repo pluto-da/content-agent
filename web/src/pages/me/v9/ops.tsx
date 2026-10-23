@@ -13,9 +13,15 @@ import { getPrefs, setPrefs, getModelsV3, saveModelsV3 } from '../../../local/st
 import { post } from '../../../api';
 import { GroupList, Problem, useToast, EmptyState, StatusDot, Busy } from '../../../ui';
 import { useAsync, Section, Note, download, fmtTime, pct, SegTabs } from './common';
+import { Diagnostics, NotifySection } from '../../../v10/Diagnostics';
+import { CardGallery } from '../../../v10/CardGallery';
 
 /* ---------------- 运行状态 ---------------- */
-export function StatusPage({ go }: { go: (to: string) => void }) {
+export function StatusPage({ go, id }: { go: (to: string) => void; id?: string | null }) {
+  if (id === 'cards') return <CardGallery go={go} />;
+  return <StatusMain go={go} />;
+}
+function StatusMain({ go }: { go: (to: string) => void }) {
   const { t } = useT();
   const [days, setDays] = useState<'1' | '7' | '30'>('7');
   const { data, error, reload } = useAsync(() => modelStats(Number(days)), ['usage_log'], [days]);
@@ -43,6 +49,7 @@ export function StatusPage({ go }: { go: (to: string) => void }) {
         <Note tone={doc && doc.problems.filter((p) => !p.fixed).length ? 'warn' : 'ok'}>{doc ? `${doc.files} ${t('个文件')} · ${doc.folders} ${t('个文件夹')} · ${t('问题')} ${doc.problems.filter((p) => !p.fixed).length}（${t('已自动修复')} ${doc.fixed}）` : t('打开“Agent 设定”后会自检一次')}</Note>
       </Section>
       <Note>{t('健康路由：默认模型近期失败率高时，可重试类错误先走备用。')}</Note>
+      <Diagnostics />
     </div>
   );
 }
@@ -152,6 +159,7 @@ export function RemindersPage() {
     <div className="page page-narrow flex flex-col gap-3" data-testid="reminders-page">
       {toast}
       <Note>{t('提醒只发本机通知，不会自动执行任何动作、不调用平台、不花钱。安卓 App 关闭时由系统通知送达（需允许通知权限）。')}</Note>
+      <NotifySection compact />
       <Section title={t('新提醒')}>
         <label className="field !m-0"><span>{t('提醒什么')}</span><input value={text} onChange={(e) => setText(e.target.value)} data-testid="rem-text" /></label>
         <label className="field !m-0"><span>{t('什么时候（例如：明早 9 点 / 每周一 10 点 / 30 分钟后）')}</span><input value={when} onChange={(e) => setWhen(e.target.value)} data-testid="rem-when" /></label>
