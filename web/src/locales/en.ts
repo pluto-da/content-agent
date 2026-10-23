@@ -1563,4 +1563,12 @@ export const EN_UI: Record<string, string> = {
   'ui.v12_d51': 'Weibo',
   'ui.v12_d52': 'YouTube',
   'ui.v12_d53': 'Instagram',
+  'ui.v12_rollback': 'Roll back one version',
+  'ui.v12_rolled_back': 'Rolled back one version (history kept)',
+  'ui.v12_unit_followers': 'followers',
+  'ui.v12_unit_revenue': 'yuan',
+  'ui.v12_unit_views': 'views',
+  'ui.v12_unit_posts': 'posts',
+  'ui.v12_unit_custom': 'items',
+  'ui.v12_readonly_template': 'Built-in · read-only template',
 };

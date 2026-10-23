@@ -762,3 +762,6 @@ html:lang(en) { --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "
 .seg.seg-nowrap button { flex-shrink: 0; }
 /* 1.1.0 自审：输入框占位文字只占一行（英文手机上“Message the Agent…”曾折成两行被裁） */
 textarea[data-testid="agent-input"]::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 1.2.0 指挥台：6 个标签在手机上换行显示，不裁切 */
+.v12-tabs .tabs { flex-wrap: wrap; width: auto; }

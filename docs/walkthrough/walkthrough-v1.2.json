@@ -1,0 +1,316 @@
+{
+ "version": "1.2.0",
+ "at": "2026-10-23T22:44:57.841Z",
+ "viewport": "360×800",
+ "server": "none（/api 404，本机模式）",
+ "provider": "本地模拟服务商（mock://local，不联网、无 Key）",
+ "paths": {
+  "fresh": {
+   "ok": true,
+   "steps": [
+    {
+     "id": "first-open",
+     "label": "首次打开 → 首启引导",
+     "ok": true,
+     "note": "首启引导",
+     "ms": 483,
+     "shot": "walkthrough/fresh/01-first-open.png"
+    },
+    {
+     "id": "connect-first",
+     "label": "接入模型（本地模拟服务商）",
+     "ok": true,
+     "note": "选服务商 → 选模型 → 首页出现指挥条",
+     "ms": 4189,
+     "shot": "walkthrough/fresh/02-connect-first.png"
+    },
+    {
+     "id": "goal",
+     "label": "设目标（只显示有数据依据的数字）",
+     "ok": true,
+     "note": "目标「本月小红书涨粉 500」，进度：待录入",
+     "ms": 3050,
+     "shot": "walkthrough/fresh/03-goal.png"
+    },
+    {
+     "id": "agents-3",
+     "label": "从模板启用 3 个子 Agent",
+     "ok": true,
+     "note": "启用：选题研究员、平台适配编辑、合规审核员（共 3 个，权限都 ≤L2）",
+     "ms": 5494,
+     "shot": "walkthrough/fresh/04-agents-3.png"
+    },
+    {
+     "id": "platform-bili",
+     "label": "一句话添加自定义平台（B 站），超级 Agent 起草写法技能",
+     "ok": true,
+     "note": "platforms/bilibili-2/PLATFORM.md（规格全部“待核实”），写法技能草稿进审批收件箱",
+     "ms": 3526,
+     "shot": "walkthrough/fresh/05-platform-bili.png"
+    },
+    {
+     "id": "approve-skill",
+     "label": "在审批收件箱批准写法技能（新平台技能 = L3）",
+     "ok": true,
+     "note": "skills/bilibili-2/SKILL.md 已写入（author=user_approved）",
+     "ms": 3526,
+     "shot": "walkthrough/fresh/06-approve-skill.png"
+    },
+    {
+     "id": "workflow-run",
+     "label": "运行“一稿多发”工作流（写母稿 → 平台适配编辑 → 合规审核员 → 待你发布）",
+     "ok": true,
+     "note": "3 个 Agent 步骤完成（mother → adapt → review），停在审批节点；任务板 2 个完成",
+     "ms": 3353,
+     "shot": "walkthrough/fresh/07-workflow-run.png"
+    },
+    {
+     "id": "workflow-approve",
+     "label": "审批：批准工作流的“待你发布”节点",
+     "ok": true,
+     "note": "批准后工作流完成；发布仍由你本人在官方 App 内点",
+     "ms": 3496,
+     "shot": "walkthrough/fresh/08-workflow-approve.png"
+    },
+    {
+     "id": "write-mention",
+     "label": "自由创作一篇 → @平台适配编辑 交办（回复写明交给了谁、花了多少、结果在哪）",
+     "ok": true,
+     "note": "草稿 #1；@ 回复：交给了「平台适配编辑」 · 花了 ¥0.0000 · 结果在“指挥 → 任务板”",
+     "ms": 23790,
+     "shot": "walkthrough/fresh/09-write-mention.png"
+    },
+    {
+     "id": "copy-publish",
+     "label": "复制去发布：通过 → 复制文案、打开发布页，由用户点“我已发布”",
+     "ok": true,
+     "note": "复制 191 字、打开发布页；用户点“我已发布”后状态 handed_off",
+     "ms": 10888,
+     "shot": "walkthrough/fresh/10-copy-publish.png"
+    },
+    {
+     "id": "import-data",
+     "label": "导入数据：对话录入草稿数据 + 目标数据点（只填用户给的数字）",
+     "ok": true,
+     "note": "草稿数据 阅读 1200 / 点赞 85 / 收藏 40；目标进度 120 / 500 粉（24%） · 依据 2 条数据",
+     "ms": 11519,
+     "shot": "walkthrough/fresh/11-import-data.png"
+    },
+    {
+     "id": "weekly-review",
+     "label": "周复盘草稿（只陈述有数据的目标）",
+     "ok": true,
+     "note": "# 本周复盘（草稿，等你确认） / - 本月小红书涨粉 500：120 / 500（24%，依据 2 条数据）",
+     "ms": 2565,
+     "shot": "walkthrough/fresh/12-weekly-review.png"
+    },
+    {
+     "id": "pause-all",
+     "label": "一键暂停（≤1 秒停止全部运行；暂停中不能发送）",
+     "ok": true,
+     "note": "点击 → 指挥条变“恢复” 103 ms（含界面刷新）；发送被拦",
+     "ms": 2396,
+     "shot": "walkthrough/fresh/13-pause-all.png"
+    },
+    {
+     "id": "resume",
+     "label": "恢复（只能手动）",
+     "ok": true,
+     "note": "指挥条回到“全部暂停”，控制平面 paused=false",
+     "ms": 882,
+     "shot": "walkthrough/fresh/14-resume.png"
+    },
+    {
+     "id": "agent-rollback",
+     "label": "改一次子 Agent（改名，低风险）→ 回滚到上一版",
+     "ok": true,
+     "note": "改名保存为新版本 → 回滚到上一版（历史保留）",
+     "ms": 4702,
+     "shot": "walkthrough/fresh/15-agent-rollback.png"
+    },
+    {
+     "id": "backup",
+     "label": "备份（导出 zip，不含 Key）",
+     "ok": true,
+     "note": "fresh-backup.zip 572618 字节（含子 Agent、平台、工作流、控制平面）",
+     "ms": 1488,
+     "shot": "walkthrough/fresh/16-backup.png"
+    },
+    {
+     "id": "restore",
+     "label": "从备份恢复",
+     "ok": true,
+     "note": "恢复完成：草稿 1 篇、子 Agent 3 个与备份时一致",
+     "ms": 3917,
+     "shot": "walkthrough/fresh/17-restore.png"
+    }
+   ],
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "pauseMs": 103,
+   "consoleSamples": []
+  },
+  "legacy": {
+   "ok": true,
+   "steps": [
+    {
+     "id": "open-skip",
+     "label": "打开 → 跳过引导",
+     "ok": true,
+     "note": "agent",
+     "ms": 1676,
+     "shot": "walkthrough/legacy/01-open-skip.png"
+    },
+    {
+     "id": "restore-1.1",
+     "label": "用 1.1 备份恢复 → 自动迁移为超级 Agent",
+     "ok": true,
+     "note": "恢复 23870 字节；迁移：控制平面、指挥职责、内置平台只读模板；AGENTS.md 修订建议待批",
+     "ms": 4659,
+     "shot": "walkthrough/legacy/02-restore-1.1.png"
+    },
+    {
+     "id": "me-12",
+     "label": "“我的”仍 ≤12 项、无重复；指挥台是独立入口",
+     "ok": true,
+     "note": "“我的” 12 项；#command 正常",
+     "ms": 2305,
+     "shot": "walkthrough/legacy/03-me-12.png"
+    },
+    {
+     "id": "p1-approve",
+     "label": "审批收件箱：批准 AGENTS.md 修订建议（P1，用户确认后才写）",
+     "ok": true,
+     "note": "AGENTS.md 增加指挥职责引用（author=user_approved）",
+     "ms": 3516,
+     "shot": "walkthrough/legacy/04-p1-approve.png"
+    },
+    {
+     "id": "goal",
+     "label": "设目标（只显示有数据依据的数字）",
+     "ok": true,
+     "note": "目标「本月小红书涨粉 500」，进度：待录入",
+     "ms": 3121,
+     "shot": "walkthrough/legacy/05-goal.png"
+    },
+    {
+     "id": "agents-3",
+     "label": "从模板启用 3 个子 Agent",
+     "ok": true,
+     "note": "启用：选题研究员、平台适配编辑、合规审核员（共 3 个，权限都 ≤L2）",
+     "ms": 5733,
+     "shot": "walkthrough/legacy/06-agents-3.png"
+    },
+    {
+     "id": "platform-bili",
+     "label": "一句话添加自定义平台（B 站），超级 Agent 起草写法技能",
+     "ok": true,
+     "note": "platforms/bilibili-2/PLATFORM.md（规格全部“待核实”），写法技能草稿进审批收件箱",
+     "ms": 3610,
+     "shot": "walkthrough/legacy/07-platform-bili.png"
+    },
+    {
+     "id": "approve-skill",
+     "label": "在审批收件箱批准写法技能（新平台技能 = L3）",
+     "ok": true,
+     "note": "skills/bilibili-2/SKILL.md 已写入（author=user_approved）",
+     "ms": 3689,
+     "shot": "walkthrough/legacy/08-approve-skill.png"
+    },
+    {
+     "id": "workflow-run",
+     "label": "运行“一稿多发”工作流（写母稿 → 平台适配编辑 → 合规审核员 → 待你发布）",
+     "ok": true,
+     "note": "3 个 Agent 步骤完成（mother → adapt → review），停在审批节点；任务板 2 个完成",
+     "ms": 3485,
+     "shot": "walkthrough/legacy/09-workflow-run.png"
+    },
+    {
+     "id": "workflow-approve",
+     "label": "审批：批准工作流的“待你发布”节点",
+     "ok": true,
+     "note": "批准后工作流完成；发布仍由你本人在官方 App 内点",
+     "ms": 3534,
+     "shot": "walkthrough/legacy/10-workflow-approve.png"
+    },
+    {
+     "id": "write-mention",
+     "label": "自由创作一篇 → @平台适配编辑 交办（回复写明交给了谁、花了多少、结果在哪）",
+     "ok": true,
+     "note": "草稿 #2；@ 回复：交给了「平台适配编辑」 · 花了 ¥0.0000 · 结果在“指挥 → 任务板”",
+     "ms": 23778,
+     "shot": "walkthrough/legacy/11-write-mention.png"
+    },
+    {
+     "id": "copy-publish",
+     "label": "复制去发布：通过 → 复制文案、打开发布页，由用户点“我已发布”",
+     "ok": true,
+     "note": "复制 191 字、打开发布页；用户点“我已发布”后状态 handed_off",
+     "ms": 10905,
+     "shot": "walkthrough/legacy/12-copy-publish.png"
+    },
+    {
+     "id": "import-data",
+     "label": "导入数据：对话录入草稿数据 + 目标数据点（只填用户给的数字）",
+     "ok": true,
+     "note": "草稿数据 阅读 1200 / 点赞 85 / 收藏 40；目标进度 120 / 500 粉（24%） · 依据 2 条数据",
+     "ms": 11556,
+     "shot": "walkthrough/legacy/13-import-data.png"
+    },
+    {
+     "id": "weekly-review",
+     "label": "周复盘草稿（只陈述有数据的目标）",
+     "ok": true,
+     "note": "# 本周复盘（草稿，等你确认） / - 本月小红书涨粉 500：120 / 500（24%，依据 2 条数据）",
+     "ms": 2565,
+     "shot": "walkthrough/legacy/14-weekly-review.png"
+    },
+    {
+     "id": "pause-all",
+     "label": "一键暂停（≤1 秒停止全部运行；暂停中不能发送）",
+     "ok": true,
+     "note": "点击 → 指挥条变“恢复” 54 ms（含界面刷新）；发送被拦",
+     "ms": 2328,
+     "shot": "walkthrough/legacy/15-pause-all.png"
+    },
+    {
+     "id": "resume",
+     "label": "恢复（只能手动）",
+     "ok": true,
+     "note": "指挥条回到“全部暂停”，控制平面 paused=false",
+     "ms": 914,
+     "shot": "walkthrough/legacy/16-resume.png"
+    },
+    {
+     "id": "agent-rollback",
+     "label": "改一次子 Agent（改名，低风险）→ 回滚到上一版",
+     "ok": true,
+     "note": "改名保存为新版本 → 回滚到上一版（历史保留）",
+     "ms": 4696,
+     "shot": "walkthrough/legacy/17-agent-rollback.png"
+    },
+    {
+     "id": "backup",
+     "label": "备份（导出 zip，不含 Key）",
+     "ok": true,
+     "note": "legacy-backup.zip 572515 字节（含子 Agent、平台、工作流、控制平面）",
+     "ms": 1478,
+     "shot": "walkthrough/legacy/18-backup.png"
+    },
+    {
+     "id": "restore",
+     "label": "从备份恢复",
+     "ok": true,
+     "note": "恢复完成：草稿 2 篇、子 Agent 3 个与备份时一致",
+     "ms": 3918,
+     "shot": "walkthrough/legacy/19-restore.png"
+    }
+   ],
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "meEntries": 12,
+   "pauseMs": 54,
+   "consoleSamples": []
+  }
+ }
+}

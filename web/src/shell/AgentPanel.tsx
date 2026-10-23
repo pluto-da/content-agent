@@ -140,6 +140,8 @@ export function useAgent() {
   const stop = useCallback(() => abort.current?.abort(), []);
   // 1.2.0：全部暂停 → 立即停止当前对话运行
   useEffect(() => { const on = () => abort.current?.abort(); window.addEventListener('ca:pause-all', on); return () => window.removeEventListener('ca:pause-all', on); }, []);
+  // 恢复后清掉“已全部暂停”的提示
+  useEffect(() => { const on = () => setNotice((n) => (n === tr('ui.v12_paused_send_blocked') ? '' : n)); window.addEventListener('ca:resume-all', on); return () => window.removeEventListener('ca:resume-all', on); }, []);
   const userTool = useCallback(async (name: string, args: Record<string, unknown>) => {
     const spec = toolByName(name);
     if (!spec) return null;

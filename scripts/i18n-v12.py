@@ -63,6 +63,9 @@ K = {
  'weekly_review': ('生成周复盘草稿', 'Draft weekly review'), 'wf_started': ('工作流已运行', 'Workflow ran'), 'workflow_templates': ('工作流模板', 'Workflow templates'), 'workflows': ('工作流', 'Workflows'),
  'wf_running': ('运行中', 'Running'), 'wf_done': ('完成', 'Done'), 'wf_failed': ('失败', 'Failed'), 'wf_awaiting_user': ('待你批准', 'Waiting for you'), 'wf_waiting': ('等待中', 'Waiting'), 'wf_cancelled': ('已取消', 'Cancelled'),
  'you': ('你', 'You'),
+ 'readonly_template': ('内置 · 只读模板', 'Built-in · read-only template'),
+ 'unit_followers': ('粉', 'followers'), 'unit_revenue': ('元', 'yuan'), 'unit_views': ('次', 'views'), 'unit_posts': ('篇', 'posts'), 'unit_custom': ('项', 'items'),
+ 'rollback': ('回滚到上一版', 'Roll back one version'), 'rolled_back': ('已回滚到上一版（历史保留）', 'Rolled back one version (history kept)'),
 }
 # 数据表里的中文（t(变量) 反查）
 D = [
@@ -93,7 +96,7 @@ def load(p): return open(os.path.join(ROOT, p)).read()
 zh, en = load('web/src/locales/zh.ts'), load('web/src/locales/en.ts')
 have_zh_vals = set(m.group(1) for m in re.finditer(r"^\s*'[^']+':\s*'((?:[^'\\]|\\.)*)',$", zh, re.M))
 used = set(re.findall(r"ui\.v12_[a-z0-9_]+", ''.join(open(os.path.join(dp, f)).read() for dp, _, fs in os.walk(os.path.join(ROOT, 'web/src')) for f in fs if f.endswith(('.ts', '.tsx')) and 'locales' not in dp)))
-missing = [u for u in used if u not in ('ui.v12_wf_', 'ui.v12_metric_') and u[7:] not in K]
+missing = [u for u in used if u not in ('ui.v12_wf_', 'ui.v12_metric_', 'ui.v12_unit_') and u[7:] not in K]
 if missing: print('缺少文案：', missing); sys.exit(1)
 add_zh, add_en = [], []
 for k, (z, e) in K.items():

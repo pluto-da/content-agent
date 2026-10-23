@@ -1563,4 +1563,12 @@ export const ZH_UI: Record<string, string> = {
   'ui.v12_d51': '微博',
   'ui.v12_d52': 'YouTube',
   'ui.v12_d53': 'Instagram',
+  'ui.v12_rollback': '回滚到上一版',
+  'ui.v12_rolled_back': '已回滚到上一版（历史保留）',
+  'ui.v12_unit_followers': '粉',
+  'ui.v12_unit_revenue': '元',
+  'ui.v12_unit_views': '次',
+  'ui.v12_unit_posts': '篇',
+  'ui.v12_unit_custom': '项',
+  'ui.v12_readonly_template': '内置 · 只读模板',
 };

@@ -84,6 +84,18 @@ export async function enableTemplate(templateId: string): Promise<SubAgentDef> {
   return d;
 }
 
+/** 回滚子 Agent 到上一个版本（版本历史保留；生成新版本）。 */
+export async function rollbackAgent(id: string): Promise<number | null> {
+  const v = await getVfs();
+  const cur = await v.read(agentPath(id));
+  if (!cur || cur.version < 2) return null;
+  await v.rollback(agentPath(id), cur.version - 1, 'user_approved');
+  await audit({ kind: 'setting_change', actor: 'user', summary: `子 Agent ${id} 回滚到 v${cur.version - 1}`, target: agentPath(id), detail: { agentId: id } });
+  emit();
+  return cur.version - 1;
+}
+export async function agentVersion(id: string): Promise<number> { return (await (await getVfs()).read(agentPath(id)))?.version ?? 0; }
+
 /* ---------------- 平台 ---------------- */
 export async function listUserPlatforms(): Promise<PlatformManifest[]> {
   const v = await getVfs();
@@ -158,6 +170,7 @@ export async function pauseAll(): Promise<{ cancelled: number; ms: number }> {
 }
 export async function resumeAll(): Promise<void> {
   registry.resume(); pausedSync = false;
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('ca:resume-all'));
   await updateState((s) => ({ ...s, paused: false, pausedAt: undefined }));
   await audit({ kind: 'run_state', actor: 'user', summary: '手动恢复（全部暂停解除）', outcome: 'ok' });
 }

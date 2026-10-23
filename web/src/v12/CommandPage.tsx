@@ -15,7 +15,7 @@ import { useToast } from '../ui';
 import { getPrefs } from '../local/store';
 import {
   getState, updateState, onSuperChange, listAgents, saveAgent, deleteAgent, proposeAgent, enableTemplate, listUserPlatforms, savePlatform, listWorkflows, saveWorkflow, decide, addApproval,
-  togglePauseItem, startWorkflow, pauseAll, resumeAll,
+  togglePauseItem, startWorkflow, pauseAll, resumeAll, rollbackAgent,
 } from './store';
 
 export type CommandTab = 'team' | 'board' | 'workflows' | 'inbox' | 'goals' | 'connect';
@@ -27,6 +27,41 @@ function useSuperData(): [Data | null, () => void] {
   const load = useCallback(() => { void Promise.all([getState(), listAgents(), listWorkflows(), listUserPlatforms(), getPrefs()]).then(([s, agents, wfs, plats, p]) => setD({ s, agents, wfs, plats, flags: (p as { flags?: Record<string, boolean> }).flags ?? {} })).catch(() => undefined); }, []);
   useEffect(() => { load(); return onSuperChange(load); }, [load]);
   return [d, load];
+}
+
+/** 英文界面下把系统生成的审批 / 任务文字换成英文（存储里保留中文原文；用户与模型的内容不翻）。 */
+const EN_RULES: [RegExp, (m: RegExpExecArray, t: (k: string) => string) => string][] = [
+  [/^为新平台 (.+) 起草写法技能$/, (m) => `Draft a writing skill for the new platform ${m[1]}`],
+  [/^写入 (\S+)（写法只在技能里）$/, (m) => `Writes ${m[1]} (writing rules live only in skills)`],
+  [/^工作流「(.+)」的审批节点$/, (m, t) => `Approval step of workflow "${t(m[1]!)}"`],
+  [/^批准后继续执行剩余步骤$/, () => 'Approve to run the remaining steps'],
+  [/^AGENTS\.md 增加“指挥职责”引用（修订建议 P1）$/, () => 'AGENTS.md: add a reference to the command duties (proposal P1)'],
+  [/^只是引用 super\/SUPER\.md.*$/, () => 'Only a reference to super/SUPER.md — no permission or boundary changes; rejecting it does not affect 1.2 features'],
+  [/^权限 (\S+)；额度 ¥([\d.]+)\/月；工具 (\d+) 个$/, (m) => `Permissions ${m[1]}; budget ¥${m[2]}/month; ${m[3]} tools`],
+  [/^批准后 (.+) 本月额度 \+¥1 并恢复运行$/, (m, t) => `Approve to add ¥1 to ${t(m[1]!)}'s monthly budget and resume it`],
+  [/^修改子 Agent (.+)：(.+)$/, (m, t) => `Change sub-agent ${t(m[1]!)}: ${m[2]!.split('、').map((x) => ({ 职责: 'duties', 权限: 'permissions', 工具: 'tools', 额度: 'budget', 模型: 'model', 数据源授权: 'data-source grants' } as Record<string, string>)[x] ?? x).join(', ')}`],
+  [/^职责 \/ 权限 \/ 工具 \/ 额度改动属于 L3，批准后生效$/, () => 'Duty / permission / tool / budget changes are L3 and apply after approval'],
+  [/^启用外部工具服务器「(.+)」（MCP (.+)）$/, (m) => `Enable external tool server "${m[1]}" (MCP ${m[2]})`],
+  [/^(\d+) 个工具，其中 (\d+) 个因硬边界被拒；其余默认关闭，需逐个勾选$/, (m) => `${m[1]} tools, ${m[2]} refused by hard boundaries; the rest start off — tick them one by one`],
+  [/^添加外部 Agent「(.+)」（A2A）$/, (m) => `Add external agent "${m[1]}" (A2A)`],
+  [/^调用属 L2，额度 ¥3\/月$/, () => 'Calls are L2; budget ¥3/month'],
+  [/^启用工作流「(.+)」的定时$/, (m, t) => `Enable the schedule of workflow "${t(m[1]!)}"`],
+  [/^App 打开时执行到期任务；关闭时只发通知$/, () => 'Runs due tasks while the app is open; only notifies when closed'],
+  [/^你描述的专项：(.*)$/, (m) => `Your request: ${m[1]}`],
+  [/^导入 (.+)$/, (m) => `Import ${m[1]}`],
+  [/^(.+) 本月额度 ¥([\d.]+) 将超出（已花 ¥([\d.]+)）$/, (m) => `${m[1]} would exceed its monthly budget ¥${m[2]} (spent ¥${m[3]})`],
+  [/^汇总今天合法来源的热点，按账号画像出 5 个选题$/, () => 'Gather today’s trends from lawful sources and suggest 5 topics for the profile'],
+  [/^写一篇母稿（自由创作，不带平台格式）$/, () => 'Write a master draft (free writing, no platform format)'],
+  [/^把母稿适配到已选平台，母稿不改：?$/, () => 'Adapt the master draft to the chosen platforms; keep the master unchanged'],
+  [/^审核这些适配稿，只出意见不改稿：?$/, () => 'Review these adaptations — notes only, no edits'],
+  [/^用录入或导入的数据做本周复盘；没有数据就写待录入$/, () => 'Weekly review from entered or imported data; write “to be entered” when there is none'],
+];
+export function sysText(s: string, lang: string, t: (k: string) => string): string {
+  if (lang !== 'en') return s;
+  const parts = s.split(' · ');
+  if (parts.length > 1) return parts.map((x) => sysText(x, lang, t)).join(' · ');
+  for (const [re, f] of EN_RULES) { const m = re.exec(s.trim()); if (m) return f(m, t); }
+  return t(s);
 }
 const yuan = (n: number) => `¥${n.toFixed(n < 1 ? 3 : 2)}`;
 const Row = ({ children, testId }: { children: ReactNode; testId?: string }) => <div className="flex flex-wrap items-center gap-2" data-testid={testId}>{children}</div>;
@@ -42,14 +77,14 @@ export function CommandPage({ tab: initial, go }: { tab?: string; go: (to: strin
   return (
     <div className="page flex flex-col gap-3" data-testid="command-page">
       {toast}
-      <p className="m-0 text-[13px] text-muted" data-testid="command-boundary">{t('ui.v12_boundary_line')}</p>
+      {(tab === 'team' || tab === 'connect') && <p className="m-0 text-[13px] text-muted" data-testid="command-boundary">{t('ui.v12_boundary_line')}</p>}
       {d?.s.paused && (
         <div className="card v9-card flex flex-wrap items-center gap-2" role="status" data-testid="paused-banner">
           <strong className="grow">{t('ui.v12_all_paused')}</strong>
           <button type="button" className="primary" data-testid="resume-all" onClick={() => void run(resumeAll, 'ui.v12_resumed')}>{t('ui.v12_resume')}</button>
         </div>
       )}
-      <SegTabs value={tab} options={COMMAND_TABS.map(([k, l]) => [k, k === 'inbox' && pending ? `${t(l)} ${pending}` : l])} onChange={(v) => { setTab(v); go(`command?tab=${v}`); }} label={t('ui.v12_command')} />
+      <div className="v12-tabs"><SegTabs value={tab} options={COMMAND_TABS.map(([k, l]) => [k, k === 'inbox' && pending ? `${t(l)} ${pending}` : l])} onChange={(v) => { setTab(v); go(`command?tab=${v}`); }} label={t('ui.v12_command')} /></div>
       {!d ? <Note>{t('ui.loading')}</Note>
         : tab === 'team' ? <Team d={d} run={run} />
         : tab === 'board' ? <Board d={d} />
@@ -114,6 +149,7 @@ function Team({ d, run }: { d: Data; run: Run }) {
                 <Row>
                   <button type="button" data-testid={`agent-pause-${a.id}`} onClick={() => void run(() => togglePauseItem(a.id, !paused), paused ? 'ui.v12_resumed' : 'ui.v12_paused_toast')}>{t(paused ? 'ui.v12_resume' : 'ui.v12_pause')}</button>
                   <button type="button" className="ghost" data-testid={`agent-edit-${a.id}`} onClick={() => setEdit(a)}>{t('ui.v12_edit')}</button>
+                  {a.version > 1 && <button type="button" className="ghost" data-testid={`agent-rollback-${a.id}`} onClick={() => void run(() => rollbackAgent(a.id), 'ui.v12_rolled_back')}>{t('ui.v12_rollback')}</button>}
                   <button type="button" className="ghost" data-testid={`agent-export-${a.id}`} onClick={() => download(`${a.id}.agent.zip`, exportAgentZip(a), 'application/zip')}>{t('ui.v12_export')}</button>
                   <button type="button" className="ghost" data-testid={`agent-delete-${a.id}`} onClick={() => { if (confirm(t('ui.v12_delete_confirm'))) void run(() => deleteAgent(a.id), 'ui.v12_deleted'); }}>{t('ui.v12_delete')}</button>
                 </Row>
@@ -160,10 +196,10 @@ function AgentEditor({ a, onClose, run }: { a: SubAgentDef; onClose: () => void;
 
 /* ---------------- 任务板 ---------------- */
 function Board({ d }: { d: Data }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const name = (id: string) => t(d.agents.find((a) => a.id === id)?.name ?? id);
   return (
-    <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }} data-testid="board">
+    <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }} data-testid="board">
       {BOARD_COLUMNS.map((c) => {
         const list = d.s.tasks.filter((x) => x.state === c).slice(-20).reverse();
         return (
@@ -172,7 +208,7 @@ function Board({ d }: { d: Data }) {
             {!list.length && <Note>{t('ui.v12_empty')}</Note>}
             {list.map((x) => (
               <article key={x.id} className="rounded-[10px] border border-line p-2" data-testid={`task-${x.id}`}>
-                <p className="m-0 line-clamp-2 text-[14px]" title={x.title}>{x.title}</p>
+                <p className="m-0 line-clamp-2 text-[14px]" title={sysText(x.title, lang, t)}>{sysText(x.title, lang, t)}</p>
                 <p className="m-0 text-[12px] text-muted">{name(x.agentId)} · {yuan(x.cost)}{x.returned ? ` · ${t('ui.v12_returned_once')}` : ''}</p>
                 {x.summary && <p className="m-0 line-clamp-3 text-[13px]" title={x.summary}>{x.summary}</p>}
               </article>
@@ -222,7 +258,7 @@ function Workflows({ d, run }: { d: Data; run: Run }) {
 
 /* ---------------- 审批收件箱 ---------------- */
 function Inbox({ d, run }: { d: Data; run: Run }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [editing, setEditing] = useState<string | null>(null);
   const [text, setText] = useState('');
   const pending = d.s.approvals.filter((a) => a.status === 'pending').reverse();
@@ -235,8 +271,8 @@ function Inbox({ d, run }: { d: Data; run: Run }) {
         {pending.map((a) => (
           <article key={a.id} className="flex flex-col gap-1 border-t border-line pt-2" data-testid={`ap-${a.id}`} data-kind={a.kind}>
             <Row><span className="badge">{t(APPROVAL_KIND_TEXT[a.kind])}</span><span className="text-[13px] text-muted">{t('ui.v12_from')}{who(a)}</span></Row>
-            <p className="m-0 text-[14px]">{a.why}</p>
-            <p className="m-0 text-[13px] text-muted">{t('ui.v12_impact')}{a.impact}{a.estCost !== null ? ` · ${t('ui.v12_est_cost')}${yuan(a.estCost)}` : ''}</p>
+            <p className="m-0 text-[14px]">{sysText(a.why, lang, t)}</p>
+            <p className="m-0 text-[13px] text-muted">{t('ui.v12_impact')}{sysText(a.impact, lang, t)}{a.estCost !== null ? ` · ${t('ui.v12_est_cost')}${yuan(a.estCost)}` : ''}</p>
             <details><summary className="min-h-11 cursor-pointer text-[13px]">{t('ui.v12_preview')}</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-surface-2 p-2 text-[12px]">{a.preview}</pre></details>
             {editing === a.id && <textarea rows={6} value={text} onChange={(e) => setText(e.target.value)} data-testid={`ap-edit-text-${a.id}`} aria-label={t('ui.v12_edit_then_approve')} />}
             <Row>
@@ -248,7 +284,7 @@ function Inbox({ d, run }: { d: Data; run: Run }) {
         ))}
       </Section>
       {!!done.length && <Section title={t('ui.v12_recent_decisions')} testId="inbox-done">
-        {done.map((a) => <p key={a.id} className="m-0 text-[13px]"><span className="badge">{t(a.status === 'approved' ? (a.edited ? 'ui.v12_approve_edited' : 'ui.v12_approve') : 'ui.v12_reject')}</span> {a.why}</p>)}
+        {done.map((a) => <p key={a.id} className="m-0 text-[13px]"><span className="badge">{t(a.status === 'approved' ? (a.edited ? 'ui.v12_approve_edited' : 'ui.v12_approve') : 'ui.v12_reject')}</span> {sysText(a.why, lang, t)}</p>)}
       </Section>}
     </>
   );
@@ -256,7 +292,7 @@ function Inbox({ d, run }: { d: Data; run: Run }) {
 
 /* ---------------- 目标与进度 ---------------- */
 function Goals({ d, run }: { d: Data; run: Run }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [g, setG] = useState({ title: '', metric: 'followers' as Goal['metric'], platform: '', target: '', unit: '', from: new Date().toISOString().slice(0, 8) + '01', to: new Date().toISOString().slice(0, 10) });
   const [p, setP] = useState({ metric: 'followers' as Goal['metric'], platform: '', value: '', at: new Date().toISOString().slice(0, 10) });
   const [review, setReview] = useState('');
@@ -267,7 +303,7 @@ function Goals({ d, run }: { d: Data; run: Run }) {
         {d.s.goals.map((x) => { const pr = goalProgress(x, d.s.dataPoints); return (
           <div key={x.id} className="flex flex-col gap-1 border-t border-line pt-2" data-testid={`goal-${x.id}`}>
             <strong>{x.title}</strong>
-            <p className="m-0 text-[14px]" data-testid={`goal-progress-${x.id}`}>{pr.value === null ? t('ui.v12_to_be_entered') : `${pr.text}${pr.percent !== null ? `（${pr.percent}%）` : ''} · ${t('ui.v12_based_on')} ${pr.points} ${t('ui.v12_data_points')}`}</p>
+            <p className="m-0 text-[14px]" data-testid={`goal-progress-${x.id}`}>{pr.value === null ? t('ui.v12_to_be_entered') : `${pr.value} / ${x.target} ${t(`ui.v12_unit_${x.metric}`)}${pr.percent !== null ? (lang === 'en' ? ` (${pr.percent}%)` : `（${pr.percent}%）`) : ''} · ${t('ui.v12_based_on')} ${pr.points} ${t('ui.v12_data_points')}`}</p>
             {pr.percent !== null && <div className="v1-meter" role="progressbar" aria-label={x.title} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, pr.percent)}><span style={{ width: `${Math.min(100, Math.max(0, pr.percent))}%` }} /></div>}
           </div>); })}
         <div className="flex flex-col gap-2 border-t border-line pt-2">
@@ -281,7 +317,7 @@ function Goals({ d, run }: { d: Data; run: Run }) {
             <label className="field"><span>{t('ui.v12_from_date')}</span><input type="date" value={g.from} onChange={(e) => setG({ ...g, from: e.target.value })} /></label>
             <label className="field"><span>{t('ui.v12_to_date')}</span><input type="date" value={g.to} onChange={(e) => setG({ ...g, to: e.target.value })} data-testid="goal-to" /></label>
           </div>
-          <button type="button" className="self-start" disabled={!g.title.trim() || !(Number(g.target) > 0)} data-testid="goal-add" onClick={() => void run(() => updateState((s) => ({ ...s, goals: [...s.goals, { id: `g${Date.now().toString(36)}`, title: g.title.trim(), metric: g.metric, platform: g.platform || undefined, target: Number(g.target), unit: g.unit || (g.metric === 'revenue' ? '元' : g.metric === 'followers' ? '粉' : ''), from: g.from, to: g.to, createdAt: new Date().toISOString() }] })), 'ui.v12_saved')}>{t('ui.v12_add_goal')}</button>
+          <button type="button" className="self-start" disabled={!g.title.trim() || !(Number(g.target) > 0)} data-testid="goal-add" onClick={() => void run(() => updateState((s) => ({ ...s, goals: [...s.goals, { id: `g${Date.now().toString(36)}`, title: g.title.trim(), metric: g.metric, platform: g.platform || undefined, target: Number(g.target), unit: '', from: g.from, to: g.to, createdAt: new Date().toISOString() }] })), 'ui.v12_saved')}>{t('ui.v12_add_goal')}</button>
         </div>
       </Section>
       <Section title={t('ui.v12_enter_data')} testId="goal-data">
@@ -328,7 +364,7 @@ function Connect({ d, run, go }: { d: Data; run: Run; go: (to: string) => void }
           <label className="button ghost">{t('ui.v12_import_platform')}<input type="file" accept=".zip" className="sr-only" data-testid="plat-import" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; void run(async () => { const im = importPlatformZip(new Uint8Array(await f.arrayBuffer()), { existing }); if (!im.ok || !im.manifest) throw new Error(im.errors.join('；')); await savePlatform(im.manifest, im.skill ? { path: `skills/${im.manifest.id}/SKILL.md`, content: im.skill } : undefined); }, 'ui.v12_saved'); }} /></label>
         </Row>
         <ul className="m-0 flex list-none flex-col gap-1 p-0" data-testid="plat-list">
-          {d.plats.map((p) => <li key={p.id} className="flex items-center gap-2 border-t border-line pt-2" data-testid={`plat-${p.id}`}><strong className="min-w-0 grow truncate" title={p.name}>{t(p.name)}</strong><span className="text-[13px] text-muted">{unverified(p)} {t('ui.v12_unverified_fields')}</span><button type="button" className="ghost" onClick={() => go(`p/${p.id}`)}>{t('ui.v12_open')}</button></li>)}
+          {d.plats.map((p) => <li key={p.id} className="flex items-center gap-2 border-t border-line pt-2" data-testid={`plat-${p.id}`}><strong className="min-w-0 grow truncate" title={p.name}>{t(p.name)}</strong>{p.readonly && <span className="badge">{t('ui.v12_readonly_template')}</span>}<span className="text-[13px] text-muted">{unverified(p)} {t('ui.v12_unverified_fields')}</span><button type="button" className="ghost" onClick={() => go(`p/${p.id}`)}>{t('ui.v12_open')}</button></li>)}
         </ul>
         <button type="button" className="ghost self-start" onClick={() => go('me/platforms')}>{t('ui.v12_apps_entry')}</button>
       </Section>
