@@ -38,6 +38,8 @@ jobs:
         run: node scripts/i18n-audit.mjs --strict
       - name: vfs defaults up to date
         run: node scripts/gen-vfs-defaults.mjs --check
+      - name: single-source check (1.1：每个概念一个设置入口、模型只走 resolveModel、平台写法只从技能读)
+        run: node scripts/single-source-check.mjs --json out/single-source.json
       - name: unit tests (shared / server / web)
         run: |
           mkdir -p out
