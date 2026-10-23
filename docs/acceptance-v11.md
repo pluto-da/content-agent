@@ -39,6 +39,6 @@
 | V2 | 检索前 5 命中率在 30 条样例上 ≥ 0.8 | 通过 | ✓ 30 条：混合 0.967 · BM25 0.767 · 纯向量 0.967；换说法类 BM25 0.3 → 混合 0.9（localEmbed（本机轻量嵌入：哈希 n-gram + 领域同义词表，非语义模型））<br>✓ 检索评测单测：1 项，通过 1（vitest-shared.json） |
 | U1 | 保持 Hark 式 UI 与 i18n（本版无新界面文案；开关说明经 FLAGS 自动展示） | 通过 | ✓ i18n 单测：2 项，通过 2（vitest-shared.json）<br>✓ 未引入渐变等新视觉（web/src/styles.css） |
 | D1 | 文档：acceptance-v11、deviations-v11、ADR、CHANGELOG、使用说明 .md/.docx、STATUS.md | 通过 | ✓ acceptance-v11.md 存在（design/acceptance-v11.md）<br>✓ deviations-v11.md 存在（design/deviations-v11.md）<br>✓ CHANGELOG 0.11.0（CHANGELOG.md）<br>✓ 使用说明.md 含 0.11（使用说明.md）<br>✓ 使用说明.docx 存在<br>✓ STATUS.md 含 0.11.0（CI 无项目根时跳过） |
-| X1 | 版本 0.11.0 / versionCode 1100 | 通过 | ✓ package.json 0.11.0<br>✓ versionCode 按版本计算（0.11.0 → 1100）（mobile/scripts/apply-native.mjs）<br>✓ APK 尚未取回（CI 成功后写 out/apk-manifest-v11.json） |
+| X1 | 版本 0.11.0 / versionCode 1100 | 通过 | ✓ package.json 0.11.0<br>✓ versionCode 按版本计算（0.11.0 → 1100）（mobile/scripts/apply-native.mjs）<br>✓ APK 已取回：CI run 39943761609 success（ccc5093），4,901,997 B，versionName 0.11.0 / versionCode 1100 |
 | X2 | 回归：accept:v9、accept:v10 失败 0 | 通过 | ✓ accept-v9：{"pass":46,"partial":6,"pending_device":2,"pending_key":2,"fail":0}<br>✓ accept-v10：{"通过":19,"待真机":7} |
 | X3 | 硬边界：不做多账号 / 自动互动 / 刷量 / 绕风控 / 抓私有数据；发布用户点击；回复只草稿；不部署 154.8.183.93 | 通过 | ✓ 内置工具无对外写入<br>✓ CI 不部署 154.8.183.93（.github/workflows/ci.yml）<br>✓ boundaries.ts 存在（server/src/boundaries.ts） |
