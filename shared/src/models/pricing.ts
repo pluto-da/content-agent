@@ -7,6 +7,9 @@ import type { RoleId } from './roles.js';
 export const BUILTIN_PRICES: Record<string, Price> = {
   'mimo:mimo-v2.6-flash': { unit: 'token', input: 1, output: 2, cachedInput: 0.1 },
   'mimo:mimo-v2.6-pro': { unit: 'token', input: 3, output: 6, cachedInput: 0.3 },
+  // 0.11.0（2026-10-23 核实 mimo.mi.com/docs/zh-CN/price/pay-as-you-go）：TTS 系列限时免费；ASR ¥0.5 / 小时（按输入音频时长，精确到秒）
+  'mimo:mimo-v2.5-tts': { unit: 'char', per: 0 },
+  'mimo:mimo-v2.5-asr': { unit: 'second', per: 0.5 / 3600 },
   'mock:*': { unit: 'call', per: 0 },
 };
 export function priceOf(vendor: string, model: string, user: Record<string, Price> = {}): Price | undefined {

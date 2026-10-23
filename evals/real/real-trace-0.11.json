@@ -1,0 +1,241 @@
+{
+  "version": "0.11.0",
+  "startedAt": "2026-10-23T10:40:41.349Z",
+  "finishedAt": "2026-10-23T10:41:14.213Z",
+  "baseURL": "https://api.xiaomimimo.com/v1",
+  "keyMode": "网络层按主机注入（脚本未读取真实 Key）",
+  "models": {
+    "chat": "mimo-v2.6-flash",
+    "fast": "mimo-v2.6-flash",
+    "reason": "mimo-v2.6-flash",
+    "tts": "mimo-v2.5-tts",
+    "asr": "mimo-v2.5-asr"
+  },
+  "transport": "undici + HTTPS 代理",
+  "steps": [
+    {
+      "id": "M0",
+      "name": "GET /models",
+      "ok": true,
+      "ms": 891,
+      "status": 200,
+      "models": [
+        "mimo-v2.5-asr",
+        "mimo-v2.5-tts",
+        "mimo-v2.5-tts-voiceclone",
+        "mimo-v2.5-tts-voicedesign",
+        "mimo-v2.6-flash",
+        "mimo-v2.6-pro",
+        "mimo-v2.6-pro-ultraspeed"
+      ],
+      "costYuan": 0
+    },
+    {
+      "id": "C5-chat-stream",
+      "name": "chat 流式（mimo-v2.6-flash，3 次）",
+      "ok": true,
+      "criterion": "流式首字 < 3 s（取 3 次中位数）",
+      "firstTokenMsMedian": 1307,
+      "runs": [
+        {
+          "ok": true,
+          "firstTokenMs": 1013,
+          "headersMs": 1012,
+          "totalMs": 1917,
+          "chunks": 14,
+          "finishReason": "stop",
+          "content": "小红书标题建议 20 字以内，是为了在信息流中一眼抓住注意力，降低理解成本，提高点击率。",
+          "usage": {
+            "input": 45,
+            "output": 29
+          },
+          "costYuan": 0.000103
+        },
+        {
+          "ok": true,
+          "firstTokenMs": 1376,
+          "headersMs": 1376,
+          "totalMs": 3644,
+          "chunks": 21,
+          "finishReason": "stop",
+          "content": "小红书标题控制在20字内，能确保在信息流中完整显示不被截断，同时简洁有力更易抓住用户注意力，提升点击率。",
+          "usage": {
+            "input": 45,
+            "output": 38
+          },
+          "costYuan": 0.000121
+        },
+        {
+          "ok": true,
+          "firstTokenMs": 1307,
+          "headersMs": 1306,
+          "totalMs": 3009,
+          "chunks": 25,
+          "finishReason": "stop",
+          "content": "小红书标题建议20字以内，是因为这样能在信息流中完整显示、更醒目，便于用户快速抓住重点，也更符合平台推荐机制和用户浏览习惯。",
+          "usage": {
+            "input": 45,
+            "output": 40
+          },
+          "costYuan": 0.000125
+        }
+      ],
+      "costYuan": 0.000349,
+      "note": "首字中位数 1307 ms"
+    },
+    {
+      "id": "C5-reason",
+      "name": "reason 思考（mimo-v2.6-flash，thinking=enabled，经 v9 callRole）",
+      "ok": true,
+      "criterion": "返回思考内容（reasoning 非空）且正文非空",
+      "ms": 13859,
+      "respondedModel": "mimo-v2.6-flash",
+      "reasoningChars": 1128,
+      "reasoningHead": "The user is asking whether the 3rd post (with 3000 views) counts as \"exploded/vi",
+      "content": "## 第 3 篇不算\"爆了\"，但算一次明显的小爆/微爆。\n\n**依据：** 相对于该账号的正常基线（90\\~150 次阅读），3000 次是 20\\~30 倍的跳跃，说明内容确实触发了更大的流量池推荐，属于账号自身的\"异常高光\"；但在小红书的通用语境中，\"爆了\"通常意味着进入十万甚至百万级曝光，3000 的绝对量级还远",
+      "usage": {
+        "input": 66,
+        "output": 467,
+        "reasoning": 328
+      },
+      "costYuan": 0.001
+    },
+    {
+      "id": "C6-tts",
+      "name": "TTS（mimo-v2.5-tts，wav，经 v9 callRole）",
+      "ok": true,
+      "criterion": "返回音频可播（RIFF/WAVE 头正确、ffprobe 时长 > 0.5 s、ffmpeg 完整解码无错）",
+      "ms": 7262,
+      "text": "你好，这是超级工作台的配音测试，本段语音由人工智能合成。",
+      "mime": "audio/wav",
+      "header": {
+        "riff": "RIFF",
+        "wave": "WAVE",
+        "bytes": 268844
+      },
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "pcm_s16le",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        ],
+        "format": {
+          "format_name": "wav",
+          "duration": "5.600000"
+        },
+        "decodeOk": true
+      },
+      "file": "out/real-v11/tts.wav",
+      "usage": {
+        "chars": 28,
+        "input": 169,
+        "output": 37
+      },
+      "costYuan": 0,
+      "priceKnown": true
+    },
+    {
+      "id": "C6-asr",
+      "name": "ASR（mimo-v2.5-asr，转写上一步的 TTS 音频，经 v9 callRole）",
+      "ok": true,
+      "criterion": "ASR 文本非空（另记与原文的字符重合率，仅供参考）",
+      "ms": 2111,
+      "transcript": "你好，这是超级工作台的配音测试，本段语音由人工智能合成。",
+      "charOverlapWithSource": 1,
+      "usage": {
+        "input": 58,
+        "output": 18,
+        "cached": 4,
+        "reasoning": 0,
+        "seconds": 5.6
+      },
+      "costYuan": 0.000778,
+      "priceKnown": true
+    }
+  ],
+  "summary": {
+    "pass": 5,
+    "fail": 0,
+    "costYuanKnown": 0.002127,
+    "unknownPriceSteps": [],
+    "budgetYuan": 5
+  },
+  "notTested": [
+    {
+      "vendor": "阿里云百炼 dashscope",
+      "roles": [
+        "chat",
+        "image",
+        "tts",
+        "asr"
+      ],
+      "reason": "用户未提供 Key，未实测；能力声明保持 doc"
+    },
+    {
+      "vendor": "智谱 zhipu",
+      "roles": [
+        "chat"
+      ],
+      "reason": "用户未提供 Key，未实测；能力声明保持 doc"
+    },
+    {
+      "vendor": "火山方舟 ark",
+      "roles": [
+        "chat"
+      ],
+      "reason": "用户未提供 Key，未实测；能力声明保持 doc"
+    },
+    {
+      "vendor": "MiniMax",
+      "roles": [
+        "chat",
+        "tts"
+      ],
+      "reason": "用户未提供 Key，未实测；能力声明保持 doc"
+    }
+  ],
+  "usageLog": [
+    {
+      "role": "reason",
+      "model": "mimo-v2.6-flash",
+      "ok": true,
+      "cost": 0.001,
+      "usage": {
+        "input": 66,
+        "output": 467,
+        "reasoning": 328
+      },
+      "ms": 13859
+    },
+    {
+      "role": "tts",
+      "model": "mimo-v2.5-tts",
+      "ok": true,
+      "cost": 0,
+      "usage": {
+        "chars": 28,
+        "input": 169,
+        "output": 37
+      },
+      "ms": 7262
+    },
+    {
+      "role": "asr",
+      "model": "mimo-v2.5-asr",
+      "ok": true,
+      "cost": 0.000778,
+      "usage": {
+        "input": 58,
+        "output": 18,
+        "cached": 4,
+        "reasoning": 0,
+        "seconds": 5.6
+      },
+      "ms": 2111
+    }
+  ]
+}

@@ -7,8 +7,9 @@ export default makeOpenAICompatible({
   id: 'mimo', label: '小米 MiMo', defaultBaseURL: 'https://api.xiaomimimo.com/v1', region: 'cn', docs: 'https://mimo.mi.com/docs/zh-CN/api',
   baseURLPresets: [{ label: '按量付费（sk- Key）', url: 'https://api.xiaomimimo.com/v1' }, { label: 'Token Plan（tp- Key）', url: 'https://token-plan-cn.xiaomimimo.com/v1' }],
   roles: ['chat', 'reason', 'fast', 'vision', 'tts', 'asr'],
-  declare: (role, model) => role === 'tts' ? { verified: 'doc', voices: [{ id: 'mimo_default', label: '默认' }, { id: '冰糖', label: '冰糖' }, { id: '茉莉', label: '茉莉' }, { id: '苏打', label: '苏打' }, { id: '白桦', label: '白桦' }], audioFormats: ['wav', 'mp3', 'pcm'] }
-    : role === 'asr' ? { verified: 'doc', audioInput: true }
+  // 0.11.0：TTS（mimo-v2.5-tts）、ASR（mimo-v2.5-asr）已真实调用通过（out/real-trace-0.11.json，2026-10-23）→ live；vision 未实测仍为 doc
+  declare: (role, model) => role === 'tts' ? { verified: model === 'mimo-v2.5-tts' ? 'live' : 'doc', voices: [{ id: 'mimo_default', label: '默认' }, { id: '冰糖', label: '冰糖' }, { id: '茉莉', label: '茉莉' }, { id: '苏打', label: '苏打' }, { id: '白桦', label: '白桦' }], audioFormats: ['wav', 'mp3', 'pcm'] }
+    : role === 'asr' ? { verified: model === 'mimo-v2.5-asr' ? 'live' : 'doc', audioInput: true }
     : role === 'vision' ? { verified: 'doc', imageInput: true }
     : { verified: /flash|pro/.test(model) ? 'live' : 'doc', stream: true, tools: 'native', thinking: 'toggle', jsonMode: 'json_object', contextWindow: 128000 },
   build(req, ctx) {
@@ -30,7 +31,7 @@ export default makeOpenAICompatible({
       if (!data) throw new ParseError('返回里没有 audio.data');
       return { value: { type: 'media', items: [{ base64: data, mime: `audio/${req.format === 'mp3' ? 'mpeg' : req.format ?? 'wav'}` }] }, usage: { chars: [...req.text].length, input: j.usage?.prompt_tokens, output: j.usage?.completion_tokens }, respondedModel: j.model };
     }
-    if (req.role === 'asr') { const p = parseChat(res); return { ...p, value: { type: 'transcript', text: p.value.type === 'text' ? p.value.text : '' } }; }
+    if (req.role === 'asr') { const p = parseChat(res); const sec = audioSeconds(req.audio.base64, req.audio.format); return { ...p, usage: { ...p.usage, ...(sec != null ? { seconds: sec } : {}) }, value: { type: 'transcript', text: p.value.type === 'text' ? p.value.text : '' } }; }
     const p = parseChat(res);
     const fr = p.value.type === 'text' ? p.value.finishReason : undefined;
     return fr === 'repetition_truncation' ? { ...p, warnings: ['模型检测到重复输出被截断'] } : p;
@@ -40,3 +41,14 @@ export default makeOpenAICompatible({
     return null;
   },
 }, { maxTokensParam: 'max_completion_tokens', thinking: 'type', tempMax: 1.5 });
+/** 0.11.0：ASR 按输入音频时长计费——WAV 从头部字节率算时长（只解前 64 字节）；其它格式返回 null（费用显示“单价未知”）。 */
+export function audioSeconds(b64: string, format: string): number | null {
+  if (!/^wav$/i.test(format)) return null;
+  try {
+    const head = Uint8Array.from(atob(b64.slice(0, 88)), (c) => c.charCodeAt(0));
+    if (String.fromCharCode(...head.subarray(0, 4)) !== 'RIFF') return null;
+    const byteRate = new DataView(head.buffer).getUint32(28, true);
+    const total = Math.floor((b64.replace(/=+$/, '').length * 3) / 4);
+    return byteRate > 0 ? Math.max(0, Math.round(((total - 44) / byteRate) * 100) / 100) : null;
+  } catch { return null; }
+}
