@@ -29,8 +29,8 @@ describe('F19 8 个历史版本备份：恢复 → 迁移 → 使用 → 降级'
     it(`${ver} 备份`, async () => {
       const r = await act(async () => restoreBackup(backup(ver)));
       expect(r.errors).toEqual([]);
-      const m = await migrateV13();
-      expect(m.skipped).toBe(false);
+      // 恢复备份后已自动迁移（快照、默认关闭）
+      expect((await db.getKV<{ at?: string }>('migrations.v13'))?.at).toBeTruthy();
       const v = await getVfs();
       const s0 = await getGroup();
       expect(s0.enabled).toBe(ver === '1.3.0');
