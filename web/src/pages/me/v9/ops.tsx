@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { FLAGS, flagOn, AUDIT_KIND_LABEL, parseWhenZh, shDateTime, type AuditKind, type AuditFilter, type FlagOverrides } from '@content-agent/shared';
 import { useT } from '../../../i18n';
 import { modelStats, listAudit, auditToCsv, auditToJsonl, audit } from '../../../v9/ops';
-import { exportBackup, restoreBackup, rollbackRestore, migrateLegacyBackup } from '../../../v9/backup';
+import { exportBackup, restoreBackup, rollbackRestore, migrateLegacyBackup, BackupReadError } from '../../../v9/backup';
 import { listReminders, addReminder, cancelReminder, tick } from '../../../v9/reminders';
 import { doctorReport } from '../../../v9/vfsBackend';
 import { getPrefs, setPrefs, getModelsV3, saveModelsV3 } from '../../../local/store';
@@ -187,7 +187,7 @@ export function BackupV9Page() {
   const doExport = async () => {
     setErr(null); setMsg(''); setBusy('export');
     try { const z = await exportBackup({ includeMedia: media }); download(`super-workbench-backup-${new Date().toISOString().slice(0, 10)}.zip`, z, 'application/zip'); setMsg(t('ui.exported_no_keys')); }
-    catch (e) { setErr({ message: (e as Error).message, advice: t('ui.export_is_blocked_if_something') }); }
+    catch (e) { setErr({ message: (e as Error).message, advice: t(e instanceof BackupReadError ? 'ui.export_local_db_read_failed' : 'ui.export_is_blocked_if_something') }); }
     finally { setBusy(null); }
   };
   const doImport = async (f: File) => {

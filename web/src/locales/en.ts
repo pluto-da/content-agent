@@ -731,6 +731,7 @@ export const EN_UI: Record<string, string> = {
   'ui.chats_try_it_and_connection': 'Chats, “try it” and connection tests record latency, cost, cache hits and errors here.',
   'ui.chat_cards_one_normal_and': 'Chat cards, one normal and one failed per type. All demo data: doesn’t read your content, call models or run actions.',
   'ui.export_is_blocked_if_something': 'Export is blocked if something looks like a key; remove it from settings files or notes, then export again',
+  'ui.export_local_db_read_failed': 'Local data couldn’t be read. Close other Super Workbench windows, reopen and export again; if it still fails, check Me → Diagnostics',
   'ui.will_delete': 'Will delete',
   'ui.expand_agent_panel': 'Expand Agent panel',
   'ui.show_more_providers': 'Show more providers',

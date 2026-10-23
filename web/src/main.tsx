@@ -4,6 +4,11 @@ import { App, ErrorBoundary } from './App';
 import { runtime } from './runtime';
 import './styles.css';
 
+// 1.0：未处理的异步错误留一份（名称 / 信息 / 调用栈，最多 20 条，不含任何数据），供 我的 → 诊断 与桌面冒烟定位。
+const caErrors: { name: string; message: string; stack?: string; at: string }[] = [];
+(window as unknown as { __caErrors: typeof caErrors }).__caErrors = caErrors;
+window.addEventListener('unhandledrejection', (ev) => { const e = ev.reason as Error | undefined; if (caErrors.length < 20) caErrors.push({ name: e?.name ?? 'Error', message: String(e?.message ?? e).slice(0, 300), stack: e?.stack?.slice(0, 1200), at: new Date().toISOString() }); });
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>

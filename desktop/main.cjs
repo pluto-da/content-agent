@@ -40,8 +40,26 @@ const allowed = (u) => { try { const x = new URL(u); return x.protocol === 'http
 const partitionOf = (id) => `persist:creator-${id}`;
 const validId = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(CENTERS, id);
 
-function freePort() {
-  return new Promise((resolve) => { const s = net.createServer(); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => resolve(p)); }); });
+function freePort(want = 0) {
+  return new Promise((resolve) => {
+    const s = net.createServer();
+    s.once('error', () => { if (want) resolve(freePort(0)); else resolve(0); });
+    s.listen(want, '127.0.0.1', () => { const p = s.address().port; s.close(() => resolve(p)); });
+  });
+}
+/**
+ * 1.0：端口固定下来（第一次随机挑一个空闲端口，存在 userData/port.json，以后每次优先用它）。
+ * 界面数据存在 IndexedDB，按来源 http://127.0.0.1:<端口> 分开存；端口每次变，等于每次换一个空库。
+ * 万一该端口被别的程序占用才换新端口（并记下来），数据仍在旧来源里，换回端口即可找回。
+ */
+async function stablePort() {
+  const f = path.join(app.getPath('userData'), 'port.json');
+  let want = 0;
+  try { want = Number(JSON.parse(fs.readFileSync(f, 'utf8')).port) || 0; } catch { /* 首次启动 */ }
+  if (!(want >= 1024 && want < 65536)) want = 0;
+  const port = await freePort(want);
+  if (port !== want) { try { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, JSON.stringify({ port, previous: want || undefined })); } catch { /* 忽略 */ } }
+  return port;
 }
 
 /* ---------- 每个平台的本地状态：最后地址、是否曾保存过会话、是否由用户退出 ---------- */
@@ -81,7 +99,7 @@ async function loginStatus(id) {
 let server;
 let dataDir;
 async function startServer() {
-  const port = await freePort();
+  const port = await stablePort();
   const res = app.isPackaged ? process.resourcesPath : path.resolve(__dirname, '..');
   dataDir = path.join(app.getPath('userData'), 'data');
   // 1.0：安装包里是 esbuild 打成单文件的 server/dist/index.mjs（不带 node_modules）；开发时用 tsc 输出的 index.js
@@ -205,6 +223,13 @@ app.on('before-quit', (e) => {
   saveStateNow();
   flushAll().finally(() => app.quit());
 });
+
+// 1.0：只允许一个实例。两个实例共用同一个 userData 时 Chromium 的存储（IndexedDB / 配额库）会互相锁住，
+// 后开的那个读写本机数据报 UnknownError: Internal error.；第二次双击只把已有窗口调到前面。
+if (!app.requestSingleInstanceLock()) { app.exit(0); }
+app.on('second-instance', () => { const w = BrowserWindow.getAllWindows()[0]; if (w) { if (w.isMinimized()) w.restore(); w.show(); w.focus(); } });
+// app.exit()（冒烟结束）不会触发 window-all-closed：进程退出时也把后端子进程收掉，免得卸载时 exe 被占用删不掉。
+process.on('exit', () => { try { if (server) server.kill(); } catch { /* 忽略 */ } });
 
 app.whenReady().then(() => {
   loadState();

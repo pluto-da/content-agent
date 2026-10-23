@@ -56,6 +56,32 @@ function memory(): Backend {
   };
 }
 
+/* ---------- 1.0：大值分片（只用于 VFS 两个按路径存的表；对旧数据透明：没分片的值原样读出） ---------- */
+/** 每片最多 16 000 个字符（V8 序列化按 UTF-16 约 32 KB，低于 Chromium 64 KB 的大值包装阈值）。 */
+export const CHUNK_CHARS = 16000;
+interface ChunkHead { __caChunks: number; __caKey: string; content: string; [k: string]: unknown }
+interface ChunkRec { __caChunkOf: string; i: number; s: string }
+const chunkKey = (k: string, i: number) => `${k}\u0000chunk${i}`;
+const isChunkHead = (v: unknown): v is ChunkHead => !!v && typeof v === 'object' && typeof (v as ChunkHead).__caChunks === 'number';
+const isChunkRec = (v: unknown): v is ChunkRec => !!v && typeof v === 'object' && typeof (v as ChunkRec).__caChunkOf === 'string';
+export function splitChunks(k: string, v: unknown): { head: unknown; chunks: string[] } {
+  if (!v || typeof v !== 'object' || typeof (v as { content?: unknown }).content !== 'string') return { head: v, chunks: [] };
+  const content = (v as { content: string }).content;
+  if (content.length <= CHUNK_CHARS) return { head: v, chunks: [] };
+  const chunks: string[] = [];
+  for (let i = 0; i < content.length; i += CHUNK_CHARS) chunks.push(content.slice(i, i + CHUNK_CHARS));
+  return { head: { ...(v as object), content: '', __caChunks: chunks.length, __caKey: k }, chunks };
+}
+function joinChunks(head: ChunkHead, parts: string[]): unknown {
+  const { __caChunks: _n, __caKey: _k, ...rest } = head;
+  return { ...rest, content: parts.join('') };
+}
+export function assembleAll(rows: unknown[]): unknown[] {
+  const parts = new Map<string, string[]>();
+  for (const r of rows) if (isChunkRec(r)) { const a = parts.get(r.__caChunkOf) ?? []; a[r.i] = r.s; parts.set(r.__caChunkOf, a); }
+  return rows.filter((r) => !isChunkRec(r)).map((r) => (isChunkHead(r) ? joinChunks(r, Array.from({ length: r.__caChunks }, (_, i) => parts.get(r.__caKey)?.[i] ?? '')) : r));
+}
+
 function idb(factory: IDBFactory): Backend {
   let opening: Promise<IDBDatabase> | null = null;
   const open = () => opening ??= new Promise<IDBDatabase>((resolve, reject) => {
@@ -77,6 +103,18 @@ function idb(factory: IDBFactory): Backend {
       t.oncomplete = () => resolve(r.result);
       t.onerror = () => reject(t.error ?? new Error('本机数据库写入失败'));
       t.onabort = () => reject(t.error ?? new Error('本机数据库写入被中止'));
+    });
+  };
+  /** 在一个事务里跑多步（分片读写用）。 */
+  const txMulti = async <T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore, done: (v: T) => void) => void): Promise<T> => {
+    const db = await open();
+    return new Promise<T>((resolve, reject) => {
+      const t = db.transaction(store, mode);
+      let out: T;
+      fn(t.objectStore(store), (v) => { out = v; });
+      t.oncomplete = () => resolve(out);
+      t.onerror = () => reject(t.error ?? new Error('本机数据库读写失败'));
+      t.onabort = () => reject(t.error ?? new Error('本机数据库读写被中止'));
     });
   };
   return {
@@ -102,10 +140,41 @@ function idb(factory: IDBFactory): Backend {
     async clear(c) { await tx(c, 'readwrite', (s) => s.clear()); },
     getKV: <T,>(k: string) => tx<T | undefined>('kv', 'readonly', (s) => s.get(k) as IDBRequest<T | undefined>),
     async setKV(k, v) { await tx('kv', 'readwrite', (s) => s.put(v, k)); },
-    kget: <T,>(c: Keyed, k: string) => tx<T | undefined>(c, 'readonly', (s) => s.get(k) as IDBRequest<T | undefined>),
-    async kput(c, k, v) { await tx(c, 'readwrite', (s) => s.put(v, k)); },
-    async kdel(c, k) { await tx(c, 'readwrite', (s) => s.delete(k)); },
-    kall: <T,>(c: Keyed) => tx<T[]>(c, 'readonly', (s) => s.getAll() as IDBRequest<T[]>),
+    // 1.0：VFS 大文件分片存（单条值 < 64 KB，不触发 Chromium 的“大值转 Blob 文件”存储；Windows 桌面上该路径报 UnknownError: Internal error.）
+    kget: <T,>(c: Keyed, k: string) => txMulti<T | undefined>(c, 'readonly', (s, done) => {
+      const r = s.get(k);
+      r.onsuccess = () => {
+        const head = r.result as ChunkHead | undefined;
+        if (!isChunkHead(head)) { done(head as T | undefined); return; }
+        const parts: string[] = new Array(head.__caChunks);
+        let left = head.__caChunks;
+        for (let i = 0; i < head.__caChunks; i++) {
+          const q = s.get(chunkKey(k, i));
+          q.onsuccess = () => { parts[i] = (q.result as ChunkRec | undefined)?.s ?? ''; if (--left === 0) done(joinChunks(head, parts) as T); };
+        }
+      };
+    }),
+    async kput(c, k, v) {
+      const { head, chunks } = splitChunks(k, v);
+      await txMulti<void>(c, 'readwrite', (s, done) => {
+        const r = s.get(k);
+        r.onsuccess = () => {
+          const old = r.result as ChunkHead | undefined;
+          const oldN = isChunkHead(old) ? old.__caChunks : 0;
+          for (let i = chunks.length; i < oldN; i++) s.delete(chunkKey(k, i));
+          chunks.forEach((part, i) => s.put({ __caChunkOf: k, i, s: part } satisfies ChunkRec, chunkKey(k, i)));
+          s.put(head, k);
+          done();
+        };
+      });
+    },
+    async kdel(c, k) {
+      await txMulti<void>(c, 'readwrite', (s, done) => {
+        const r = s.get(k);
+        r.onsuccess = () => { const old = r.result as ChunkHead | undefined; if (isChunkHead(old)) for (let i = 0; i < old.__caChunks; i++) s.delete(chunkKey(k, i)); s.delete(k); done(); };
+      });
+    },
+    kall: <T,>(c: Keyed) => tx<unknown[]>(c, 'readonly', (s) => s.getAll() as IDBRequest<unknown[]>).then((rows) => assembleAll(rows) as T[]),
   };
 }
 

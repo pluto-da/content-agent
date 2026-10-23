@@ -1,5 +1,5 @@
-/* global document, innerWidth */
 #!/usr/bin/env node
+/* global document, innerWidth */
 /**
  * 1.0 截图矩阵：手机 375×812 / 平板 834×1194 / 桌面 1440×900 × 浅 / 深 × 1.0 相关页面（中文），外加英文桌面若干页。
  * 无服务端：托管 web/dist，屏蔽 /api；种子数据同 a11y-seed.js（模拟服务商，不含真实 Key）。同时量页面横向溢出与报错。

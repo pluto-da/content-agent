@@ -20,7 +20,11 @@ if [ "$OS" = win ]; then
   log "已安装：$EXE"; [ -n "$EXE" ] || { log "未找到安装后的 exe"; R=1; }
   if [ -n "$EXE" ]; then
     INST="$(dirname "$EXE")"; ls "$INST" | tee -a "$OUT/desktop-ci.log"
+    # 1.0：冒烟前确认没有别的本 App 实例（两个实例共用 userData 会让 IndexedDB 互锁）；有就记下并结束
+    tasklist //FI "IMAGENAME eq content-agent.exe" 2>&1 | tee -a "$OUT/desktop-ci.log"
+    taskkill //F //IM content-agent.exe >/dev/null 2>&1 && log "冒烟前发现已在运行的实例，已结束" || log "冒烟前没有其它实例"
     CA_SMOKE_DIR="$(cygpath -w "$SMOKE" 2>/dev/null || echo "$SMOKE")" tmo 200 "$EXE"; log "冒烟退出码 $?"
+    sleep 3; tasklist //FI "IMAGENAME eq content-agent.exe" 2>&1 | tee -a "$OUT/desktop-ci.log"; taskkill //F //IM content-agent.exe >/dev/null 2>&1 && log "冒烟后仍有残留进程，已结束" || true
     UN=$(find "$INST" -maxdepth 1 -iname 'Uninstall*.exe' | head -1); log "卸载程序：$UN"
     "$UN" /S; sleep 15
     if [ -e "$EXE" ]; then log "卸载后 exe 仍存在"; R=1; else log "卸载完成：$EXE 已删除"; echo '{"uninstalled":true}' > "$SMOKE/uninstall.json"; fi

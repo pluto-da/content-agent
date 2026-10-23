@@ -27,7 +27,7 @@ export function getVfs(): Promise<Vfs> {
     const sch = (await db.getKV<Record<string, number>>('schema')) ?? {};
     await db.setKV('schema', { ...sch, vfs: 1 });
     return v;
-  })());
+  })().catch((e) => { inst = null; throw e; }));   // 1.0：初始化失败不缓存失败结果，下次调用重新初始化
 }
 export function resetVfsForTests(): void { inst = null; lastReport = null; }
 export function doctorReport(): DoctorReport | null { return lastReport; }

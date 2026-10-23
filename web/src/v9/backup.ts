@@ -13,16 +13,21 @@ const KV_EXCLUDE = /^(secrets|secure\.key|cache:|backup\.snapshot|run:|models$|m
 const KV_KEYS = ['models_v3', 'prefs', 'profile', 'assistants', 'usage', 'schema', 'approvals.remembered', 'memory.dontRemember', 'hot.cache', 'sources.creds.meta'];
 const APP_VERSION = '0.9.0';
 
+/** 1.0：本机数据库读失败时带上是哪一步，界面据此给白话建议（不是“发现密钥”）。 */
+export class BackupReadError extends Error {
+  constructor(public stage: string, public cause: unknown) { super(`${stage}：${(cause as Error)?.name ?? ''} ${(cause as Error)?.message ?? String(cause)}`.trim()); this.name = 'BackupReadError'; }
+}
+const stage = async <T,>(name: string, p: () => Promise<T>): Promise<T> => { try { return await p(); } catch (e) { throw e instanceof BackupReadError ? e : new BackupReadError(name, e); } };
 export async function exportBackup(o: { includeMedia?: boolean; includeMemory?: boolean } = {}): Promise<Uint8Array> {
-  const vfs = await getVfs();
-  const files = (await vfs.list()).map((f) => ({ path: `vfs/${f.path}`, content: f.content }));
+  const vfs = await stage('打开 Agent 文件库', () => getVfs());
+  const files = (await stage('读取 Agent 文件', () => vfs.list())).map((f) => ({ path: `vfs/${f.path}`, content: f.content }));
   const extra: Record<string, string> = {};
   for (const c of COLLECTIONS) {
     if (c === 'media' && !o.includeMedia) continue;
     if (c === 'locks') continue;
-    extra[`data/${c}.json`] = JSON.stringify(await db.all(c));
+    extra[`data/${c}.json`] = JSON.stringify(await stage(`读取数据集 ${c}`, () => db.all(c)));
   }
-  for (const k of KV_KEYS) { if (KV_EXCLUDE.test(k)) continue; const v = await db.getKV(k); if (v !== undefined) extra[`kv/${k}.json`] = JSON.stringify(v); }
+  for (const k of KV_KEYS) { if (KV_EXCLUDE.test(k)) continue; const v = await stage(`读取设置 ${k}`, () => db.getKV(k)); if (v !== undefined) extra[`kv/${k}.json`] = JSON.stringify(v); }
   try {
     const { zip, manifest } = buildExport(files, { appVersion: APP_VERSION, extra, includeMedia: o.includeMedia, includeMemory: o.includeMemory });
     await audit({ kind: 'backup', actor: 'user', summary: `导出备份：${manifest.files.length} 个文件（不含 Key${o.includeMedia ? '' : '、不含媒体'}）`, outcome: 'ok' });

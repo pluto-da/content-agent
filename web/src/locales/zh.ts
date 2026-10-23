@@ -731,6 +731,7 @@ export const ZH_UI: Record<string, string> = {
   'ui.chats_try_it_and_connection': '对话、试一试、测试连接都会在这里记下延迟、费用、缓存命中和错误。',
   'ui.chat_cards_one_normal_and': '对话里的卡片，每类一张正常、一张失败。全部是演示数据：不读你的内容、不调用模型、按钮不会执行动作。',
   'ui.export_is_blocked_if_something': '导出前发现疑似密钥会直接阻止；把它从设定文件或备注里删掉后再导出',
+  'ui.export_local_db_read_failed': '本机数据读不出来。关掉其它“超级工作台”窗口后重新打开再导出；仍不行请到 我的 → 诊断 查看',
   'ui.will_delete': '将删除',
   'ui.expand_agent_panel': '展开 Agent 面板',
   'ui.show_more_providers': '展开更多服务商',
