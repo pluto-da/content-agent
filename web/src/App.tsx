@@ -102,7 +102,7 @@ function CommandPalette({ open, onClose, go, t }: { open: boolean; onClose: () =
           {items.map((n, i) => (
             <li key={n.id} role="option" aria-selected={i === idx} className={cn('flex min-h-11 cursor-pointer items-center gap-3 rounded-[10px] px-2 py-2 text-[15px] text-fg', i === idx && 'bg-surface-2')} onMouseEnter={() => setIdx(i)} onClick={() => pick(n.id)}>
               <span className="text-muted"><Icon name={n.icon} size={16} /></span>
-              <span className="min-w-0 flex-1 truncate">{t(n.label)}<small className="text-[13px] text-muted"> · {t(n.desc)}</small></span>
+              <span className="min-w-0 flex-1 truncate" title={`${t(n.label)} · ${t(n.desc)}`}>{t(n.label)}<small className="text-[13px] text-muted"> · {t(n.desc)}</small></span>
             </li>
           ))}
           {!items.length && <li className="py-6 text-center text-muted">{t('ui.not_found')}</li>}
@@ -195,7 +195,7 @@ export function App() {
         {back ? <Button variant="ghost" size="icon-lg" aria-label={t('ui.back')} onClick={back}><Icon name="arrowLeft" size={20} /></Button> : null}
         <div className="min-w-0 flex-1">
           <h1 className={isPhone ? 'truncate text-[18px]' : 'truncate text-[20px]'}>{t(meSubItem?.label ?? '我的')}</h1>
-          {!isPhone && <p className="m-0 truncate text-[13px] text-muted">{t(meSubItem?.desc ?? '模型、平台与软件、数据源、规则、设置')}</p>}
+          {!isPhone && <p className="m-0 line-clamp-2 text-[13px] text-muted" title={t(meSubItem?.desc ?? '模型、平台与软件、数据源、规则、设置')}>{t(meSubItem?.desc ?? '模型、平台与软件、数据源、规则、设置')}</p>}
         </div>
         {!isPhone && tools}
       </header>

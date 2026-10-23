@@ -216,7 +216,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
           <span className="truncate">{conv?.title ?? (variant === 'full' ? '超级工作台' : 'Agent')}</span>
         </button>
       )}
-      <button type="button" title={tr('ui.switch_model')} data-testid="model-pill" className="!min-h-9 max-w-[42%] !rounded-full !px-3 !text-[13px] !font-normal" onClick={() => setModelOpen(true)}>
+      <button type="button" title={a.cfg ? `${tr('ui.switch_model')}：${presetOf(a.cfg.id)?.label ?? a.cfg.label} · ${a.cfg.model}` : tr('ui.switch_model')} data-testid="model-pill" className="!min-h-9 max-w-[42%] !rounded-full !px-3 !text-[13px] !font-normal" onClick={() => setModelOpen(true)}>
         <span className="shrink-0 text-muted" data-testid="model-pill-role">{tr('ui.text_2')}</span>{a.models === null ? <span className="skeleton inline-block h-3 w-24" aria-label={tr('ui.loading_models')} /> : <span key={a.cfg ? `${a.cfg.id}:${a.cfg.model}` : 'none'} className="anim-swap truncate" data-testid="model-pill-label">{a.cfg ? `${presetOf(a.cfg.id)?.label ?? a.cfg.label} · ${a.cfg.model}` : '未连接模型'}</span>}{a.cfgState && a.cfgState !== 'ok' && <span className="shrink-0 text-[12px] text-muted" data-testid="model-untested">{a.cfgState === 'failed' ? '测试未通过' : '未测试'}</span>}<Icon name="chevronDown" size={14} />
       </button>
       <button type="button" aria-label={tr('ui.new_conversation')} className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => { a.setCid(null); setTab('chat'); }}><Icon name="newChat" size={18} /></button>
