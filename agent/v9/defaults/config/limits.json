@@ -1,0 +1,47 @@
+{
+  "$schema": "limits.schema.json",
+  "version": 1,
+  "run": {
+    "maxToolCalls": 16,
+    "maxPlanSteps": 12,
+    "maxReplans": 2,
+    "maxRunMinutes": 10,
+    "planningTimeoutSec": 60
+  },
+  "tool": {
+    "defaultTimeoutSec": 60,
+    "imageTimeoutSec": 120,
+    "videoSubmitTimeoutSec": 30,
+    "videoTotalMinutes": 15,
+    "retry": {
+      "max": 2,
+      "baseMs": 1000,
+      "jitter": 0.2
+    }
+  },
+  "concurrency": {
+    "toolsPerStep": 3,
+    "mediaPerStep": 2,
+    "runsGlobal": 2
+  },
+  "subtask": {
+    "maxDepth": 1,
+    "maxSteps": 6
+  },
+  "budget": {
+    "perCallConfirmYuan": 1,
+    "perDayConfirmYuan": 10
+  },
+  "selfcheck": {
+    "judge": "auto",
+    "maxRewrite": 1,
+    "numberProvenance": true
+  },
+  "evolution": {
+    "minSampleMedium": 5,
+    "minSampleHigh": 10,
+    "degradeAfter": 3,
+    "rejectCooldownDays": 30,
+    "monetizationRecheckDays": 30
+  }
+}

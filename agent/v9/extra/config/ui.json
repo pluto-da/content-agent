@@ -1,0 +1,8 @@
+{
+  "$schema": "ui.schema.json",
+  "version": 1,
+  "theme": "system",
+  "showSystemFiles": false,
+  "aiLabelOnImages": true,
+  "keyScope": "account"
+}

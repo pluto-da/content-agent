@@ -11,8 +11,8 @@
   "scripts": {
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w web",
     "lint": "eslint .",
-    "test": "npm run test -w server && npm run test -w web",
-    "coverage": "npm run coverage -w server && npm run coverage -w web",
+    "test": "npm run test -w shared && npm run test -w server && npm run test -w web",
+    "coverage": "npm run coverage -w shared && npm run coverage -w server && npm run coverage -w web",
     "build": "npm run build -w shared && npm run build -w server && npm run build -w web",
     "start": "node server/dist/index.js",
     "e2e": "node server/dist/scripts/e2e.js",
@@ -24,7 +24,10 @@
     "app:desktop": "bash scripts/build-desktop.sh",
     "dev:server": "npm run dev -w server",
     "dev:web": "npm run dev -w web",
-    "postinstall": "npm run build -w shared"
+    "postinstall": "npm run build -w shared",
+    "eval": "npm run test -w shared -- ../evals && node scripts/eval-report.mjs",
+    "vfs:doctor": "node scripts/vfs-doctor.mjs",
+    "accept:v9": "node scripts/accept-v9.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

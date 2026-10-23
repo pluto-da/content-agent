@@ -1,0 +1,6 @@
+{
+  "$schema": "import-mappings.schema.json",
+  "version": 1,
+  "note": "拿不到真实导出样本的平台不预设映射，界面让大哥手动映射列。",
+  "mappings": {}
+}

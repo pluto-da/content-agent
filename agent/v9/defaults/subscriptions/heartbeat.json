@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "enabled": true,
+  "time": "09:00",
+  "timezone": "Asia/Shanghai",
+  "onAppOpen": true
+}

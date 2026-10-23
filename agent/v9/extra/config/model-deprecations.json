@@ -1,0 +1,62 @@
+{
+  "$schema": "model-deprecations.schema.json",
+  "version": 1,
+  "checkedAt": "2026-10-22",
+  "items": [
+    {
+      "model": "deepseek-chat",
+      "vendorHint": "deepseek",
+      "date": "2026-07-24",
+      "replacements": [
+        "deepseek-flash",
+        "deepseek-v4-pro"
+      ],
+      "url": "https://api-docs.deepseek.com/"
+    },
+    {
+      "model": "deepseek-reasoner",
+      "vendorHint": "deepseek",
+      "date": "2026-07-24",
+      "replacements": [
+        "deepseek-v4-pro"
+      ],
+      "url": "https://api-docs.deepseek.com/"
+    },
+    {
+      "model": "gte-rerank",
+      "vendorHint": "dashscope",
+      "date": "2026-05-30",
+      "replacements": [
+        "qwen3-rerank"
+      ],
+      "url": "https://help.aliyun.com/zh/model-studio/text-rerank-api"
+    },
+    {
+      "model": "mimo-v2.5",
+      "vendorHint": "mimo",
+      "date": "2026-10-21",
+      "replacements": [
+        "mimo-v2.6-flash"
+      ],
+      "url": "https://mimo.mi.com/docs/zh-CN/api/model/list-models"
+    },
+    {
+      "model": "mimo-v2.5-pro",
+      "vendorHint": "mimo",
+      "date": "2026-10-21",
+      "replacements": [
+        "mimo-v2.6-pro"
+      ],
+      "url": "https://mimo.mi.com/docs/zh-CN/api/model/list-models"
+    },
+    {
+      "model": "kimi-k2.5",
+      "vendorHint": "kimi",
+      "date": "2026-08-31",
+      "replacements": [
+        "kimi-k3"
+      ],
+      "url": "https://platform.kimi.com/docs/models"
+    }
+  ]
+}

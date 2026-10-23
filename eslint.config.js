@@ -9,6 +9,14 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   { files: ['scripts/**/*.mjs', 'eslint.config.js'], languageOptions: { globals: globals.node } },
   {
+    files: ['shared/**/*.ts', 'evals/**/*.ts'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    },
+  },
+  {
     files: ['server/**/*.ts'],
     languageOptions: { globals: globals.node },
     rules: {

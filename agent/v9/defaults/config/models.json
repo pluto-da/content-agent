@@ -1,0 +1,40 @@
+{
+  "$schema": "models.schema.json",
+  "version": 3,
+  "accounts": [],
+  "roles": {
+    "chat": {
+      "enabled": true
+    },
+    "reason": {
+      "enabled": true
+    },
+    "fast": {
+      "enabled": true
+    },
+    "vision": {
+      "enabled": true
+    },
+    "image": {
+      "enabled": true
+    },
+    "imageEdit": {
+      "enabled": true
+    },
+    "tts": {
+      "enabled": true
+    },
+    "asr": {
+      "enabled": true
+    },
+    "video": {
+      "enabled": true
+    },
+    "embed": {
+      "enabled": true
+    },
+    "rerank": {
+      "enabled": true
+    }
+  }
+}

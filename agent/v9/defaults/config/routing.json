@@ -1,0 +1,18 @@
+{
+  "$schema": "routing.schema.json",
+  "version": 1,
+  "tasks": {
+    "chat.title": "fast",
+    "chat.compress": "fast",
+    "chat.selfcheck": "fast",
+    "chat.draft": "chat",
+    "vision.ocr": "vision",
+    "image.cover": "image"
+  },
+  "fallbackOnlyOn": [
+    "network",
+    "timeout",
+    "rate_limited",
+    "server"
+  ]
+}

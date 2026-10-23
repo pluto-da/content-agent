@@ -1,0 +1,136 @@
+{
+  "$schema": "model-examples.schema.json",
+  "version": 1,
+  "checkedAt": "2026-10-22",
+  "note": "只做输入框占位提示，不参与任何逻辑判断",
+  "examples": {
+    "chat": [
+      {
+        "model": "qwen3.7-plus",
+        "vendor": "dashscope"
+      },
+      {
+        "model": "deepseek-flash",
+        "vendor": "openai-compatible",
+        "label": "DeepSeek"
+      }
+    ],
+    "reason": [
+      {
+        "model": "deepseek-v4-pro",
+        "vendor": "openai-compatible",
+        "label": "DeepSeek"
+      },
+      {
+        "model": "mimo-v2.6-pro",
+        "vendor": "mimo"
+      }
+    ],
+    "fast": [
+      {
+        "model": "qwen3.8-flash",
+        "vendor": "dashscope"
+      },
+      {
+        "model": "glm-4.7-flash",
+        "vendor": "zhipu"
+      }
+    ],
+    "vision": [
+      {
+        "model": "qwen3.7-plus",
+        "vendor": "dashscope"
+      },
+      {
+        "model": "glm-5.3-flash",
+        "vendor": "zhipu"
+      }
+    ],
+    "image": [
+      {
+        "model": "qwen-image-3.0-pro",
+        "vendor": "dashscope"
+      },
+      {
+        "model": "doubao-seedream-5-0-pro-260628",
+        "vendor": "ark"
+      },
+      {
+        "model": "glm-image",
+        "vendor": "zhipu"
+      }
+    ],
+    "imageEdit": [
+      {
+        "model": "qwen-image-3.0-pro",
+        "vendor": "dashscope"
+      },
+      {
+        "model": "wan2.7-image-pro",
+        "vendor": "dashscope"
+      }
+    ],
+    "tts": [
+      {
+        "model": "mimo-v2.5-tts",
+        "vendor": "mimo"
+      },
+      {
+        "model": "cosyvoice-v3-flash",
+        "vendor": "dashscope"
+      },
+      {
+        "model": "glm-tts",
+        "vendor": "zhipu"
+      }
+    ],
+    "asr": [
+      {
+        "model": "qwen3-asr-flash",
+        "vendor": "dashscope"
+      },
+      {
+        "model": "mimo-v2.5-asr",
+        "vendor": "mimo"
+      },
+      {
+        "model": "glm-asr-2512",
+        "vendor": "zhipu"
+      }
+    ],
+    "video": [
+      {
+        "model": "wan3.0-video",
+        "vendor": "dashscope"
+      },
+      {
+        "model": "doubao-seedance-2-0-fast-260128",
+        "vendor": "ark"
+      },
+      {
+        "model": "cogvideox-3",
+        "vendor": "zhipu"
+      }
+    ],
+    "embed": [
+      {
+        "model": "text-embedding-v4",
+        "vendor": "dashscope"
+      },
+      {
+        "model": "embedding-3",
+        "vendor": "zhipu"
+      }
+    ],
+    "rerank": [
+      {
+        "model": "qwen3-rerank",
+        "vendor": "dashscope"
+      },
+      {
+        "model": "rerank",
+        "vendor": "zhipu"
+      }
+    ]
+  }
+}
