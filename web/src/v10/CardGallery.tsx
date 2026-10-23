@@ -2,12 +2,12 @@
  * 0.10.0 卡片预览（我的 → 运行状态 → 卡片预览，#me/status/cards）：用演示数据回放对话里的 0.9 新卡片，每类一张“正常”、一张“失败”，
  * 与对话里完全同一个组件（ToolCard → V9Body），用于逐张截图验收（shots-v10）与真机目测。不读写任何真实数据、不调用模型。
  */
-import { useT } from '../i18n';
+import { useT, tr } from '../i18n';
 import { ToolCard, type CardActions } from '../agent/cards';
 import type { CardData } from '../agent/store';
 import { BackBar, Note } from '../pages/me/v9/common';
 
-const SVG = (c: string) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="${c}"/><circle cx="120" cy="110" r="50" fill="#fff" opacity=".7"/><text x="120" y="210" font-size="22" text-anchor="middle" fill="#fff">AI 生成</text></svg>`)}`;
+const SVG = (c: string) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="${c}"/><circle cx="120" cy="110" r="50" fill="#fff" opacity=".7"/><text x="120" y="210" font-size="22" text-anchor="middle" fill="#fff">{tr('ui.ai_generated')}</text></svg>`)}`;
 function silentWav(): string {
   const n = 800, b = new Uint8Array(44 + n * 2), dv = new DataView(b.buffer);
   const w = (o: number, s: string) => [...s].forEach((c, i) => { b[o + i] = c.charCodeAt(0); });
@@ -48,8 +48,8 @@ export function CardGallery({ go }: { go: (to: string) => void }) {
   const items = galleryItems();
   return (
     <div className="page page-narrow flex flex-col gap-3" data-testid="card-gallery">
-      <BackBar label={t('卡片预览（演示数据）')} onBack={() => go('me/status')} />
-      <Note>{t('对话里的卡片，每类一张正常、一张失败。全部是演示数据：不读你的内容、不调用模型、按钮不会执行动作。')}</Note>
+      <BackBar label={t('ui.card_preview_demo_data')} onBack={() => go('me/status')} />
+      <Note>{t('ui.chat_cards_one_normal_and')}</Note>
       {items.map((it) => (
         <section key={it.key} className="flex flex-col gap-1" data-testid={`gallery-${it.key}`}>
           <h3 className="m-0 text-[14px] font-semibold text-fg-2">{t(it.title)}</h3>

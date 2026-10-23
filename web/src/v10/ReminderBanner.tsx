@@ -17,9 +17,9 @@ export function ReminderBanner() {
     <div className="fixed inset-x-0 z-50 mx-auto flex w-[min(560px,calc(100%-24px))] flex-col gap-2" style={{ top: 'calc(var(--sa-top, 0px) + 12px)' }} role="status" aria-live="polite" data-testid="reminder-banner">
       {list.map((r) => (
         <div key={r.id} className="flex items-center gap-2 rounded-[16px] border border-line bg-surface px-3 py-2 shadow-lg">
-          <span className="min-w-0 flex-1 text-[14px] text-fg">{t('提醒')}：{r.text}</span>
-          {r.link && <a className="button !min-h-11 !px-3 !text-[14px]" href={r.link.startsWith('#') ? r.link : `#${r.link}`} onClick={() => setList((l) => l.filter((x) => x.id !== r.id))}>{t('打开')}</a>}
-          <button type="button" className="ghost !min-h-11 !px-3 !text-[14px]" onClick={() => setList((l) => l.filter((x) => x.id !== r.id))}>{t('知道了')}</button>
+          <span className="min-w-0 flex-1 text-[14px] text-fg">{t('ui.reminders')}：{r.text}</span>
+          {r.link && <a className="button !min-h-11 !px-3 !text-[14px]" href={r.link.startsWith('#') ? r.link : `#${r.link}`} onClick={() => setList((l) => l.filter((x) => x.id !== r.id))}>{t('ui.open')}</a>}
+          <button type="button" className="ghost !min-h-11 !px-3 !text-[14px]" onClick={() => setList((l) => l.filter((x) => x.id !== r.id))}>{t('ui.got_it')}</button>
         </div>
       ))}
     </div>

@@ -60,7 +60,7 @@ export function Loading({ show, lines = 3 }: { show: boolean; lines?: number }) 
   if (!show) return null;
   return (
     <div className="loading" aria-live="polite" aria-busy="true">
-      <span className="sr-only">{t('加载中')}</span>
+      <span className="sr-only">{t('ui.loading')}</span>
       <SkeletonLines lines={lines} />
     </div>
   );
@@ -218,11 +218,12 @@ export function HelpTip({ label, children }: { label: string; children: ReactNod
 }
 
 /** 分组列表（“我的”、设置类页面）：图标 + 文字 + ›，行高 56px。 */
-export function GroupList({ title, children }: { title?: string; children: ReactNode }) {
+/** plain：子元素不是 <li> 时用 div 容器（读屏器的列表语义要求 ul 只含 li，1.0 axe 修复）。 */
+export function GroupList({ title, children, plain }: { title?: string; children: ReactNode; plain?: boolean }) {
   return (
     <section className="group">
       {title && <h2 className="group-t">{title}</h2>}
-      <ul className="group-list">{children}</ul>
+      {plain ? <div className="group-list">{children}</div> : <ul className="group-list">{children}</ul>}
     </section>
   );
 }

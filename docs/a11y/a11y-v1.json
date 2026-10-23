@@ -1,0 +1,1563 @@
+{
+  "at": "2026-10-23T11:48:17.891Z",
+  "axe": "4.14.0",
+  "runs": {
+    "phone-light/zh": {
+      "pages": {
+        "agent": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "agent/drafts": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "agent/inbox": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/image": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/accounts": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/routing": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/platforms": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/sources": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/profile": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/agent": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/files": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/memory": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/skills": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/revenue": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/growth": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/reminders": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/prefs": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/settings": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/status": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/status/cards": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/audit": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/backup": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/storage": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/logs": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/server": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        }
+      },
+      "misses": [],
+      "errors": [],
+      "totals": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0,
+        "pages": 27,
+        "i18nMisses": 0,
+        "pageErrors": 0
+      }
+    },
+    "phone-dark/zh": {
+      "pages": {
+        "agent": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "agent/drafts": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "agent/inbox": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/image": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/accounts": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/routing": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/platforms": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/sources": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/profile": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/agent": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/files": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/memory": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/skills": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/revenue": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/growth": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/reminders": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/prefs": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/settings": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/status": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/status/cards": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/audit": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/backup": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/storage": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/logs": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/server": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        }
+      },
+      "misses": [],
+      "errors": [],
+      "totals": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0,
+        "pages": 27,
+        "i18nMisses": 0,
+        "pageErrors": 0
+      }
+    },
+    "phone-light/en": {
+      "pages": {
+        "agent": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "agent/drafts": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "agent/inbox": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/image": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/accounts": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/routing": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/platforms": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/sources": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/profile": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/agent": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/files": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/memory": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/skills": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/revenue": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/growth": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/reminders": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/prefs": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/settings": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/status": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/status/cards": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/audit": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/backup": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/storage": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/logs": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/server": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        }
+      },
+      "misses": [],
+      "errors": [],
+      "totals": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0,
+        "pages": 27,
+        "i18nMisses": 0,
+        "pageErrors": 0
+      }
+    },
+    "phone-dark/en": {
+      "pages": {
+        "agent": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "agent/drafts": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "agent/inbox": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/image": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/accounts": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/routing": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/platforms": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/sources": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/profile": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/agent": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/files": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/memory": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/skills": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/revenue": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/growth": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/reminders": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/prefs": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/settings": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/status": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/status/cards": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/audit": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/backup": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/storage": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/logs": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/server": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        }
+      },
+      "misses": [],
+      "errors": [],
+      "totals": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0,
+        "pages": 27,
+        "i18nMisses": 0,
+        "pageErrors": 0
+      }
+    },
+    "desktop-light/zh": {
+      "pages": {
+        "agent": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "agent/drafts": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "agent/inbox": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/image": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/accounts": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/routing": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/platforms": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/sources": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/profile": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/agent": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/files": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/memory": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/skills": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/revenue": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/growth": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/reminders": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/prefs": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/settings": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/status": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/status/cards": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/audit": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/backup": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/storage": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/logs": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/server": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        }
+      },
+      "misses": [],
+      "errors": [],
+      "totals": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0,
+        "pages": 27,
+        "i18nMisses": 0,
+        "pageErrors": 0
+      }
+    },
+    "desktop-light/en": {
+      "pages": {
+        "agent": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "agent/drafts": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "agent/inbox": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/image": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/accounts": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/models/routing": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/platforms": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/sources": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/profile": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/agent": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/files": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/memory": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/skills": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/revenue": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/growth": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/reminders": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/prefs": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/settings": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/status": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/status/cards": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/audit": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/backup": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/storage": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/logs": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        },
+        "me/server": {
+          "violations": [],
+          "counts": {
+            "critical": 0,
+            "serious": 0,
+            "moderate": 0,
+            "minor": 0
+          }
+        }
+      },
+      "misses": [],
+      "errors": [],
+      "totals": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0,
+        "pages": 27,
+        "i18nMisses": 0,
+        "pageErrors": 0
+      }
+    }
+  },
+  "summary": {
+    "runs": 6,
+    "critical": 0,
+    "serious": 0,
+    "moderate": 0,
+    "minor": 0,
+    "i18nMisses": 0,
+    "pageErrors": 0
+  }
+}

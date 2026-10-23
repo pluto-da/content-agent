@@ -60,9 +60,57 @@ export const ZH: Catalog = {
   'attr.allocated': '分摊估计',
 };
 const EN: Catalog = {
-  'btn.configure': 'Configure', 'btn.skip': 'Skip for now', 'btn.retry': 'Retry', 'btn.continue': 'Continue', 'btn.allow': 'Allow', 'btn.deny': 'Deny', 'btn.remember': 'Remember this kind',
-  'agent.stopped': 'Stopped. Everything finished so far is saved.', 'agent.publish_ready': 'Ready — you need to press publish yourself.',
+  'err.key_invalid': 'The {vendor} key is wrong ({status}); this step didn’t run.',
+  'err.key_invalid.advice': 'Copy the API key again from the provider console (no spaces), then tap “Test”.',
+  'err.quota': '{vendor} is out of balance; this step didn’t run.',
+  'err.quota.advice': 'Top up in the provider console, or switch providers.',
+  'err.rate_limited': 'Too many requests; the provider is rate-limiting.',
+  'err.rate_limited.advice': 'It retries automatically after a moment; you can also tap retry later.',
+  'err.model_not_found': 'Model “{model}” doesn’t exist at this provider. Check the spelling (case, dots, dashes, slashes), or tap “Fetch list” to pick one.',
+  'err.model_not_enabled': 'This model exists but your account hasn’t enabled it. Enable it in the provider console, then test again.',
+  'err.capability_mismatch': '“{model}” doesn’t seem to support “{role}”. Check the capabilities ticked for this model name.',
+  'err.content_filtered': 'The provider’s content moderation blocked this. Shall I rephrase and try again?',
+  'err.network_offline': 'The network dropped; I stopped at step {step}. Tap continue when you’re back online.',
+  'err.cors': 'This service doesn’t allow direct calls from a web page; use the app or connect a server.',
+  'err.timeout': 'No response for too long; stopped.',
+  'err.server': 'The provider had a temporary error ({status}); try again later.',
+  'err.format': 'The response had the wrong structure; the URL may point to a web page instead of the API.',
+  'err.job_timeout': 'The video isn’t done after {minutes} minutes. The job is still at the provider; I’ll check again next time you open the app.',
+  'err.result_expired': 'The result link expired (the provider keeps it for {hours} hours); generate it again.',
+  'err.size_unsupported': 'This model doesn’t support the selected size.',
+  'err.audio_too_long': 'The audio exceeds the model limit ({limit}); split it before transcribing.',
+  'err.text_too_long': 'The text exceeds the model’s per-call limit ({limit} chars); I’ll split it automatically.',
+  'err.role_not_configured': 'No {roleName} model connected yet.',
+  'err.unknown': 'Didn’t work: {detail}',
+  'agent.not_configured.text_done': 'No {roleName} model connected yet. The text is written; {roleName} will follow once you connect one.',
+  'agent.stopped': 'Stopped. Everything finished so far is saved.',
+  'agent.limit': 'Out of steps: I got to step {step}. Shall I finish the rest?',
+  'agent.bad_args': 'The arguments I generated were invalid; this step didn’t run and cost nothing.',
+  'agent.illegal_transition': 'Internal state error; stopped. You can retry.',
+  'agent.expired_click': 'This confirmation has expired.',
+  'agent.queued': '{n} queued',
+  'agent.publish_ready': 'Ready — you need to press publish yourself.',
+  'agent.no_revenue': 'No income data yet. Add it in “Me → Revenue”, or import the file exported from the platform dashboard.',
+  'agent.boundary_refuse': 'I won’t do this: {why}. Instead: {alt}',
+  'agent.injection_note': 'This material contains instruction-like text; I didn’t follow it.',
+  'agent.unverified': 'I have no reliable source for this; better not put it in the post.',
+  'agent.secret_prompt': 'You can view and edit my settings in “Me → Agent settings”; I won’t paste them here.',
+  'agent.no_consciousness': 'No. I have no consciousness and can’t change model weights; “growth” means experience notes, skill versions and setting revisions you approved, all visible in the Growth log.',
+  'btn.configure': 'Configure',
+  'btn.skip': 'Skip for now',
+  'btn.retry': 'Retry',
+  'btn.continue': 'Continue',
+  'btn.fix_key': 'Fix key',
+  'btn.topup': 'Top-up page',
+  'btn.use_fallback': 'Use fallback model',
+  'btn.fetch_list': 'Fetch list',
+  'btn.rename_model': 'Rename model',
+  'btn.allow': 'Allow',
+  'btn.deny': 'Deny',
+  'btn.remember': 'Remember this kind',
   'growth.disclaimer': 'This records versions of experience and settings, not changes to the model itself.',
+  'growth.not_causal': 'This only shows order in time, not cause and effect.',
+  'attr.allocated': 'Allocated estimate',
 };
 const CATALOGS: Record<Locale, Catalog> = { 'zh-CN': ZH, en: EN };
 let current: Locale = 'zh-CN';
@@ -73,5 +121,7 @@ export function t(id: string, vars: Record<string, string | number | undefined> 
   if (raw === undefined) return id;
   return raw.replace(/\{(\w+)\}/g, (_, k: string) => (vars[k] === undefined ? '' : String(vars[k])));
 }
-/** 校验：某语言缺失哪些 id（CI 报告用，不阻断）。 */
+/** 校验：某语言缺失哪些 id（1.0 起 en 必须为 0，shared v1.test 与 scripts/i18n-audit.mjs 校验）。 */
+/** 原始文案（不插值），校验占位一致用。 */
+export function rawMessage(id: string, locale: Locale): string | undefined { return CATALOGS[locale]?.[id]; }
 export function missingIds(locale: Locale): string[] { return Object.keys(ZH).filter((k) => !(k in (CATALOGS[locale] ?? {}))); }

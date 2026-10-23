@@ -12,6 +12,7 @@ import { toolByName } from './tools';
 import { db } from '../local/db';
 
 import { V9Body, V9_TITLES } from '../v9/cards';
+import { tr } from '../i18n';
 export interface CardActions {
   ask: (text: string) => void;
   retry?: () => void;
@@ -60,11 +61,11 @@ function ErrorBody({ card, actions }: { card: CardData; actions: CardActions }) 
       <p className="m-0 text-fg"><Icon name="error" size={14} className="mr-1 inline text-bad" />{card.error?.reason ?? '没有成功'}</p>
       {card.error?.advice && <p className="m-0 mt-1 text-[13px] text-muted">{card.error.advice}</p>}
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        {actions.retry && <Btn primary onClick={actions.retry} testId="card-retry">重试</Btn>}
+        {actions.retry && <Btn primary onClick={actions.retry} testId="card-retry">{tr('ui.retry')}</Btn>}
         {manual && (
           <form className="flex min-w-0 flex-1 gap-2" onSubmit={(e) => { e.preventDefault(); if (text.trim()) { actions.ask(manual.send(text.trim())); setText(''); } }}>
-            <input value={text} onChange={(e) => setText(e.target.value)} placeholder={manual.ph} aria-label="手动补充" className="!min-h-9 min-w-0 flex-1 !text-[14px]" data-testid="manual-input" />
-            <Btn onClick={() => { if (text.trim()) { actions.ask(manual.send(text.trim())); setText(''); } }}>手动补充</Btn>
+            <input value={text} onChange={(e) => setText(e.target.value)} placeholder={manual.ph} aria-label={tr('ui.add_manually')} className="!min-h-9 min-w-0 flex-1 !text-[14px]" data-testid="manual-input" />
+            <Btn onClick={() => { if (text.trim()) { actions.ask(manual.send(text.trim())); setText(''); } }}>{tr('ui.add_manually')}</Btn>
           </form>
         )}
       </div>
@@ -90,7 +91,7 @@ function Body({ card, actions }: { card: CardData; actions: CardActions }) {
           </ul>
           {(d.gaps ?? []).map((g: { platform: string; hint: string }) => <p key={g.platform} className="m-0 mt-1 text-[13px] text-muted" data-testid="gap">{g.hint}</p>)}
           <div className="mt-2 flex flex-wrap gap-2">
-            <Btn onClick={() => actions.ask('开始热点巡视，我自己翻看各平台热榜')}>热点巡视</Btn>
+            <Btn onClick={() => actions.ask('开始热点巡视，我自己翻看各平台热榜')}>{tr('ui.trend_patrol')}</Btn>
           </div>
         </div>
       );
@@ -99,7 +100,7 @@ function Body({ card, actions }: { card: CardData; actions: CardActions }) {
       const clusters = (d.clusters ?? []) as { id: string; title: string; score: number; trend: string; sources: string[]; angles: string[]; risk: string; why: string; members: { title: string; source: string; route?: string }[]; perPlatform: Record<string, { titles: string[]; risk?: string }> }[];
       return (
         <div>
-          {!d.usedModel && <p className="m-0 mb-1 text-[13px] text-muted">本次为快速分析（未调用模型，只做本机去重与评分）。</p>}
+          {!d.usedModel && <p className="m-0 mb-1 text-[13px] text-muted">{tr('ui.this_was_a_quick_analysis')}</p>}
           <ol className="m-0 list-none p-0">
             {clusters.slice(0, 6).map((c, i) => (
               <li key={c.id} className="border-b border-line py-2 last:border-0" data-testid="cluster">
@@ -118,7 +119,7 @@ function Body({ card, actions }: { card: CardData; actions: CardActions }) {
                     {(v.titles ?? []).map((t) => (
                       <div key={t} className="flex items-center gap-2 text-[14px]">
                         <span className="min-w-0 flex-1">{t}</span>
-                        <button type="button" className="!min-h-8 !px-2 !text-[13px]" data-testid="write-this" onClick={() => actions.ask(`把「${t}」写成${writePlatform(p).label}`)}>写这篇</button>
+                        <button type="button" className="!min-h-8 !px-2 !text-[13px]" data-testid="write-this" onClick={() => actions.ask(`把「${t}」写成${writePlatform(p).label}`)}>{tr('ui.write_this')}</button>
                       </div>
                     ))}
                   </div>
@@ -144,8 +145,8 @@ function Body({ card, actions }: { card: CardData; actions: CardActions }) {
           </ul>
           <div className="mt-2 flex gap-2">
             {d.blocking
-              ? <Btn primary testId="fix-by-advice" onClick={() => actions.ask(`按检查建议修改草稿 #${d.draftId}：${checks.filter((c) => !c.pass).map((c) => `${c.label}（${c.fix ?? c.detail}）`).join('；')}`)}>按建议修改</Btn>
-              : <Btn primary testId="go-publish" onClick={() => actions.ask(`准备发布草稿 #${d.draftId}`)}>去发布</Btn>}
+              ? <Btn primary testId="fix-by-advice" onClick={() => actions.ask(`按检查建议修改草稿 #${d.draftId}：${checks.filter((c) => !c.pass).map((c) => `${c.label}（${c.fix ?? c.detail}）`).join('；')}`)}>{tr('ui.apply_suggestions')}</Btn>
+              : <Btn primary testId="go-publish" onClick={() => actions.ask(`准备发布草稿 #${d.draftId}`)}>{tr('ui.go_publish')}</Btn>}
           </div>
         </div>
       );
@@ -163,17 +164,17 @@ function Body({ card, actions }: { card: CardData; actions: CardActions }) {
     case 'inbox': return (
       <ul className="m-0 list-none p-0 text-[14px]">
         {(d.items ?? []).map((i: { id: number; title?: string; text?: string; url?: string; platform?: string; used?: boolean }) => <li key={i.id} className="truncate py-0.5">{i.title || i.text || i.url}<Src source={i.platform || '素材'} route="c" />{i.used ? ' · 已使用' : ''}</li>)}
-        {!(d.items ?? []).length && <li className="text-muted">素材箱是空的。在平台页面点“发给 Agent”，或在官方 App 里“分享 → 超级工作台”。</li>}
+        {!(d.items ?? []).length && <li className="text-muted">{tr('ui.the_asset_box_is_empty')}</li>}
       </ul>
     );
     case 'profile': return <ProfileBody d={d} />;
-    case 'progress': return d.none ? <p className="m-0 text-muted">没有未完成的任务。</p> : (
+    case 'progress': return d.none ? <p className="m-0 text-muted">{tr('ui.no_unfinished_tasks')}</p> : (
       <div>
         <p className="m-0 text-fg">{d.goal}</p>
         <ul className="m-0 mt-1 list-none p-0 text-[13px]">
           {(d.steps ?? []).map((s: { name: string; status: string; summary: string }, i: number) => <li key={i} className="flex gap-2"><Icon name={s.status === 'done' ? 'check' : 'error'} size={14} className={s.status === 'done' ? 'text-ok' : 'text-bad'} />{s.name}{s.status !== 'done' ? `：${s.summary}` : ''}</li>)}
         </ul>
-        {d.status !== 'done' && <div className="mt-2"><Btn primary onClick={() => actions.ask('接着上次继续')}>继续</Btn></div>}
+        {d.status !== 'done' && <div className="mt-2"><Btn primary onClick={() => actions.ask('接着上次继续')}>{tr('ui.continue')}</Btn></div>}
       </div>
     );
     case 'open': return <p className="m-0">{d.opened ? `已在主区打开 ${d.label}${d.page === 'publish' ? ' · 发布页' : ''}` : `没有打开：${d.reason}`}</p>;
@@ -187,7 +188,7 @@ function MiniChart({ values }: { values: number[] }) {
   const max = Math.max(1, ...values);
   const w = 240; const h = 48;
   const pts = values.map((v, i) => `${(i / Math.max(1, values.length - 1)) * w},${h - (v / max) * (h - 4) - 2}`).join(' ');
-  return <svg width={w} height={h} className="mt-1 max-w-full text-accent" role="img" aria-label="阅读趋势"><polyline points={pts} fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>;
+  return <svg width={w} height={h} className="mt-1 max-w-full text-accent" role="img" aria-label={tr('ui.read_trend')}><polyline points={pts} fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>;
 }
 
 function DraftBody({ d, actions }: { d: any; actions: CardActions }) {
@@ -199,14 +200,14 @@ function DraftBody({ d, actions }: { d: any; actions: CardActions }) {
       <strong className="text-fg">{d.title || '（无标题）'}</strong>
       <div className="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed">{lines.slice(0, 5).join('\n')}{lines.length > 5 ? '\n…' : ''}</div>
       <p className="m-0 mt-1 text-[12px] text-muted">{d.platformLabel} · {[...String(d.body ?? '')].length}{d.standard?.bodyMax ? ` / ${d.standard.bodyMax}` : ''} 字{d.warnings?.length ? ` · ${d.warnings.join('；')}` : ''}</p>
-      {d.previous && <details className="mt-1 text-[13px] text-muted"><summary>对比上一版</summary><div className="whitespace-pre-wrap">{String(d.previous.title ?? '')}{'\n'}{String(d.previous.body ?? '').slice(0, 300)}</div></details>}
-      {d.standard && <details className="mt-1 text-[13px] text-muted"><summary>本篇标准</summary>{d.standard.titleMax ? `标题 ≤ ${d.standard.titleMax} 字；` : ''}{d.standard.bodyMax ? `正文 ≤ ${d.standard.bodyMax} 字；` : ''}{(d.standard.must ?? []).join('；')}</details>}
+      {d.previous && <details className="mt-1 text-[13px] text-muted"><summary>{tr('ui.compare_with_previous')}</summary><div className="whitespace-pre-wrap">{String(d.previous.title ?? '')}{'\n'}{String(d.previous.body ?? '').slice(0, 300)}</div></details>}
+      {d.standard && <details className="mt-1 text-[13px] text-muted"><summary>{tr('ui.standard_for_this_post')}</summary>{d.standard.titleMax ? `标题 ≤ ${d.standard.titleMax} 字；` : ''}{d.standard.bodyMax ? `正文 ≤ ${d.standard.bodyMax} 字；` : ''}{(d.standard.must ?? []).join('；')}</details>}
       <div className="mt-2 flex flex-wrap gap-2">
         {status === 'pending'
-          ? <Btn primary testId="draft-approve" onClick={async () => { await db.update('drafts', d.id, { status: 'approved' }); setStatus('approved'); actions.ask(`草稿 #${d.id} 我通过了，做发布前检查`); }}>通过</Btn>
-          : <Btn primary onClick={() => actions.ask(`做发布前检查：草稿 #${d.id}`)}>去发布</Btn>}
-        <Btn onClick={() => actions.ask(`改写草稿 #${d.id}：更口语一点`)}>改写</Btn>
-        {actions.openDraft && <Btn onClick={() => actions.openDraft!(d.id)}>展开编辑</Btn>}
+          ? <Btn primary testId="draft-approve" onClick={async () => { await db.update('drafts', d.id, { status: 'approved' }); setStatus('approved'); actions.ask(`草稿 #${d.id} 我通过了，做发布前检查`); }}>{tr('ui.approve')}</Btn>
+          : <Btn primary onClick={() => actions.ask(`做发布前检查：草稿 #${d.id}`)}>{tr('ui.go_publish')}</Btn>}
+        <Btn onClick={() => actions.ask(`改写草稿 #${d.id}：更口语一点`)}>{tr('ui.rewrite')}</Btn>
+        {actions.openDraft && <Btn onClick={() => actions.openDraft!(d.id)}>{tr('ui.expand_editor')}</Btn>}
       </div>
     </div>
   );
@@ -220,8 +221,8 @@ function PublishBody({ d, actions }: { d: any; actions: CardActions }) {
       <ol className="m-0 mt-1 pl-5 text-[14px]">{(d.steps ?? []).map((s: string) => <li key={s}>{s}</li>)}</ol>
       {state === 'ready' ? (
         <div className="mt-2 flex gap-2">
-          <Btn primary testId="published" onClick={async () => { await actions.userTool('publish_mark', { draftId: d.draftId, platform: d.platform }); setState('done'); }}>我已发布</Btn>
-          <Btn onClick={() => setState('later')}>还没发</Btn>
+          <Btn primary testId="published" onClick={async () => { await actions.userTool('publish_mark', { draftId: d.draftId, platform: d.platform }); setState('done'); }}>{tr('ui.i_published')}</Btn>
+          <Btn onClick={() => setState('later')}>{tr('ui.not_yet')}</Btn>
         </div>
       ) : <p className="m-0 mt-2 text-[13px] text-muted">{state === 'done' ? '已记为“已发布”。过几天告诉我数据，我来复盘。' : '好的，草稿保留在“待发布”。'}</p>}
     </div>
@@ -238,7 +239,7 @@ function MetricsForm({ d, actions }: { d: any; actions: CardActions }) {
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
         {keys.map(([k, l]) => <label key={k} className="text-[12px] text-muted">{l}<input inputMode="numeric" value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value.replace(/\D/g, '') })} className="!min-h-9 w-full !text-[14px]" /></label>)}
       </div>
-      <div className="mt-2">{saved ? <span className="text-[13px] text-muted">已保存</span> : <Btn primary onClick={async () => { const args: Record<string, unknown> = { draftId: d.draftId }; for (const [k] of keys) if (v[k]) args[k] = Number(v[k]); await actions.userTool('metrics_record', args); setSaved(true); }}>保存</Btn>}</div>
+      <div className="mt-2">{saved ? <span className="text-[13px] text-muted">{tr('ui.saved')}</span> : <Btn primary onClick={async () => { const args: Record<string, unknown> = { draftId: d.draftId }; for (const [k] of keys) if (v[k]) args[k] = Number(v[k]); await actions.userTool('metrics_record', args); setSaved(true); }}>{tr('ui.save')}</Btn>}</div>
     </div>
   );
 }
@@ -251,7 +252,7 @@ function ProfileBody({ d }: { d: any }) {
       <ul className="m-0 mt-1 list-none p-0 text-[14px]">
         {(d.diff ?? []).map((x: { field: string; before: unknown; after: unknown }) => <li key={x.field} className="py-0.5"><span className="text-muted">{x.field}：</span><s className="text-muted">{JSON.stringify(x.before)}</s> → {JSON.stringify(x.after)}</li>)}
       </ul>
-      <div className="mt-2">{adopted ? <span className="text-[13px] text-muted">已采纳，写入画像</span> : <Btn primary testId="profile-adopt" onClick={async () => { await saveProfile(d.next); setAdopted(true); }}>采纳</Btn>}</div>
+      <div className="mt-2">{adopted ? <span className="text-[13px] text-muted">{tr('ui.adopted_and_written_to_profile')}</span> : <Btn primary testId="profile-adopt" onClick={async () => { await saveProfile(d.next); setAdopted(true); }}>{tr('ui.approve_2')}</Btn>}</div>
     </div>
   );
 }
@@ -263,9 +264,9 @@ export function ConfirmCard({ label, args, onDecide, rememberable = true, spend 
       <p className="m-0 text-[14px] text-fg">{spend ? `这一步要花钱：「${label}」${estCost != null ? `，预计 ¥${estCost.toFixed(3)}` : '，单价未知'}。允许吗？` : `Agent 想要「${label}」，会修改你本机已有的数据。允许吗？`}</p>
       {args !== undefined && <pre className="m-0 mt-1 max-h-24 overflow-auto text-[12px] text-muted">{JSON.stringify(args)}</pre>}
       <div className="mt-2 flex flex-wrap gap-2">
-        <button type="button" className="primary !min-h-9" data-testid="confirm-allow" onClick={() => onDecide('allow')}>允许</button>
-        <button type="button" className="!min-h-9" data-testid="confirm-deny" onClick={() => onDecide('deny')}>拒绝</button>
-        {rememberable && <button type="button" className="!min-h-9" data-testid="confirm-remember" onClick={() => onDecide('remember')}>允许并记住此类</button>}
+        <button type="button" className="primary !min-h-9" data-testid="confirm-allow" onClick={() => onDecide('allow')}>{tr('ui.allow')}</button>
+        <button type="button" className="!min-h-9" data-testid="confirm-deny" onClick={() => onDecide('deny')}>{tr('ui.reject_2')}</button>
+        {rememberable && <button type="button" className="!min-h-9" data-testid="confirm-remember" onClick={() => onDecide('remember')}>{tr('ui.allow_and_remember_this_kind')}</button>}
       </div>
     </section>
   );

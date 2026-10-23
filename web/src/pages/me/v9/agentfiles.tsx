@@ -32,18 +32,18 @@ export function AgentSettingsPage({ go }: { go: (to: string) => void }) {
   const hit = q.trim() ? (files ?? []).filter((f) => f.path.toLowerCase().includes(q.toLowerCase())) : null;
   return (
     <div className="page page-narrow flex flex-col gap-3" data-testid="agent-settings">
-      <Note>{t('这些是 Agent 的设定文件：每次对话按 SYSTEM.md 里的顺序加载。改完保存后，下一次运行立即生效；每次保存都留版本，可随时回滚。')}</Note>
-      <SegTabs value={tab} onChange={setTab} label={t('Agent 设定')} options={[['files', '文件'], ['preview', '加载预览']]} />
-      {error && <Problem title={t('读取设定文件失败')} advice={error} action={t('重试')} onAction={reload} />}
+      <Note>{t('ui.these_are_the_agents_settings')}</Note>
+      <SegTabs value={tab} onChange={setTab} label={t('ui.agent_settings')} options={[['files', '文件'], ['preview', '加载预览']]} />
+      {error && <Problem title={t('ui.failed_to_read_settings_files')} advice={error} action={t('ui.retry')} onAction={reload} />}
       {tab === 'files' && <>
-        <input placeholder={t('搜索文件')} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t('搜索文件')} />
+        <input placeholder={t('ui.search_files')} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t('ui.search_files')} />
         {hit ? (
-          <GroupList title={`${t('搜索结果')}（${hit.length}）`}>{hit.slice(0, 60).map((f) => <ListRow key={f.path} label={f.path} hint={`v${f.version} · ${fmtTime(f.updated)}`} onClick={() => setOpen(f.path)} />)}</GroupList>
+          <GroupList title={`${t('ui.search_results')}（${hit.length}）`}>{hit.slice(0, 60).map((f) => <ListRow key={f.path} label={f.path} hint={`v${f.version} · ${fmtTime(f.updated)}`} onClick={() => setOpen(f.path)} />)}</GroupList>
         ) : <>
-          <GroupList title={t('根目录（系统文件）')}>{root.map((f) => <ListRow key={f.path} icon={editableOf(f.content, f.path) === 'system_only' ? 'lock' : 'agent'} label={f.path} hint={`v${f.version} · ${editableOf(f.content, f.path) === 'system_only' ? t('只读') : t('可编辑')}`} onClick={() => setOpen(f.path)} testId={`file-${f.path}`} />)}</GroupList>
+          <GroupList title={t('ui.root_system_files')}>{root.map((f) => <ListRow key={f.path} icon={editableOf(f.content, f.path) === 'system_only' ? 'lock' : 'agent'} label={f.path} hint={`v${f.version} · ${editableOf(f.content, f.path) === 'system_only' ? t('ui.read_only') : t('ui.editable')}`} onClick={() => setOpen(f.path)} testId={`file-${f.path}`} />)}</GroupList>
           {dirs.map((d) => <DirGroup key={d} dir={d} files={(files ?? []).filter((f) => f.path.startsWith(`${d}/`))} onOpen={setOpen} />)}
         </>}
-        <div className="flex flex-wrap gap-2"><button type="button" onClick={() => go('me/memory')}>{t('记忆')}</button><button type="button" onClick={() => go('me/skills')}>{t('技能')}</button><button type="button" onClick={() => go('me/growth')}>{t('成长记录')}</button></div>
+        <div className="flex flex-wrap gap-2"><button type="button" onClick={() => go('me/memory')}>{t('ui.memory')}</button><button type="button" onClick={() => go('me/skills')}>{t('ui.skills')}</button><button type="button" onClick={() => go('me/growth')}>{t('ui.growth_log')}</button></div>
       </>}
       {tab === 'preview' && <LoadPreview />}
     </div>
@@ -68,7 +68,7 @@ function FileEditor({ path, onBack }: { path: string; onBack: () => void }) {
   const [err, setErr] = useState<string | null>(null);
   const [view, setView] = useState<VfsVersion | null>(null);
   const [toast, show] = useToast();
-  if (f === null) return <div className="page page-narrow"><BackBar label={path} onBack={onBack} /><Problem title={t('文件不存在或已删除')} /></div>;
+  if (f === null) return <div className="page page-narrow"><BackBar label={path} onBack={onBack} /><Problem title={t('ui.file_doesnt_exist_or_was')} /></div>;
   if (!f) return null;
   const ro = editableOf(f.content, path) === 'system_only';
   const body = text ?? f.content;
@@ -80,35 +80,35 @@ function FileEditor({ path, onBack }: { path: string; onBack: () => void }) {
       const r = await v.write(path, next, { author: 'user', expectedVersion: f.version, note: why });
       const d = applyChanged(diffLines(f.content, next));
       await audit({ kind: 'system_file_change', actor: 'user', summary: `${why}：${path} v${f.version}→v${r.version}（+${d.added}/-${d.removed}）`, target: path, outcome: 'ok' });
-      setText(null); setConfirm(null); reload(); show(`${t('已保存')} v${r.version}${t('，下一次运行生效')}`);
+      setText(null); setConfirm(null); reload(); show(`${t('ui.saved')} v${r.version}${t('ui.applies_to_the_next_run')}`);
     } catch (e) { setErr((e as Error).message); setConfirm(null); }
   };
   return (
     <div className="page page-narrow flex flex-col gap-3" data-testid="file-editor">
       {toast}
       <BackBar label={path} onBack={onBack} />
-      <Note>v{f.version} · {fmtTime(f.updated)} · {ro ? t('只读：由代码强制，任何文件和对话都不能放宽') : t('可编辑')}</Note>
+      <Note>v{f.version} · {fmtTime(f.updated)} · {ro ? t('ui.read_only_enforced_in_code') : t('ui.editable')}</Note>
       {confirm ? (
-        <Section title={t('确认改动')} testId="confirm-diff">
+        <Section title={t('ui.review_changes')} testId="confirm-diff">
           <DiffInline a={f.content} b={confirm.next} />
-          <div className="flex flex-wrap gap-2"><button type="button" className="primary" onClick={() => void save(confirm.next, confirm.why)} data-testid="confirm-save">{t('确认保存')}</button><button type="button" onClick={() => setConfirm(null)}>{t('再改改')}</button></div>
+          <div className="flex flex-wrap gap-2"><button type="button" className="primary" onClick={() => void save(confirm.next, confirm.why)} data-testid="confirm-save">{t('ui.confirm_save')}</button><button type="button" onClick={() => setConfirm(null)}>{t('ui.revise')}</button></div>
         </Section>
       ) : view ? (
-        <Section title={`${t('版本')} v${view.version} · ${fmtTime(view.updated)} · ${view.author}`}>
+        <Section title={`${t('ui.version')} v${view.version} · ${fmtTime(view.updated)} · ${view.author}`}>
           <DiffInline a={view.content} b={f.content} />
-          <div className="flex flex-wrap gap-2">{!ro && <button type="button" className="primary" onClick={() => setConfirm({ next: view.content, why: `回滚到 v${view.version}` })}>{t('回滚到这个版本')}</button>}<button type="button" onClick={() => setView(null)}>{t('关闭')}</button></div>
+          <div className="flex flex-wrap gap-2">{!ro && <button type="button" className="primary" onClick={() => setConfirm({ next: view.content, why: `回滚到 v${view.version}` })}>{t('ui.roll_back_to_this_version')}</button>}<button type="button" onClick={() => setView(null)}>{t('ui.close')}</button></div>
         </Section>
       ) : (
         <Section>
           <textarea className="v9-editor" rows={18} value={body} readOnly={ro} onChange={(e) => setText(e.target.value)} spellCheck={false} aria-label={path} data-testid="file-text" />
-          {err && <Problem title={err} advice={t('改好后再保存；密钥只能存“账号与 Key”')} />}
+          {err && <Problem title={err} advice={t('ui.fix_it_then_save_keys')} />}
           {!ro && <div className="flex flex-wrap gap-2">
-            <button type="button" className="primary" disabled={text === null || text === f.content} onClick={() => setConfirm({ next: body, why: '手动编辑' })} data-testid="file-save">{t('保存（先看改动）')}</button>
-            {def !== undefined && def !== f.content && <button type="button" onClick={() => setConfirm({ next: patchFM(def, {}), why: '恢复默认' })} data-testid="file-reset">{t('恢复默认')}</button>}
+            <button type="button" className="primary" disabled={text === null || text === f.content} onClick={() => setConfirm({ next: body, why: '手动编辑' })} data-testid="file-save">{t('ui.save_review_diff')}</button>
+            {def !== undefined && def !== f.content && <button type="button" onClick={() => setConfirm({ next: patchFM(def, {}), why: '恢复默认' })} data-testid="file-reset">{t('ui.restore_default')}</button>}
           </div>}
         </Section>
       )}
-      <GroupList title={t('版本历史')}>
+      <GroupList title={t('ui.version_history')}>
         {(hist ?? []).slice().reverse().slice(0, 30).map((v) => <ListRow key={v.version} label={`v${v.version} · ${v.author}${v.note ? ` · ${v.note}` : ''}`} hint={fmtTime(v.updated)} onClick={() => setView(v)} />)}
       </GroupList>
     </div>
@@ -127,14 +127,14 @@ function LoadPreview() {
   const sk = routeSkill(q, skills);
   return (
     <div className="flex flex-col gap-3" data-testid="load-preview">
-      <label className="field !m-0"><span>{t('试一句话，看会额外加载什么')}</span><input value={q} onChange={(e) => setQ(e.target.value)} /></label>
-      <Section title={`${t('稳定前缀')}：${pre.total} ${t('字符')}`}>
-        <ol className="m-0 flex flex-col gap-1 pl-5 text-[14px]">{pre.parts.map((p) => <li key={p.path}><span className="break-all">{p.path}</span> <span className="text-muted">{p.chars}/{p.budget}{p.truncated ? ` · ${t('已截断')}` : ''}</span></li>)}</ol>
+      <label className="field !m-0"><span>{t('ui.try_a_sentence_to_see')}</span><input value={q} onChange={(e) => setQ(e.target.value)} /></label>
+      <Section title={`${t('ui.stable_prefix')}：${pre.total} ${t('ui.characters')}`}>
+        <ol className="m-0 flex flex-col gap-1 pl-5 text-[14px]">{pre.parts.map((p) => <li key={p.path}><span className="break-all">{p.path}</span> <span className="text-muted">{p.chars}/{p.budget}{p.truncated ? ` · ${t('ui.truncated')}` : ''}</span></li>)}</ol>
         {pre.warnings.map((w) => <Note key={w} tone="warn">{w}</Note>)}
       </Section>
-      <Section title={t('按需加载')}>
-        <Note tone={sem.loaded ? 'ok' : 'muted'}>{sem.loaded ? `semiotics：${sem.parts.map((p) => `${p.path}（${p.chars}）`).join(' → ')}` : t('这句话不需要符号—结构底座（简单任务不加载）')}</Note>
-        <Note>{sk ? `${t('技能')}：${sk.name}${sk.source === 'user' ? `（${t('自定义优先')}）` : ''}` : t('没有命中技能，只带技能目录')}</Note>
+      <Section title={t('ui.load_on_demand')}>
+        <Note tone={sem.loaded ? 'ok' : 'muted'}>{sem.loaded ? `semiotics：${sem.parts.map((p) => `${p.path}（${p.chars}）`).join(' → ')}` : t('ui.this_sentence_doesnt_need_the')}</Note>
+        <Note>{sk ? `${t('ui.skills')}：${sk.name}${sk.source === 'user' ? `（${t('ui.custom_first')}）` : ''}` : t('ui.no_skill_matched_only_the')}</Note>
       </Section>
     </div>
   );
@@ -155,37 +155,37 @@ export function MemoryPage() {
   const doForget = async () => {
     if (!q.trim()) return;
     const hits = searchMemory(rows, q);
-    if (!window.confirm(`${t('将删除')} ${hits.length} ${t('条，并写入“不要记住”规则。确定？')}`)) return;
+    if (!window.confirm(`${t('ui.will_delete')} ${hits.length} ${t('ui.items_and_add_a_dont')}`)) return;
     const f = forget(rows, q, hits.map((h) => h.id));
     for (const h of hits) { const id = rid(h); if (id !== undefined) await db.del('memories', id); }
     await db.setKV('memory.dontRemember', [...(dont ?? []), q.trim()]);
     const v = await getVfs(); const mem = (await v.text('MEMORY.md')) ?? '';
     await v.write('MEMORY.md', `${mem.replace(/\s*$/, '')}\n${f.rule}\n`, { author: 'user', note: 'forget' }).catch(() => {});
     await audit({ kind: 'memory_change', actor: 'user', summary: `忘掉：${q}（删除 ${f.removed.length} 条，复查命中 ${f.verifyHits}）`, outcome: 'ok' });
-    show(`${t('已删除')} ${f.removed.length} ${t('条，复查命中')} ${f.verifyHits}`); reload();
+    show(`${t('ui.deleted')} ${f.removed.length} ${t('ui.items_re_check_hits')} ${f.verifyHits}`); reload();
   };
   const saveEdit = async () => { if (!edit) return; await db.update('memories', edit.row, { text: edit.text, condition: edit.condition || undefined, source: 'user_edited', updatedAt: new Date().toISOString() }); await audit({ kind: 'memory_change', actor: 'user', summary: `编辑记忆：${edit.text.slice(0, 40)}`, outcome: 'ok' }); setEdit(null); reload(); };
   return (
     <div className="page page-narrow flex flex-col gap-3" data-testid="memory-page">
       {toast}
-      <Note>{t('Agent 只在你确认后才记住；推断出来的会标“推断”。可以随时编辑或删除。')}</Note>
-      <div className="flex flex-wrap gap-2"><input className="grow" placeholder={t('搜索或输入要忘掉的内容')} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t('搜索记忆')} /><button type="button" className="danger" disabled={!q.trim()} onClick={() => void doForget()} data-testid="forget">{t('忘掉这些')}</button></div>
-      {!list.length ? <div className="card !p-0"><EmptyState icon="inbox" title={t('还没有长期记忆')} why={t('在对话里说“记住……”，确认后会出现在这里。')} /></div> : (
+      <Note>{t('ui.the_agent_only_remembers_after')}</Note>
+      <div className="flex flex-wrap gap-2"><input className="grow" placeholder={t('ui.search_or_type_what_to')} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t('ui.search_memory')} /><button type="button" className="danger" disabled={!q.trim()} onClick={() => void doForget()} data-testid="forget">{t('ui.forget_these')}</button></div>
+      {!list.length ? <div className="card !p-0"><EmptyState icon="inbox" title={t('ui.no_long_term_memory_yet')} why={t('ui.say_remember_in_chat_it')} /></div> : (
         <ul className="item-list">
           {list.map((m) => { const id = rid(m); return (
             <li key={m.id} className="flex-col !items-stretch">
               {edit && edit.row === id ? (
-                <div className="flex flex-col gap-2"><textarea rows={2} value={edit.text} onChange={(e) => setEdit({ ...edit, text: e.target.value })} /><input placeholder={t('条件（可不填）')} value={edit.condition} onChange={(e) => setEdit({ ...edit, condition: e.target.value })} /><div className="flex gap-2"><button type="button" className="primary" onClick={() => void saveEdit()}>{t('保存')}</button><button type="button" onClick={() => setEdit(null)}>{t('取消')}</button></div></div>
+                <div className="flex flex-col gap-2"><textarea rows={2} value={edit.text} onChange={(e) => setEdit({ ...edit, text: e.target.value })} /><input placeholder={t('ui.condition_optional')} value={edit.condition} onChange={(e) => setEdit({ ...edit, condition: e.target.value })} /><div className="flex gap-2"><button type="button" className="primary" onClick={() => void saveEdit()}>{t('ui.save')}</button><button type="button" onClick={() => setEdit(null)}>{t('ui.cancel')}</button></div></div>
               ) : <>
                 <span className="item-title !text-[15px]">{m.text}</span>
-                <span className="item-meta">{m.condition ? `${t('条件')}：${m.condition} · ` : ''}{m.source === 'inferred' || m.confidence === 'inferred' ? t('推断') : m.source === 'user_edited' ? t('你改过') : t('你说的')} · {String(m.createdAt ?? '').slice(0, 10)}</span>
-                <span className="flex gap-2">{id !== undefined && <><button type="button" className="ghost" onClick={() => setEdit({ row: id, text: m.text, condition: m.condition ?? '' })}>{t('编辑')}</button><button type="button" className="ghost danger" onClick={async () => { await db.del('memories', id); await audit({ kind: 'memory_change', actor: 'user', summary: `删除记忆：${m.text.slice(0, 40)}`, outcome: 'ok' }); reload(); }}>{t('删除')}</button></>}</span>
+                <span className="item-meta">{m.condition ? `${t('ui.condition')}：${m.condition} · ` : ''}{m.source === 'inferred' || m.confidence === 'inferred' ? t('ui.inferred') : m.source === 'user_edited' ? t('ui.edited_by_you') : t('ui.you_said')} · {String(m.createdAt ?? '').slice(0, 10)}</span>
+                <span className="flex gap-2">{id !== undefined && <><button type="button" className="ghost" onClick={() => setEdit({ row: id, text: m.text, condition: m.condition ?? '' })}>{t('ui.edit')}</button><button type="button" className="ghost danger" onClick={async () => { await db.del('memories', id); await audit({ kind: 'memory_change', actor: 'user', summary: `删除记忆：${m.text.slice(0, 40)}`, outcome: 'ok' }); reload(); }}>{t('ui.delete')}</button></>}</span>
               </>}
             </li>
           ); })}
         </ul>
       )}
-      {!!dont?.length && <GroupList title={t('不要记住（规则）')}>{dont.map((d) => <li key={d}><div className="list-row static"><span className="row-text"><span className="row-label">{d}</span></span></div></li>)}</GroupList>}
+      {!!dont?.length && <GroupList title={t('ui.dont_remember_rule')}>{dont.map((d) => <li key={d}><div className="list-row static"><span className="row-text"><span className="row-label">{d}</span></span></div></li>)}</GroupList>}
     </div>
   );
 }
@@ -201,26 +201,26 @@ export function SkillsPage({ go }: { go: (to: string) => void }) {
   const skills = Object.entries(files).filter(([p]) => /^skills\/[^/]+\/SKILL\.md$/.test(p)).map(([p, c]) => skillMeta(p, c)).filter((x): x is NonNullable<typeof x> => !!x).sort((a, b) => (a.source === b.source ? a.name.localeCompare(b.name) : a.source === 'user' ? -1 : 1));
   const toggle = async (path: string, on: boolean) => {
     const v = await getVfs(); const cur = await v.read(path); if (!cur) return;
-    try { await v.write(path, patchFM(cur.content, { enabled: on }), { author: 'user', expectedVersion: cur.version, note: on ? '启用' : '停用' }); await audit({ kind: 'system_file_change', actor: 'user', summary: `${on ? '启用' : '停用'}技能 ${path}`, target: path, outcome: 'ok' }); show(on ? t('已启用') : t('已停用')); reload(); }
+    try { await v.write(path, patchFM(cur.content, { enabled: on }), { author: 'user', expectedVersion: cur.version, note: on ? '启用' : '停用' }); await audit({ kind: 'system_file_change', actor: 'user', summary: `${on ? '启用' : '停用'}技能 ${path}`, target: path, outcome: 'ok' }); show(on ? t('ui.enabled') : t('ui.disabled')); reload(); }
     catch (e) { show((e as Error).message); }
   };
   const docOf = (p: string) => parseDoc(files[p] ?? '').fm;
   return (
     <div className="page page-narrow flex flex-col gap-3" data-testid="skills-page">
       {toast}
-      <Note>{t('每轮只带技能目录（名称 + 描述），命中后才载入正文；你写的技能优先。Agent 只能提修订建议，你看过改动对比确认后才生效。')}</Note>
-      <GroupList title={`${t('技能')}（${skills.length}）`}>
+      <Note>{t('ui.each_turn_carries_only_the')}</Note>
+      <GroupList title={`${t('ui.skills')}（${skills.length}）`}>
         {skills.map((s) => (
           <li key={s.path}>
             <div className="list-row static flex-wrap">
-              <span className="row-text"><span className="row-label">{s.name}{s.source === 'user' ? ` · ${t('自定义')}` : ''}{s.version ? ` · v${s.version}` : ''}{docOf(s.path).status ? ` · ${String(docOf(s.path).status)}` : ''}</span><span className="row-hint">{s.description}</span></span>
-              <button type="button" className="ghost" onClick={() => setOpen(s.path)}>{t('查看')}</button>
-              <label className="flex min-h-11 items-center gap-1 px-1 text-[13px]"><input type="checkbox" checked={s.enabled} onChange={() => void toggle(s.path, !s.enabled)} aria-label={`${t('启用')} ${s.name}`} />{t('启用')}</label>
+              <span className="row-text"><span className="row-label">{s.name}{s.source === 'user' ? ` · ${t('ui.custom')}` : ''}{s.version ? ` · v${s.version}` : ''}{docOf(s.path).status ? ` · ${String(docOf(s.path).status)}` : ''}</span><span className="row-hint">{s.description}</span></span>
+              <button type="button" className="ghost" onClick={() => setOpen(s.path)}>{t('ui.view')}</button>
+              <label className="flex min-h-11 items-center gap-1 px-1 text-[13px]"><input type="checkbox" checked={s.enabled} onChange={() => void toggle(s.path, !s.enabled)} aria-label={`${t('ui.enable')} ${s.name}`} />{t('ui.enable')}</label>
             </div>
           </li>
         ))}
       </GroupList>
-      <button type="button" className="self-start" onClick={() => go('me/growth')}>{t('技能版本与修订建议在“成长记录”')} ›</button>
+      <button type="button" className="self-start" onClick={() => go('me/growth')}>{t('ui.skill_versions_and_proposals_are')} ›</button>
     </div>
   );
 }

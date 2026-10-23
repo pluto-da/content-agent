@@ -20,9 +20,9 @@ export function AddAppButton({ variant }: { variant: 'side' | 'rail' | 'drawer' 
       aria-hidden="true"
     >{count}</span>
   );
-  const label = count > 0 ? `${t('添加软件')}（${t('已登记')} ${count}）` : t('添加软件');
+  const label = count > 0 ? `${t('ui.add_app')}（${t('ui.registered')} ${count}）` : t('ui.add_app');
   if (variant === 'rail') return (
-    <Tip label={t('添加软件')}>
+    <Tip label={t('ui.add_app')}>
       <button type="button" onClick={() => open()} aria-label={label} data-testid="add-app" className="add-app-fab !relative !h-10 !min-h-10 !w-10 !rounded-full !p-0">
         <Icon name="plus" size={18} strokeWidth={1.75} />{badge}
       </button>
@@ -34,7 +34,7 @@ export function AddAppButton({ variant }: { variant: 'side' | 'rail' | 'drawer' 
       className={cn('add-app-fab !relative w-full !justify-start !gap-2 !rounded-full !px-[14px] text-sm', variant === 'drawer' ? '!h-11 !min-h-11' : '!h-10 !min-h-10')}
     >
       <Icon name="plus" size={16} strokeWidth={1.75} />
-      <span className="flex-1 text-left">{t('添加软件')}</span>
+      <span className="flex-1 text-left">{t('ui.add_app')}</span>
       {badge}
     </button>
   );

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { cn } from './utils';
+import { tr } from '../../i18n';
 
 /** 可拖宽的双栏：左栏宽度保存在本机。键盘可用 ←/→ 调整。 */
 export function ResizableSplit({ storageKey, initial = 340, min = 260, max = 560, left, right, className }: {
@@ -18,7 +19,7 @@ export function ResizableSplit({ storageKey, initial = 340, min = 260, max = 560
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="拖动调整列表宽度"
+        aria-label={tr('ui.drag_to_resize_the_list')}
         aria-valuenow={Math.round(w)}
         aria-valuemin={min}
         aria-valuemax={max}

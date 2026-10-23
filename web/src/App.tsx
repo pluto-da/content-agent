@@ -3,7 +3,7 @@ import { startReminderScheduler } from './v9/reminders';
 import { startCleanupTask } from './v9/media/store';
 import { ReminderBanner } from './v10/ReminderBanner';
 import { apiMode } from './api';
-import { LangContext, translate, type Lang } from './i18n';
+import { LangContext, translate, setUiLang, type Lang, tr } from './i18n';
 import { Icon } from './icons';
 import { Loading, prefersReducedMotion } from './ui';
 import { NAV, layoutOf, type NavItem } from './nav';
@@ -35,9 +35,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
       <div className="problem" role="alert" style={{ margin: 24 }}>
         <Icon name="error" size={18} className="problem-ico" />
         <div className="grow">
-          <strong>页面出错了</strong>
+          <strong>{tr('ui.something_went_wrong_on_this')}</strong>
           <p>{this.state.error.message}</p>
-          <div className="problem-a"><button type="button" className="primary" onClick={() => this.setState({ error: null })}>重试</button><button type="button" onClick={() => { location.hash = 'agent'; this.setState({ error: null }); }}>回到首页</button></div>
+          <div className="problem-a"><button type="button" className="primary" onClick={() => this.setState({ error: null })}>{tr('ui.retry')}</button><button type="button" onClick={() => { location.hash = 'agent'; this.setState({ error: null }); }}>{tr('ui.back_to_home')}</button></div>
         </div>
       </div>
     );
@@ -75,19 +75,19 @@ function systemDark(): boolean {
 function CommandPalette({ open, onClose, go, t }: { open: boolean; onClose: () => void; go: (p: string) => void; t: (k: string) => string }) {
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(0);
-  const all: NavItem[] = [...NAV, ...CENTERS.map((c) => ({ id: `p/${c.id}`, label: c.label, icon: 'globe', desc: `在主区打开 ${c.label}`, keywords: c.id }))];
+  const all: NavItem[] = [...NAV, ...CENTERS.map((c) => ({ id: `p/${c.id}`, label: c.label, icon: 'globe', desc: `${tr('ui.open_in_main_area')} ${tr(c.label)}`, keywords: c.id }))];
   const items = all.filter((n) => !q || `${n.label}${t(n.label)}${n.id}${n.desc}${n.keywords ?? ''}`.toLowerCase().includes(q.toLowerCase()));
   useEffect(() => { if (open) { setQ(''); setIdx(0); } }, [open]);
   const pick = (id: string) => { onClose(); go(id); };
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent aria-label={t('快速跳转')}>
-        <DialogTitle className="sr-only">{t('快速跳转')}</DialogTitle>
-        <DialogDescription className="sr-only">{t('搜索页面…')}</DialogDescription>
+      <DialogContent aria-label={t('ui.quick_jump')}>
+        <DialogTitle className="sr-only">{t('ui.quick_jump')}</DialogTitle>
+        <DialogDescription className="sr-only">{t('ui.search_pages')}</DialogDescription>
         <div className="flex items-center gap-2 border-b border-line px-4 text-muted">
           <Icon name="search" size={16} />
           <input
-            autoFocus value={q} placeholder={t('搜索页面…')} aria-label={t('快速跳转')} aria-controls="cmdk-list"
+            autoFocus value={q} placeholder={t('ui.search_pages')} aria-label={t('ui.quick_jump')} aria-controls="cmdk-list"
             className="!min-h-12 !border-0 !bg-transparent !p-0 text-base !shadow-none"
             onChange={(e) => { setQ(e.target.value); setIdx(0); }}
             onKeyDown={(e) => {
@@ -97,14 +97,14 @@ function CommandPalette({ open, onClose, go, t }: { open: boolean; onClose: () =
             }}
           />
         </div>
-        <ul id="cmdk-list" role="listbox" aria-label={t('页面')} className="m-0 max-h-[50vh] list-none overflow-y-auto p-2">
+        <ul id="cmdk-list" role="listbox" aria-label={t('ui.pages')} className="m-0 max-h-[50vh] list-none overflow-y-auto p-2">
           {items.map((n, i) => (
             <li key={n.id} role="option" aria-selected={i === idx} className={cn('flex min-h-11 cursor-pointer items-center gap-3 rounded-[10px] px-2 py-2 text-[15px] text-fg', i === idx && 'bg-surface-2')} onMouseEnter={() => setIdx(i)} onClick={() => pick(n.id)}>
               <span className="text-muted"><Icon name={n.icon} size={16} /></span>
               <span className="min-w-0 flex-1 truncate">{t(n.label)}<small className="text-[13px] text-muted"> · {t(n.desc)}</small></span>
             </li>
           ))}
-          {!items.length && <li className="py-6 text-center text-muted">{t('没有找到')}</li>}
+          {!items.length && <li className="py-6 text-center text-muted">{t('ui.not_found')}</li>}
         </ul>
       </DialogContent>
     </Dialog>
@@ -128,6 +128,7 @@ export function App() {
   const appCount = apps.data?.apps?.length ?? 0;
   const openAdd = useCallback((platform?: string) => { setAddInitial(platform); setAddOpen(true); }, []);
   const addCtx = useMemo(() => ({ open: openAdd, count: appCount, version: appsVersion }), [openAdd, appCount, appsVersion]);
+  setUiLang(lang);   // tr() 与 useT() 同步当前语言
   const t = useMemo(() => (k: string) => translate(lang, k), [lang]);
 
   useEffect(() => {
@@ -179,8 +180,8 @@ export function App() {
 
   const tools = (
     <div className="flex shrink-0 items-center gap-1">
-      {!online && <span className="badge warn" role="status"><Icon name="wifiOff" size={14} /> {t('离线')}</span>}
-      <Button variant="ghost" size="icon-lg" aria-label={t('快速跳转')} onClick={() => setCmdk(true)}><Icon name="search" size={18} /></Button>
+      {!online && <span className="badge warn" role="status"><Icon name="wifiOff" size={14} /> {t('ui.offline')}</span>}
+      <Button variant="ghost" size="icon-lg" aria-label={t('ui.quick_jump')} onClick={() => setCmdk(true)}><Icon name="search" size={18} /></Button>
       <Button variant="ghost" size="icon-lg" aria-label={t(dark ? '切换到浅色' : '切换到深色')} onClick={() => setTheme(dark ? 'light' : 'dark')}><Icon name={dark ? 'sun' : 'moon'} size={18} /></Button>
     </div>
   );
@@ -188,7 +189,7 @@ export function App() {
   const meContent = route.space === 'me' ? (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <header className="app-top sticky top-0 z-20 flex shrink-0 items-center gap-2 bg-canvas px-2 sm:px-6" style={{ minHeight: isPhone ? 48 : 64 }} data-testid="topbar">
-        {back ? <Button variant="ghost" size="icon-lg" aria-label={t('返回')} onClick={back}><Icon name="arrowLeft" size={20} /></Button> : null}
+        {back ? <Button variant="ghost" size="icon-lg" aria-label={t('ui.back')} onClick={back}><Icon name="arrowLeft" size={20} /></Button> : null}
         <div className="min-w-0 flex-1">
           <h1 className={isPhone ? 'truncate text-[18px]' : 'truncate text-[20px]'}>{t(meSubItem?.label ?? '我的')}</h1>
           {!isPhone && <p className="m-0 truncate text-[13px] text-muted">{t(meSubItem?.desc ?? '模型、平台与软件、数据源、规则、设置')}</p>}
@@ -212,7 +213,7 @@ export function App() {
       <ReminderBanner />
       <AddAppContext.Provider value={addCtx}>
         <TooltipProvider delayDuration={200}>
-          <a className="skip" href="#main">跳到主要内容</a>
+          <a className="skip" href="#main">{tr('ui.skip_to_main_content')}</a>
           <div className={cn('shell app-root', lay)}>
             {route.space === 'onboarding' ? (
               <ErrorBoundary><Suspense fallback={<div className="page"><Loading show lines={5} /></div>}><Onboarding go={go} /></Suspense></ErrorBoundary>

@@ -26,6 +26,7 @@ import { useAddApp } from '../components/addAppContext';
 import { AgentPanel, useAgent } from './AgentPanel';
 import { BrowserArea, type BrowserTarget, type PatrolState } from './BrowserArea';
 import { Sidebar, type SideItem } from './Sidebar';
+import { tr } from '../i18n';
 
 export type ShellLayout = 'phone' | 'tablet-portrait' | 'tablet-landscape' | 'desktop';
 export function shellLayoutOf(w: number, h: number): ShellLayout {
@@ -184,13 +185,13 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
     <BrowserArea target={target} startUrl={startUrl[target.id]} onSend={sendFromPage} onMenu={(act) => void menu(target.id, act)} patrol={target.patrol ? patrol : null}
       onPatrol={(x) => { if (x === 'end') { setPatrol(null); go('agent'); } else setPatrol((p) => (p ? { ...p, index: Math.min(p.stops.length - 1, p.index + 1) } : p)); }} />
   ) : (
-    <div className="flex flex-1 items-center justify-center text-muted" data-testid="unknown-platform">这个平台不在工作台里。<button type="button" className="ml-2" onClick={() => setAddOpen(true)}>添加平台</button></div>
+    <div className="flex flex-1 items-center justify-center text-muted" data-testid="unknown-platform">{tr('ui.this_platform_isnt_in_the')}<button type="button" className="ml-2" onClick={() => setAddOpen(true)}>{tr('ui.add_platform')}</button></div>
   );
 
   const sidePanel = route.space === 'p' && !sheetMode && (
     panelOpen ? (
       <div className="relative flex shrink-0 border-l border-line" style={{ width: panelW }} data-testid="agent-side">
-        <div role="separator" aria-orientation="vertical" aria-label="拖动调整 Agent 面板宽度" className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize"
+        <div role="separator" aria-orientation="vertical" aria-label={tr('ui.drag_to_resize_the_agent')} className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize"
           onPointerDown={(e) => { dragging.current = true; (e.target as HTMLElement).setPointerCapture(e.pointerId); }}
           onPointerMove={(e) => { if (!dragging.current) return; const w = Math.min(560, Math.max(320, window.innerWidth - e.clientX)); setPanelW(w); }}
           onPointerUp={() => { dragging.current = false; localStorage.setItem(`ca.v8.panelW.${target?.id ?? 'agent'}`, String(panelW)); }} />
@@ -198,7 +199,7 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
       </div>
     ) : (
       <div className="flex w-2 shrink-0 flex-col items-center justify-center border-l border-line bg-side" data-testid="agent-handle">
-        <button type="button" aria-label="展开 Agent 面板" className="!fixed right-2 bottom-6 z-20 !min-h-11 !rounded-full !px-4 !text-[14px] shadow-pop" onClick={() => { setPanelOpen(true); localStorage.setItem('ca.v8.panel', '1'); }}><Icon name="bot" size={16} /> Agent</button>
+        <button type="button" aria-label={tr('ui.expand_agent_panel')} className="!fixed right-2 bottom-6 z-20 !min-h-11 !rounded-full !px-4 !text-[14px] shadow-pop" onClick={() => { setPanelOpen(true); localStorage.setItem('ca.v8.panel', '1'); }}><Icon name="bot" size={16} /> Agent</button>
       </div>
     )
   );
@@ -210,8 +211,8 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
       <button type="button" aria-label={sheet === 'full' ? '缩小' : '展开'} className="!mx-auto !min-h-11 !w-full !rounded-none !border-0 !bg-transparent !p-0" onClick={() => setSheet((s) => (s === 'peek' ? 'half' : s === 'half' ? 'full' : 'half'))}><span className="mx-auto block h-1 w-9 rounded-full bg-line-strong" /></button>
       {sheet === 'peek' ? (
         <div className="flex items-center gap-2 px-3 pb-[calc(8px+var(--sa-bottom))]">
-          <button type="button" className="!min-h-11 min-w-0 flex-1 !justify-start !rounded-full !px-4 !text-[15px] !font-normal !text-muted" onClick={() => setSheet('half')} data-testid="sheet-peek">问 Agent…</button>
-          <button type="button" aria-label="关闭" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => setSheet('closed')}><Icon name="close" size={18} /></button>
+          <button type="button" className="!min-h-11 min-w-0 flex-1 !justify-start !rounded-full !px-4 !text-[15px] !font-normal !text-muted" onClick={() => setSheet('half')} data-testid="sheet-peek">{tr('ui.ask_the_agent')}</button>
+          <button type="button" aria-label={tr('ui.close')} className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => setSheet('closed')}><Icon name="close" size={18} /></button>
         </div>
       ) : (
         <AgentPanel a={a} variant="sheet" lay="phone" go={go} onOpenPlatform={select} route={{ sub: '', id: null }} onBackToWeb={() => setSheet('closed')} onCollapse={() => setSheet(sheet === 'full' ? 'half' : 'peek')} />
@@ -221,7 +222,7 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
 
   const phoneTop = isPhone && (
     <header className="flex shrink-0 items-center gap-1 border-b border-line bg-canvas px-1 safe-top" style={{ height: 'calc(48px + var(--sa-top))' }} data-testid="phone-top">
-      <button type="button" aria-label="打开平台侧栏" data-testid="open-side" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => setPhoneSide(true)}><Icon name="menu" size={20} /></button>
+      <button type="button" aria-label={tr('ui.open_platform_sidebar')} data-testid="open-side" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => setPhoneSide(true)}><Icon name="menu" size={20} /></button>
       <h1 className="min-w-0 flex-1 truncate text-center text-[16px]">{route.space === 'me' ? '我的' : route.space === 'p' ? target?.label ?? '' : a.convs.find((c) => c.id === a.cid)?.title ?? '超级工作台'}</h1>
       {header}
     </header>
@@ -248,7 +249,7 @@ export function Workbench({ route, go, lay, header, meContent }: { route: Route;
       {sheetEl}
       {isPhone && phoneSide && (
         <div className="fixed inset-0 z-50" data-testid="side-drawer">
-          <button type="button" aria-label="关闭平台侧栏" className="anim-overlay absolute inset-0 !min-h-0 !rounded-none !border-0 !bg-black/30 !p-0" onClick={() => setPhoneSide(false)} />
+          <button type="button" aria-label={tr('ui.close_platform_sidebar')} className="anim-overlay absolute inset-0 !min-h-0 !rounded-none !border-0 !bg-black/30 !p-0" onClick={() => setPhoneSide(false)} />
           <div className="anim-drawer-left absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-side shadow-pop safe-top">{sidebar}</div>
         </div>
       )}
@@ -271,7 +272,7 @@ export function SendPreview({ item, onClose, onSend }: { item: InboxDraft | null
   useEffect(() => setNote(''), [item]);
   return (
     <Drawer open={!!item} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DrawerContent title="发给 Agent" description="确认后才会发送；只发送下面这些内容，不读取页面">
+      <DrawerContent title={tr('ui.send_to_agent')} description="确认后才会发送；只发送下面这些内容，不读取页面">
         {item && (
           <div className="px-2 pb-2" data-testid="send-preview">
             <div className="rounded-[12px] border border-line bg-surface p-3 text-[14px]">
@@ -279,12 +280,12 @@ export function SendPreview({ item, onClose, onSend }: { item: InboxDraft | null
               {item.title && <p className="m-0 font-medium text-fg">{item.title}</p>}
               {item.url && <p className="m-0 break-all text-[13px] text-muted">{item.url}</p>}
               {item.text && item.text !== item.url && <p className="m-0 mt-1 line-clamp-6 whitespace-pre-wrap">{item.text}</p>}
-              {item.image && <img src={item.image} alt="分享的图片" className="mt-2 max-h-40 rounded-md" />}
+              {item.image && <img src={item.image} alt={tr('ui.shared_image')} className="mt-2 max-h-40 rounded-md" />}
             </div>
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="补一句说明（可选）" aria-label="补一句说明" className="!mt-2 !min-h-10 w-full !text-[14px]" />
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={tr('ui.add_a_note_optional')} aria-label={tr('ui.add_a_note')} className="!mt-2 !min-h-10 w-full !text-[14px]" />
             <div className="mt-3 flex gap-2">
-              <button type="button" className="primary flex-1" data-testid="preview-send" onClick={() => onSend({ ...item, note: note.trim() || undefined }, true)}>发送到当前会话</button>
-              <button type="button" className="flex-1" data-testid="preview-save" onClick={() => onSend({ ...item, note: note.trim() || undefined }, false)}>只存进素材箱</button>
+              <button type="button" className="primary flex-1" data-testid="preview-send" onClick={() => onSend({ ...item, note: note.trim() || undefined }, true)}>{tr('ui.send_to_current_conversation')}</button>
+              <button type="button" className="flex-1" data-testid="preview-save" onClick={() => onSend({ ...item, note: note.trim() || undefined }, false)}>{tr('ui.save_to_asset_box_only')}</button>
             </div>
           </div>
         )}
@@ -301,7 +302,7 @@ function AddPlatformSheet({ open, onOpenChange, prefs, onSaved, onRegisterApp }:
   const has = (id: string) => !!prefs?.platforms.includes(id);
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent title="添加到工作台" description="勾选的平台会出现在侧栏；自定义网站只能打开，不参与热点与发布工具">
+      <DrawerContent title={tr('ui.add_to_workspace')} description="勾选的平台会出现在侧栏；自定义网站只能打开，不参与热点与发布工具">
         <div data-testid="add-platform">
           {CENTERS.map((c) => (
             <DrawerItem key={c.id} label={`${has(c.id) ? '✓ ' : ''}${c.label}`} hint={has(c.id) ? '已在工作台（点按移除）' : c.url.replace('https://', '')} onClick={async () => {
@@ -319,11 +320,11 @@ function AddPlatformSheet({ open, onOpenChange, prefs, onSaved, onRegisterApp }:
             await setPrefs({ customSites: [...(prefs?.customSites ?? []), { id, label: name.trim().slice(0, 8), url: u }] });
             setName(''); setUrl(''); setErr(''); onSaved();
           }}>
-            <strong className="text-[14px]">自定义网站</strong>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="名称" aria-label="自定义网站名称" className="!min-h-10 !text-[14px]" />
-            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" aria-label="自定义网站地址" className="!min-h-10 !text-[14px]" />
+            <strong className="text-[14px]">{tr('ui.custom_site')}</strong>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('ui.name')} aria-label={tr('ui.custom_site_name')} className="!min-h-10 !text-[14px]" />
+            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" aria-label={tr('ui.custom_site_url')} className="!min-h-10 !text-[14px]" />
             {err && <p className="m-0 text-[13px] text-bad" role="alert">{err}</p>}
-            <button type="submit" className="!min-h-10">添加</button>
+            <button type="submit" className="!min-h-10">{tr('ui.add')}</button>
           </form>
         </div>
       </DrawerContent>

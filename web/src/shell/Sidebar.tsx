@@ -9,6 +9,7 @@ import { cn } from '../components/ui/utils';
 import { Drawer, DrawerContent, DrawerItem } from '../components/ui/drawer';
 import { CENTERS } from '../data/platforms';
 import { overlayManager } from '../browser/browserHost';
+import { tr } from '../i18n';
 
 export interface SideItem { id: string; label: string; custom?: boolean }
 export interface SidebarProps {
@@ -70,7 +71,7 @@ export function Sidebar(p: SidebarProps) {
             <PlatformGlyph id={id} label={it.label} size={wide ? 28 : 26} />
             <span className={cn('truncate', wide ? 'min-w-0 flex-1 text-left' : 'max-w-[52px] leading-tight')}>{it.label}</span>
             {!sorting && !off && b?.count ? <span key={`c${b.count}`} data-testid={`badge-${id}`} className={cn('anim-pop inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-ink px-1 text-[12px] font-medium text-ink-fg', !wide && 'absolute right-1 top-1')}>{b.count}</span>
-              : !sorting && !off && b?.dot ? <span data-testid={`dot-${id}`} aria-label="有新热点或素材" className={cn('anim-pop h-1.5 w-1.5 rounded-full bg-accent', !wide && 'absolute right-2 top-2')} /> : null}
+              : !sorting && !off && b?.dot ? <span data-testid={`dot-${id}`} aria-label={tr('ui.new_trends_or_assets')} className={cn('anim-pop h-1.5 w-1.5 rounded-full bg-accent', !wide && 'absolute right-2 top-2')} /> : null}
           </button>
           {sorting && (
             <span className="flex shrink-0 flex-row">
@@ -95,24 +96,24 @@ export function Sidebar(p: SidebarProps) {
   const it = menuFor ? byId(menuFor) : null;
   const known = it && CENTERS.some((c) => c.id === it.id);
   return (
-    <nav aria-label="平台侧栏" data-testid="sidebar" data-variant={variant} className={cn('app-side flex h-full shrink-0 flex-col bg-side', variant === 'rail' ? 'w-[72px] items-center px-2' : variant === 'wide' ? 'w-[200px] px-2' : 'w-full px-2')}>
+    <nav aria-label={tr('ui.platform_sidebar')} data-testid="sidebar" data-variant={variant} className={cn('app-side flex h-full shrink-0 flex-col bg-side', variant === 'rail' ? 'w-[72px] items-center px-2' : variant === 'wide' ? 'w-[200px] px-2' : 'w-full px-2')}>
       <div className={cn('flex min-h-14 shrink-0 items-center gap-2', variant === 'rail' ? 'justify-center' : 'px-1')}>
         <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-ink text-ink-fg"><Icon name="bot" size={16} /></span>
-        {wide && <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-fg" data-testid="brand">超级工作台</span>}
+        {wide && <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-fg" data-testid="brand">{tr('ui.super_workbench')}</span>}
         {p.onToggleWide && p.variant !== 'drawer' && <button type="button" aria-label={wide ? '收起侧栏' : '展开侧栏'} className="!min-h-9 !min-w-9 !border-0 !bg-transparent !p-0" onClick={p.onToggleWide}><Icon name={wide ? 'collapse' : 'sidebar'} size={16} /></button>}
       </div>
       <div className={cn('flex items-center', wide ? 'justify-between px-2' : 'justify-center')}>
-        {wide && <span className="text-[12px] text-muted">平台</span>}
-        <button type="button" aria-label="角标说明" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0 !text-[12px] !text-muted" onClick={() => setHelp(true)}>?</button>
+        {wide && <span className="text-[12px] text-muted">{tr('ui.platforms')}</span>}
+        <button type="button" aria-label={tr('ui.about_badges')} className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0 !text-[12px] !text-muted" onClick={() => setHelp(true)}>?</button>
       </div>
-      <ul className={cn('m-0 flex min-h-0 flex-1 list-none flex-col gap-1 overflow-y-auto p-0', !wide && 'items-center')} aria-label="已登记平台" data-testid="platform-list">
+      <ul className={cn('m-0 flex min-h-0 flex-1 list-none flex-col gap-1 overflow-y-auto p-0', !wide && 'items-center')} aria-label={tr('ui.platforms_registered')} data-testid="platform-list">
         {order.map(row)}
-        {!order.length && wide && <li className="px-2 py-3 text-[13px] text-muted">还没有平台。点下面的“添加平台”。</li>}
+        {!order.length && wide && <li className="px-2 py-3 text-[13px] text-muted">{tr('ui.no_platforms_yet_tap_add')}</li>}
       </ul>
-      {sorting && <button type="button" className="primary !my-2 !min-h-10 w-full" data-testid="sort-done" onClick={() => { setSorting(false); p.onReorder(order); }}>完成</button>}
+      {sorting && <button type="button" className="primary !my-2 !min-h-10 w-full" data-testid="sort-done" onClick={() => { setSorting(false); p.onReorder(order); }}>{tr('ui.done_2')}</button>}
       <div className={cn('flex shrink-0 flex-col gap-1 border-t border-line pt-2 pb-[calc(8px+var(--sa-bottom))]', !wide && 'items-center')}>
-        <button type="button" data-testid="side-add" aria-label="添加平台" className={cn('!flex !min-h-11 !border-0 !bg-transparent !font-normal !text-side-fg', wide ? 'w-full !justify-start gap-3 !px-2 !text-[15px]' : 'h-12 w-14 !flex-col !justify-center !p-0 !text-[11px]')} onClick={p.onAdd}>
-          <span className="grid h-7 w-7 place-items-center rounded-[8px] border border-dashed border-line-strong"><Icon name="plus" size={16} /></span><span className={cn(wide && 'flex-1 text-left')}>添加平台</span>
+        <button type="button" data-testid="side-add" aria-label={tr('ui.add_platform')} className={cn('!flex !min-h-11 !border-0 !bg-transparent !font-normal !text-side-fg', wide ? 'w-full !justify-start gap-3 !px-2 !text-[15px]' : 'h-12 w-14 !flex-col !justify-center !p-0 !text-[11px]')} onClick={p.onAdd}>
+          <span className="grid h-7 w-7 place-items-center rounded-[8px] border border-dashed border-line-strong"><Icon name="plus" size={16} /></span><span className={cn(wide && 'flex-1 text-left')}>{tr('ui.add_platform')}</span>
         </button>
         {fixed('agent', 'Agent', 'bot')}
         {fixed('me', '我的', 'user')}
@@ -127,11 +128,11 @@ export function Sidebar(p: SidebarProps) {
         </DrawerContent>
       </Drawer>
       <Drawer open={help} onOpenChange={setHelp}>
-        <DrawerContent title="角标是什么意思" description="角标只显示超级工作台自己知道的状态">
+        <DrawerContent title={tr('ui.what_do_badges_mean')} description="角标只显示超级工作台自己知道的状态">
           <div className="px-2 pb-2 text-[14px] leading-relaxed text-fg-2" data-testid="badge-help">
-            <p>数字：该平台“已通过、待发布”的草稿数。</p>
-            <p>靛蓝小圆点：该平台对应的合法热点来源今天有新条目，或有来自该平台、还没处理的“发给 Agent”素材。</p>
-            <p>角标不代表平台里的未读消息——超级工作台不读取平台页面内容。每个平台可在长按菜单里关掉角标。</p>
+            <p>{tr('ui.number_drafts_approved_waiting_to')}</p>
+            <p>{tr('ui.indigo_dot_that_platforms_lawful')}</p>
+            <p>{tr('ui.badges_dont_mean_unread_platform')}</p>
           </div>
         </DrawerContent>
       </Drawer>

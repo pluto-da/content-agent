@@ -32,26 +32,26 @@ export function Topics({ go }: { go: (to: string) => void }) {
   return (
     <div className="page page-narrow flex flex-col gap-5">
       <section className="flex flex-col gap-2">
-        <h2 className="section-t !m-0 !mx-1">{t('手动输入一个想法')}</h2>
+        <h2 className="section-t !m-0 !mx-1">{t('ui.type_an_idea_by_hand')}</h2>
         <Composer key={pick ?? 'none'} go={go} initialText={pick ?? undefined} autoFocus={!!pick} />
       </section>
 
       {(allFailed || err) && (
         <Problem
           testId="hot-error"
-          title={allFailed ? `${t('热点源暂时连不上')}（${failed[0]?.reason ?? t('网络超时')}）` : err!.message}
-          advice={allFailed ? t('你可以先在上面手动写一个想法，或换个网络后再读一次。') + (failed.length > 1 ? ` ${reason}` : '') : err!.advice}
-          action={t('再读一次')} onAction={() => void refresh()}
+          title={allFailed ? `${t('ui.trend_sources_cant_be_reached')}（${failed[0]?.reason ?? t('ui.network_timeout')}）` : err!.message}
+          advice={allFailed ? t('ui.write_an_idea_above_by') + (failed.length > 1 ? ` ${reason}` : '') : err!.advice}
+          action={t('ui.reload')} onAction={() => void refresh()}
         />
       )}
 
-      <section aria-label={t('今天的热点')}>
+      <section aria-label={t('ui.todays_trends')}>
         <div className="mb-2 flex items-center gap-2 px-1">
-          <h2 className="section-t !m-0">{t('今天的热点')}</h2>
-          <HelpTip label={t('热点从哪里来')}>{t('来自官方 RSS 和遵守 robots.txt 的公开榜单；App 内直接读取，网页版可能因跨域读不到。被 robots 禁止的来源会如实跳过。')}</HelpTip>
+          <h2 className="section-t !m-0">{t('ui.todays_trends')}</h2>
+          <HelpTip label={t('ui.where_trends_come_from')}>{t('ui.from_official_rss_and_public')}</HelpTip>
           <span className="grow" />
           {hot?.at && <span className="item-meta">{ago(hot.at, lang)}</span>}
-          <button type="button" onClick={() => void refresh()} disabled={busy}>{busy ? <Busy label={t('正在读取…')} /> : <><Icon name="retry" size={16} />{t('刷新热点')}</>}</button>
+          <button type="button" onClick={() => void refresh()} disabled={busy}>{busy ? <Busy label={t('ui.reading')} /> : <><Icon name="retry" size={16} />{t('ui.refresh_trends')}</>}</button>
         </div>
         {hot && hot.items.length > 0 ? (
           <ul className="item-list" data-testid="hot-list">
@@ -59,19 +59,19 @@ export function Topics({ go }: { go: (to: string) => void }) {
               <li key={`${h.source}-${i}`}>
                 <span className="w-6 shrink-0 text-center text-[13px] tabular-nums text-muted">{i + 1}</span>
                 <span className="flex min-w-0 flex-1 flex-col"><span className="item-title">{h.title}</span><span className="item-meta">{h.source}</span></span>
-                <button type="button" className="shrink-0" onClick={() => { setPick(h.title); window.scrollTo?.(0, 0); }} data-testid="use-hot">{t('用它写一篇')}</button>
+                <button type="button" className="shrink-0" onClick={() => { setPick(h.title); window.scrollTo?.(0, 0); }} data-testid="use-hot">{t('ui.write_with_this')}</button>
               </li>
             ))}
           </ul>
         ) : !busy && hot && (
           <div className="card !p-0">
-            <EmptyState icon="hot" title={t('还没有热点')} why={allFailed ? t('热点源暂时读不到。先试试下面的示例想法，或在上面输入自己的。') : t('点“刷新热点”读取今天的热点。')} />
-            <div className="suggest justify-center px-4 pb-6" aria-label={t('示例想法')}>
-              {SAMPLE_IDEAS.map((s) => <button key={s} type="button" onClick={() => setPick(s)}>{t('示例')}：{s}</button>)}
+            <EmptyState icon="hot" title={t('ui.no_trends_yet')} why={allFailed ? t('ui.trend_sources_cant_be_read') : t('ui.tap_refresh_trends_to_load')} />
+            <div className="suggest justify-center px-4 pb-6" aria-label={t('ui.sample_ideas')}>
+              {SAMPLE_IDEAS.map((s) => <button key={s} type="button" onClick={() => setPick(s)}>{t('ui.example')}：{s}</button>)}
             </div>
           </div>
         )}
-        {!hot && !err && <Busy label={t('正在读取…')} />}
+        {!hot && !err && <Busy label={t('ui.reading')} />}
       </section>
     </div>
   );

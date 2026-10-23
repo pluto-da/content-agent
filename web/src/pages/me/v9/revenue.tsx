@@ -27,8 +27,8 @@ export function RevenuePage() {
   const { data: metrics } = useAsync(async () => (await db.all('metrics')) as unknown as MetricRecord[], ['metrics']);
   return (
     <div className="page page-narrow flex flex-col gap-3" data-testid="revenue-page">
-      <Note>{t('收入只来自你在这里录入，或你从平台后台导出的文件。Agent 不会编造收入，也不承诺收入。')}</Note>
-      <SegTabs value={tab} onChange={setTab} label={t('收益')} options={[['summary', '汇总'], ['form', '录入'], ['import', '导入 CSV']]} />
+      <Note>{t('ui.income_comes_only_from_what')}</Note>
+      <SegTabs value={tab} onChange={setTab} label={t('ui.revenue')} options={[['summary', '汇总'], ['form', '录入'], ['import', '导入 CSV']]} />
       {tab === 'summary' && <Summary rev={rev ?? []} metrics={metrics ?? []} />}
       {tab === 'form' && <RevenueForm existing={rev ?? []} onDone={() => { reload(); setTab('summary'); }} />}
       {tab === 'import' && <RevenueImport existing={rev ?? []} onDone={() => { reload(); setTab('summary'); }} />}
@@ -38,7 +38,7 @@ export function RevenuePage() {
 
 function Summary({ rev, metrics }: { rev: RevenueRecord[]; metrics: MetricRecord[] }) {
   const { t } = useT();
-  if (!rev.length) return <div className="card !p-0"><EmptyState icon="coin" title={t('还没有收入数据')} why={t('可以手动录入一笔，或导入平台后台导出的收入文件。')} /></div>;
+  if (!rev.length) return <div className="card !p-0"><EmptyState icon="coin" title={t('ui.no_revenue_data_yet')} why={t('ui.add_an_entry_by_hand')} /></div>;
   const attr = computeAttribution(rev);
   const s = summarize(rev, attr);
   const f = funnel(metrics, rev);
@@ -46,17 +46,17 @@ function Summary({ rev, metrics }: { rev: RevenueRecord[]; metrics: MetricRecord
   const days = [...byDay].sort(([a], [b]) => a.localeCompare(b));
   return (
     <>
-      <Section title={`${t('合计')} ¥${s.total.toFixed(2)} · ${s.count} ${t('条')}`} testId="revenue-total">
+      <Section title={`${t('ui.total_2')} ¥${s.total.toFixed(2)} · ${s.count} ${t('ui.items_2')}`} testId="revenue-total">
         <div className="flex flex-wrap gap-4 text-[14px]">{(Object.keys(METHOD_LABEL) as (keyof typeof METHOD_LABEL)[]).map((m) => <span key={m} data-testid={`attr-${m}`}>{t(METHOD_LABEL[m])}：¥{(s.byMethod[m] ?? 0).toFixed(2)}</span>)}</div>
-        <Note>{t('“分摊估计”是按规则把一笔收入分给多条内容的估算，不是平台给出的数字。')}</Note>
+        <Note>{t('ui.allocated_estimate_splits_one_income')}</Note>
       </Section>
-      <Section title={t('漏斗（只用你录入或导入的数据）')}>
+      <Section title={t('ui.funnel_only_data_you_entered')}>
         <div className="flex flex-wrap gap-4 text-[14px]">{f.map((x) => <span key={x.layer}>{t(x.layer)}：{x.layer === '收入' ? `¥${x.value.toFixed(2)}` : x.value}</span>)}</div>
       </Section>
-      {days.length > 1 && <Section title={t('收入趋势')}><Sparkline values={days.map(([, v]) => v)} w={300} h={48} label={t('收入趋势')} /><Note>{ct('growth.not_causal')}</Note></Section>}
-      <GroupList title={t('明细')}>
+      {days.length > 1 && <Section title={t('ui.income_trend')}><Sparkline values={days.map(([, v]) => v)} w={300} h={48} label={t('ui.income_trend')} /><Note>{ct('growth.not_causal')}</Note></Section>}
+      <GroupList title={t('ui.details')}>
         {rev.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 100).map((r) => (
-          <li key={r.id}><div className="list-row static"><span className="row-text"><span className="row-label">¥{r.amount.toFixed(2)} · {r.platform} · {t(TYPES.find((x) => x[0] === r.type)?.[1] ?? '其他')}</span><span className="row-hint">{r.date} · {r.basis === 'settled' ? t('已结算') : t('预估')} · {r.source.kind === 'user_entered' ? t('你录入的') : `${t('导入')} ${r.source.fileName} ${t('第')} ${r.source.row} ${t('行')}`}</span></span></div></li>
+          <li key={r.id}><div className="list-row static"><span className="row-text"><span className="row-label">¥{r.amount.toFixed(2)} · {r.platform} · {t(TYPES.find((x) => x[0] === r.type)?.[1] ?? '其他')}</span><span className="row-hint">{r.date} · {r.basis === 'settled' ? t('ui.settled') : t('ui.estimate')} · {r.source.kind === 'user_entered' ? t('ui.entered_by_you') : `${t('ui.import')} ${r.source.fileName} ${t('ui.x')} ${r.source.row} ${t('ui.rows')}`}</span></span></div></li>
         ))}
       </GroupList>
     </>
@@ -78,12 +78,12 @@ function RevenueForm({ existing, onDone }: { existing: RevenueRecord[]; onDone: 
   };
   return (
     <Section testId="revenue-form">
-      <div className="form-row"><label className="field"><span>{t('日期（北京时间）')}</span><input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></label><label className="field"><span>{t('金额（元）')}</span><input inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} data-testid="rev-amount" /></label></div>
-      <div className="form-row"><label className="field"><span>{t('平台')}</span><input value={f.platform} onChange={(e) => setF({ ...f, platform: e.target.value })} /></label><label className="field"><span>{t('类型')}</span><select value={f.type} onChange={(e) => setF({ ...f, type: e.target.value as RevenueType })}>{TYPES.map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}</select></label></div>
-      <div className="form-row"><label className="field"><span>{t('口径')}</span><select value={f.basis} onChange={(e) => setF({ ...f, basis: e.target.value as 'settled' | 'estimated' })}><option value="settled">{t('已结算')}</option><option value="estimated">{t('预估')}</option></select></label><label className="field"><span>{t('对应内容（草稿编号，可不填）')}</span><input value={f.contentId} onChange={(e) => setF({ ...f, contentId: e.target.value })} /></label></div>
-      <label className="field !m-0"><span>{t('备注')}</span><input value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></label>
-      {err && <Problem title={err} advice={t('改好后再保存')} />}
-      <button type="button" className="primary" onClick={() => void submit()} data-testid="rev-save">{t('保存')}</button>
+      <div className="form-row"><label className="field"><span>{t('ui.date_beijing_time')}</span><input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></label><label className="field"><span>{t('ui.amount')}</span><input inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} data-testid="rev-amount" /></label></div>
+      <div className="form-row"><label className="field"><span>{t('ui.platforms')}</span><input value={f.platform} onChange={(e) => setF({ ...f, platform: e.target.value })} /></label><label className="field"><span>{t('ui.type')}</span><select value={f.type} onChange={(e) => setF({ ...f, type: e.target.value as RevenueType })}>{TYPES.map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}</select></label></div>
+      <div className="form-row"><label className="field"><span>{t('ui.definition')}</span><select value={f.basis} onChange={(e) => setF({ ...f, basis: e.target.value as 'settled' | 'estimated' })}><option value="settled">{t('ui.settled')}</option><option value="estimated">{t('ui.estimate')}</option></select></label><label className="field"><span>{t('ui.linked_content_draft_number_optional')}</span><input value={f.contentId} onChange={(e) => setF({ ...f, contentId: e.target.value })} /></label></div>
+      <label className="field !m-0"><span>{t('ui.note')}</span><input value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></label>
+      {err && <Problem title={err} advice={t('ui.fix_it_then_save')} />}
+      <button type="button" className="primary" onClick={() => void submit()} data-testid="rev-save">{t('ui.save')}</button>
     </Section>
   );
 }
@@ -99,7 +99,7 @@ function RevenueImport({ existing, onDone }: { existing: RevenueRecord[]; onDone
   const guess = (hs: string[]): ColumnMap => ({ date: hs.find((h) => /日期|date|时间/i.test(h)) ?? '', amount: hs.find((h) => /金额|收入|amount|收益/i.test(h)) ?? '', platform: hs.find((h) => /平台|platform/i.test(h)) ?? '', contentId: hs.find((h) => /内容|作品|content|id/i.test(h)) ?? '' });
   const preview = async () => {
     setErr(null);
-    if (!file || !map.date || !map.amount) { setErr(t('先选择日期列和金额列')); return; }
+    if (!file || !map.date || !map.amount) { setErr(t('ui.choose_the_date_and_amount')); return; }
     const imported = (await db.getKV<string[]>('revenue.importedHashes')) ?? [];
     setPv(previewImport(file.name, file.text, { ...map, fixedPlatform: map.platform ? undefined : 'unknown' }, imported));
   };
@@ -110,24 +110,24 @@ function RevenueImport({ existing, onDone }: { existing: RevenueRecord[]; onDone
     const imported = (await db.getKV<string[]>('revenue.importedHashes')) ?? [];
     await db.setKV('revenue.importedHashes', [...new Set([...imported, pv.fileHash])]);
     await audit({ kind: 'import', actor: 'user', summary: `导入收入文件 ${file.name}：${n} 条（文件指纹 ${sha256(file.text).slice(0, 8)}）`, outcome: 'ok' });
-    show(`${t('已导入')} ${n} ${t('条')}`); setPv(null); setFile(null); onDone();
+    show(`${t('ui.imported')} ${n} ${t('ui.items_2')}`); setPv(null); setFile(null); onDone();
   };
   return (
     <Section testId="revenue-import">
       {toast}
-      <label className="field !m-0"><span>{t('选择平台后台导出的 CSV')}</span><input type="file" accept=".csv,text/csv" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const text = await f.text(); setFile({ name: f.name, text }); setPv(null); const hs = (text.replace(/^\uFEFF/, '').split(/\r?\n/)[0] ?? '').split(',').map((h) => h.replace(/^"|"$/g, '').trim()); setMap(guess(hs)); }} data-testid="rev-file" /></label>
+      <label className="field !m-0"><span>{t('ui.choose_the_csv_exported_from')}</span><input type="file" accept=".csv,text/csv" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const text = await f.text(); setFile({ name: f.name, text }); setPv(null); const hs = (text.replace(/^\uFEFF/, '').split(/\r?\n/)[0] ?? '').split(',').map((h) => h.replace(/^"|"$/g, '').trim()); setMap(guess(hs)); }} data-testid="rev-file" /></label>
       {file && <div className="form-row">{(['date', 'amount', 'platform', 'contentId'] as const).map((k) => (
         <label key={k} className="field"><span>{t({ date: '日期列', amount: '金额列', platform: '平台列（可不选）', contentId: '内容列（可不选）' }[k])}</span>
           <select value={map[k] ?? ''} onChange={(e) => setMap({ ...map, [k]: e.target.value })}><option value="">—</option>{headers.map((h) => <option key={h} value={h}>{h}</option>)}</select></label>
       ))}</div>}
-      {file && <button type="button" onClick={() => void preview()} data-testid="rev-preview">{t('预览')}</button>}
+      {file && <button type="button" onClick={() => void preview()} data-testid="rev-preview">{t('ui.preview_2')}</button>}
       {err && <Problem title={err} />}
       {pv && (
         <div className="flex flex-col gap-2" data-testid="rev-preview-result">
-          {pv.duplicateFile && <Problem title={t('这个文件已经导入过')} advice={t('再导入只会跳过已有的行，不会重复计入')} />}
-          <Note>{t('可导入')} {pv.rows.length} {t('条')}；{t('跳过')} {pv.errors.length} {t('条')}（{pv.errors.slice(0, 3).map((e) => `${t('第')} ${e.row} ${t('行')}：${e.message}`).join('；')}）</Note>
+          {pv.duplicateFile && <Problem title={t('ui.this_file_was_already_imported')} advice={t('ui.importing_again_skips_existing_rows')} />}
+          <Note>{t('ui.importable')} {pv.rows.length} {t('ui.items_2')}；{t('ui.skip')} {pv.errors.length} {t('ui.items_2')}（{pv.errors.slice(0, 3).map((e) => `${t('ui.x')} ${e.row} ${t('ui.rows')}：${e.message}`).join('；')}）</Note>
           <ul className="m-0 list-none p-0 text-[14px]">{pv.rows.slice(0, 5).map((r, i) => <li key={i}>{r.date} · ¥{r.amount} · {r.platform}</li>)}</ul>
-          <button type="button" className="primary" disabled={!pv.rows.length} onClick={() => void confirm()} data-testid="rev-confirm">{t('确认导入')}</button>
+          <button type="button" className="primary" disabled={!pv.rows.length} onClick={() => void confirm()} data-testid="rev-confirm">{t('ui.confirm_import')}</button>
         </div>
       )}
     </Section>
@@ -151,9 +151,9 @@ export function GrowthPage() {
     const id = rowId(p); if (id === undefined) return;
     try {
       const v = await getVfs(); const next = { ...p };
-      if (act === 'approve') { const r = await applyProposal(v, next); show(`${t('已采纳')} → v${r.version}`); }
-      else if (act === 'rollback') { const r = await rollbackProposal(v, next); show(`${t('已回滚')} → v${r.version}`); }
-      else { next.status = 'rejected'; next.decidedAt = new Date().toISOString(); show(t('已拒绝')); }
+      if (act === 'approve') { const r = await applyProposal(v, next); show(`${t('ui.adopted')} → v${r.version}`); }
+      else if (act === 'rollback') { const r = await rollbackProposal(v, next); show(`${t('ui.rolled_back')} → v${r.version}`); }
+      else { next.status = 'rejected'; next.decidedAt = new Date().toISOString(); show(t('ui.denied')); }
       await db.update('proposals', id, next as unknown as Record<string, unknown>);
       await audit({ kind: 'system_file_change', actor: 'user', summary: `${act === 'approve' ? '采纳' : act === 'rollback' ? '回滚' : '拒绝'}修订建议 ${p.id}（${p.target}）`, target: p.target, outcome: act === 'reject' ? 'denied' : 'ok' });
       reload();
@@ -166,36 +166,36 @@ export function GrowthPage() {
     <div className="page page-narrow flex flex-col gap-3" data-testid="growth-page">
       {toast}
       <p className="v9-disclaimer m-0" role="note" data-testid="growth-disclaimer">{ct('growth.disclaimer')}</p>
-      <SegTabs value={tab} onChange={setTab} label={t('成长记录')} options={[['proposals', '修订建议'], ['board', '打法看板'], ['trend', '收益趋势'], ['learned', '我学到了什么']]} />
-      {err && <Problem title={err} advice={t('目标文件在提议之后被改过时，需要重新生成建议')} />}
+      <SegTabs value={tab} onChange={setTab} label={t('ui.growth_log')} options={[['proposals', '修订建议'], ['board', '打法看板'], ['trend', '收益趋势'], ['learned', '我学到了什么']]} />
+      {err && <Problem title={err} advice={t('ui.the_target_file_changed_after')} />}
       {tab === 'proposals' && <>
-        {!(props ?? []).length && <div className="card !p-0"><EmptyState icon="history" title={t('还没有修订建议')} why={t('复盘或被你纠正后，Agent 会把想改的设定写成建议，等你看改动后确认。')} /></div>}
+        {!(props ?? []).length && <div className="card !p-0"><EmptyState icon="history" title={t('ui.no_proposals_yet')} why={t('ui.after_reviews_or_your_corrections')} /></div>}
         {(props ?? []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((p) => (
           <Section key={p.id} title={`${p.target} · ${t({ pending: '待确认', approved: '已采纳', rejected: '已拒绝', rolled_back: '已回滚' }[p.status])}`} testId={`proposal-${p.status}`}>
-            <Note>{p.reason} · {t('依据')}：{p.basedOn.join('、') || t('你的要求')} · {p.createdAt.slice(0, 10)}</Note>
+            <Note>{p.reason} · {t('ui.basis')}：{p.basedOn.join('、') || t('ui.your_request')} · {p.createdAt.slice(0, 10)}</Note>
             <DiffInline a={p.before} b={p.after} />
             <div className="flex flex-wrap gap-2">
-              {p.status === 'pending' && <><button type="button" className="primary" onClick={() => void decide(p, 'approve')} data-testid="proposal-approve">{t('采纳')}</button><button type="button" onClick={() => void decide(p, 'reject')}>{t('拒绝')}</button></>}
-              {p.status === 'approved' && <button type="button" onClick={() => void decide(p, 'rollback')} data-testid="proposal-rollback">{t('一键回滚')}</button>}
+              {p.status === 'pending' && <><button type="button" className="primary" onClick={() => void decide(p, 'approve')} data-testid="proposal-approve">{t('ui.approve_2')}</button><button type="button" onClick={() => void decide(p, 'reject')}>{t('ui.reject_2')}</button></>}
+              {p.status === 'approved' && <button type="button" onClick={() => void decide(p, 'rollback')} data-testid="proposal-rollback">{t('ui.roll_back_2')}</button>}
             </div>
           </Section>
         ))}
-        <GroupList title={t('最近变更')}>{recent.length ? recent.map((l) => <li key={l}><div className="list-row static"><span className="row-text"><span className="row-hint !text-[14px]">{l.slice(2)}</span></span></div></li>) : <li className="p-4 text-[14px] text-muted">{t('还没有变更')}</li>}</GroupList>
+        <GroupList title={t('ui.recent_changes')}>{recent.length ? recent.map((l) => <li key={l}><div className="list-row static"><span className="row-text"><span className="row-hint !text-[14px]">{l.slice(2)}</span></span></div></li>) : <li className="p-4 text-[14px] text-muted">{t('ui.no_changes_yet')}</li>}</GroupList>
       </>}
       {tab === 'board' && <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }} data-testid="lesson-board">
         {(['candidate', 'testing', 'effective', 'degraded'] as const).map((s) => (
           <Section key={s} title={`${t({ candidate: '候选', testing: '测试中', effective: '有效', degraded: '降级' }[s])}（${byStatus(s).length}）`}>
-            {byStatus(s).map((l) => <div key={l.id} className="text-[14px]"><strong>{l.pattern}</strong><Note>n={l.sampleSize} · {t('置信度')} {l.confidence}{l.control ? '' : ` · ${t('无对照')}`}{l.needsReview ? ` · ${t('待复核')}` : ''}</Note></div>)}
-            {!byStatus(s).length && <Note>{t('暂无')}</Note>}
+            {byStatus(s).map((l) => <div key={l.id} className="text-[14px]"><strong>{l.pattern}</strong><Note>n={l.sampleSize} · {t('ui.confidence')} {l.confidence}{l.control ? '' : ` · ${t('ui.no_control')}`}{l.needsReview ? ` · ${t('ui.to_review_2')}` : ''}</Note></div>)}
+            {!byStatus(s).length && <Note>{t('ui.none')}</Note>}
           </Section>
         ))}
       </div>}
-      {tab === 'trend' && <Section title={t('收益趋势')} testId="growth-trend">
-        {days.size > 1 ? <Sparkline values={[...days].sort(([a], [b]) => a.localeCompare(b)).map(([, v]) => v)} w={300} h={56} label={t('收益趋势')} /> : <Note>{t('至少两天的收入记录才能画趋势')}</Note>}
+      {tab === 'trend' && <Section title={t('ui.revenue_trend')} testId="growth-trend">
+        {days.size > 1 ? <Sparkline values={[...days].sort(([a], [b]) => a.localeCompare(b)).map(([, v]) => v)} w={300} h={56} label={t('ui.revenue_trend')} /> : <Note>{t('ui.at_least_two_days_of')}</Note>}
         <Note>{ct('growth.not_causal')}</Note>
       </Section>}
-      {tab === 'learned' && <Section title={t('我学到了什么')} testId="growth-learned">
-        {byStatus('effective').length ? byStatus('effective').map((l) => <div key={l.id}><strong className="text-[14px]">{l.pattern}</strong><Note>{l.conclusion}{l.sampleSize < 10 ? ` ${t('相关≠因果')}` : ''} · {t('条件')}：{l.conditions}</Note></div>) : <Note>{t('还没有经过验证（样本≥10 且有对照）的经验。')}</Note>}
+      {tab === 'learned' && <Section title={t('ui.what_i_learned')} testId="growth-learned">
+        {byStatus('effective').length ? byStatus('effective').map((l) => <div key={l.id}><strong className="text-[14px]">{l.pattern}</strong><Note>{l.conclusion}{l.sampleSize < 10 ? ` ${t('ui.correlation_causation')}` : ''} · {t('ui.condition')}：{l.conditions}</Note></div>) : <Note>{t('ui.no_verified_lessons_yet_sample')}</Note>}
       </Section>}
     </div>
   );

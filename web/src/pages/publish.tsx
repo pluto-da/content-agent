@@ -40,7 +40,7 @@ export function Publish({ go }: { go: (to: string) => void }) {
     const ok = await copyText(draftText(d));
     const r = await launchLocalApp(entryFor(c.id));
     if (!r.ok) await openExternal(c.url);
-    setCopied((m) => ({ ...m, [d.id]: { text: ok ? `${t('文案已复制')}。${r.ok ? t('已打开') + c.app : t('已打开') + c.label + t('网页版')}，${t('请粘贴后由你本人点击发布。')}` : t('复制失败，请长按正文手动复制') } }));
+    setCopied((m) => ({ ...m, [d.id]: { text: ok ? `${t('ui.text_copied')}。${r.ok ? t('ui.opened') + c.app : t('ui.opened') + c.label + t('ui.web_version')}，${t('ui.paste_it_and_press_publish')}` : t('ui.copy_failed_long_press_the') } }));
   };
 
   /** 0.7.0：在软件内打开该平台网页版发布页（先复制文案）。打不开时显示原因 + “打开官方 App”。 */
@@ -52,16 +52,16 @@ export function Publish({ go }: { go: (to: string) => void }) {
   };
   const fallbackApp = async (d: Draft, centerId: string) => {
     const r = await launchLocalApp(entryFor(centerId));
-    setCopied((m) => ({ ...m, [d.id]: { text: r.ok ? `${t('已打开')}${center(centerId)?.app ?? ''}，${t('请粘贴后由你本人点击发布。')}` : r.message } }));
+    setCopied((m) => ({ ...m, [d.id]: { text: r.ok ? `${t('ui.opened')}${center(centerId)?.app ?? ''}，${t('ui.paste_it_and_press_publish')}` : r.message } }));
   };
 
   return (
     <div className="page page-narrow flex flex-col gap-5">
       {toast}
-      <p className="m-0 flex items-center gap-2 text-[15px] text-fg-2">{t('每篇内容都由你本人在平台里点击发布。')}<HelpTip label={t('为什么不自动发布')}>{t('为了账号安全与平台规则，本应用只复制文案、打开官方网页版或官方 App，不会读取网页内容，也不会替你点击发布、点赞、评论或私信。')}</HelpTip></p>
-      <ErrorNext error={err} action={t('重新加载')} onAction={load} />
+      <p className="m-0 flex items-center gap-2 text-[15px] text-fg-2">{t('ui.you_publish_every_post_yourself')}<HelpTip label={t('ui.why_no_auto_publish')}>{t('ui.for_account_safety_and_platform')}</HelpTip></p>
+      <ErrorNext error={err} action={t('ui.reload_2')} onAction={load} />
       {drafts && !drafts.length && (
-        <div className="card !p-0"><EmptyState icon="send" title={t('没有待发布的内容')} why={t('在“写内容”里把草稿点“通过”，它就会出现在这里。')} action={t('去审核')} onAction={() => go('write/pending')} /></div>
+        <div className="card !p-0"><EmptyState icon="send" title={t('ui.nothing_waiting_to_publish')} why={t('ui.approve_a_draft_in_write')} action={t('ui.go_review')} onAction={() => go('write/pending')} /></div>
       )}
       {drafts?.map((d) => {
         const c = centerOfWrite(d.platform);
@@ -72,26 +72,26 @@ export function Publish({ go }: { go: (to: string) => void }) {
             <div className="body !max-h-24">{d.body}</div>
             <div className="mt-4 flex flex-wrap gap-2">
               <button type="button" className="primary" onClick={() => void builtin(d)} data-testid="builtin-publish">{t(builtinPublishLabel(c, mode))}</button>
-              <button type="button" onClick={() => void handoff(d)} data-testid="handoff">{t('复制文案并打开')}{c.label}</button>
-              <button type="button" onClick={() => go(`write/${d.id}`)}>{t('再改改')}</button>
+              <button type="button" onClick={() => void handoff(d)} data-testid="handoff">{t('ui.copy_text_and_open')}{c.label}</button>
+              <button type="button" onClick={() => go(`write/${d.id}`)}>{t('ui.revise')}</button>
             </div>
             {copied[d.id] && (
               <div className="mt-3 flex flex-wrap items-center gap-3 rounded-[12px] bg-surface-2 px-4 py-3" role="status">
                 <span className="min-w-0 grow basis-[16rem] text-[14px] text-fg-2" data-testid="publish-status">{copied[d.id]!.text}</span>
-                {copied[d.id]!.fallback && <button type="button" onClick={() => void fallbackApp(d, copied[d.id]!.fallback!)} data-testid="fallback-app">{t('打开官方 App')}</button>}
-                <button type="button" className="primary" onClick={() => void markPublished(d.id).then(() => { show(t('已记为已发布，可在“看效果”录入数据')); load(); }).catch((e) => setErr(e))}>{t('我已发布')}</button>
+                {copied[d.id]!.fallback && <button type="button" onClick={() => void fallbackApp(d, copied[d.id]!.fallback!)} data-testid="fallback-app">{t('ui.open_official_app')}</button>}
+                <button type="button" className="primary" onClick={() => void markPublished(d.id).then(() => { show(t('ui.marked_as_published_enter_data')); load(); }).catch((e) => setErr(e))}>{t('ui.i_published')}</button>
               </div>
             )}
           </article>
         );
       })}
 
-      <section aria-label={t('已登记的软件')}>
+      <section aria-label={t('ui.registered_apps')}>
         <div className="mb-2 flex items-center justify-between px-1">
-          <h2 className="section-t !m-0">{t('已登记的软件')}</h2>
-          <button type="button" className="ghost" onClick={() => go('results')}>{t('看效果')} ›</button>
+          <h2 className="section-t !m-0">{t('ui.registered_apps')}</h2>
+          <button type="button" className="ghost" onClick={() => go('results')}>{t('ui.results')} ›</button>
         </div>
-        {apps.error ? <Problem title={apps.error.message} advice={apps.error.advice} action={t('重试')} onAction={apps.reload} />
+        {apps.error ? <Problem title={apps.error.message} advice={apps.error.advice} action={t('ui.retry')} onAction={apps.reload} />
           : registered.length ? (
             <ul className="item-list">
               {registered.map((a) => (
@@ -101,12 +101,12 @@ export function Publish({ go }: { go: (to: string) => void }) {
                   <span className="flex basis-full flex-wrap justify-start gap-2 sm:basis-auto sm:justify-end">
                     {center(a.platform) && <button type="button" onClick={async () => { const r = await openBuiltin(center(a.platform)!, { packageName: a.package_name ?? undefined }); show(r.message); }} data-testid="builtin-open">{t(builtinOpenLabel(center(a.platform)!, mode))}</button>}
                     {center(a.platform) && canSplitScreen(env, a) && <button type="button" onClick={async () => show((await openSplit(a, center(a.platform)!.app)).message)} data-testid="split-open">{t(splitLabel(center(a.platform)!))}</button>}
-                    <button type="button" onClick={async () => show((await launchLocalApp(a)).message)}><Icon name="external" size={16} />{t('打开 App')}</button>
+                    <button type="button" onClick={async () => show((await launchLocalApp(a)).message)}><Icon name="external" size={16} />{t('ui.open_app_3')}</button>
                   </span>
                 </li>
               ))}
             </ul>
-          ) : <div className="card !p-0"><EmptyState icon="phone" title={t('还没有登记软件')} why={t('把手机上的小红书、抖音等官方 App 加进来，发布时一键打开。')} action={t('添加软件')} onAction={() => openAdd()} /></div>}
+          ) : <div className="card !p-0"><EmptyState icon="phone" title={t('ui.no_apps_registered')} why={t('ui.add_official_phone_apps_like')} action={t('ui.add_app')} onAction={() => openAdd()} /></div>}
       </section>
     </div>
   );

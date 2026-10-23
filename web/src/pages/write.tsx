@@ -32,19 +32,19 @@ export function Write({ filter, id, go, lay }: { filter: string; id: string | nu
   const list = (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="seg" role="group" aria-label={t('按状态筛选')}>
+        <div className="seg" role="group" aria-label={t('ui.filter_by_status_2')}>
           {WRITE_FILTERS.map((f) => <button key={f} type="button" aria-pressed={filter === f} onClick={() => go(f === 'all' ? 'write' : `write/${f}`)}>{t(FILTER_LABEL[f]!)} <span className="tabular-nums text-muted">{count(f)}</span></button>)}
         </div>
         <span className="grow" />
-        <button type="button" className="primary" onClick={() => go('write/new')} data-testid="new-draft"><Icon name="plus" size={16} />{t('新写一篇')}</button>
+        <button type="button" className="primary" onClick={() => go('write/new')} data-testid="new-draft"><Icon name="plus" size={16} />{t('ui.write_new')}</button>
       </div>
-      <ErrorNext error={err} action={t('重新加载')} onAction={load} />
+      <ErrorNext error={err} action={t('ui.reload_2')} onAction={load} />
       {drafts && !shown.length && (
         <div className="card !p-0">
-          {filter === 'all' ? <EmptyState icon="create" title={t('还没有内容')} why={t('输入一个想法，助手帮你写第一篇。')} action={t('新写一篇')} onAction={() => go('write/new')} />
-            : filter === 'pending' ? <EmptyState icon="review" title={t('没有待审核的内容')} why={t('新生成的草稿会先放在这里等你看。')} action={t('新写一篇')} onAction={() => go('write/new')} />
-              : filter === 'approved' ? <EmptyState icon="send" title={t('没有待发布的内容')} why={t('审核通过的草稿会出现在这里。')} action={t('去审核')} onAction={() => go('write/pending')} />
-                : <EmptyState icon="check" title={t('还没有已发布的内容')} why={t('在“去发布”里复制并打开 App、你本人发布后，会出现在这里。')} action={t('去发布')} onAction={() => go('publish')} />}
+          {filter === 'all' ? <EmptyState icon="create" title={t('ui.nothing_yet')} why={t('ui.type_an_idea_and_the')} action={t('ui.write_new')} onAction={() => go('write/new')} />
+            : filter === 'pending' ? <EmptyState icon="review" title={t('ui.nothing_waiting_for_review')} why={t('ui.new_drafts_wait_here_for')} action={t('ui.write_new')} onAction={() => go('write/new')} />
+              : filter === 'approved' ? <EmptyState icon="send" title={t('ui.nothing_waiting_to_publish')} why={t('ui.approved_drafts_appear_here')} action={t('ui.go_review')} onAction={() => go('write/pending')} />
+                : <EmptyState icon="check" title={t('ui.nothing_published_yet')} why={t('ui.appears_here_after_you_copy')} action={t('ui.go_publish')} onAction={() => go('publish')} />}
         </div>
       )}
       {shown.length > 0 && (
@@ -53,7 +53,7 @@ export function Write({ filter, id, go, lay }: { filter: string; id: string | nu
             <li key={d.id} aria-current={String(d.id) === id ? 'true' : undefined} className={String(d.id) === id ? 'bg-surface-2' : ''}>
               <button type="button" className="linklike !min-h-11 !p-0" onClick={() => go(`write/${d.id}`)}>
                 <span className="flex min-w-0 flex-1 flex-col text-left">
-                  <span className="item-title ellipsis">{d.title || d.body.slice(0, 30) || t('（无标题）')}</span>
+                  <span className="item-title ellipsis">{d.title || d.body.slice(0, 30) || t('ui.untitled')}</span>
                   <span className="item-meta">{writePlatform(d.platform).short} · <StatusDot tone={tone(d.status)}>{t(STATUS_LABEL[d.status] ?? d.status)}</StatusDot> · {ago(d.updated_at ?? d.created_at, lang)}</span>
                 </span>
               </button>
@@ -72,7 +72,7 @@ export function Write({ filter, id, go, lay }: { filter: string; id: string | nu
   return (
     <div className="page grid gap-6" style={{ gridTemplateColumns: 'minmax(280px, 380px) minmax(0, 1fr)' }}>
       {list}
-      <div className="min-w-0">{editor ?? <div className="card !p-0"><EmptyState icon="edit" title={t('选一篇开始修改')} why={t('左边点一篇草稿，或新写一篇。')} action={t('新写一篇')} onAction={() => go('write/new')} /></div>}</div>
+      <div className="min-w-0">{editor ?? <div className="card !p-0"><EmptyState icon="edit" title={t('ui.pick_a_draft_to_edit')} why={t('ui.pick_a_draft_on_the_2')} action={t('ui.write_new')} onAction={() => go('write/new')} /></div>}</div>
     </div>
   );
 }
@@ -80,8 +80,8 @@ export function Write({ filter, id, go, lay }: { filter: string; id: string | nu
 function NewDraft({ go, onDone }: { go: (to: string) => void; onDone: () => void }) {
   const { t } = useT();
   return (
-    <section className="card flex flex-col gap-3" aria-label={t('新写一篇')}>
-      <h2>{t('新写一篇')}</h2>
+    <section className="card flex flex-col gap-3" aria-label={t('ui.write_new')}>
+      <h2>{t('ui.write_new')}</h2>
       <Composer go={go} autoFocus onDone={(d) => { onDone(); go(`write/${d.id}`); }} />
     </section>
   );
@@ -100,8 +100,8 @@ function Editor({ id, go, onChanged }: { id: number; go: (to: string) => void; o
   const [toast, show] = useToast();
   const apply = (x: Draft) => { setD(x); setTitle(x.title ?? ''); setBody(x.body ?? ''); setPlatform(x.platform); };
   useEffect(() => { get<{ draft: Draft }>(`/api/drafts/${id}`).then((r) => apply(r.draft)).catch((e) => setErr(e instanceof ApiError ? e : new ApiError('error', String(e)))); }, [id]);
-  if (err && !d) return <Problem title={err.message} advice={err.advice} action={t('回到列表')} onAction={() => go('write')} />;
-  if (!d) return <Busy label={t('正在打开…')} />;
+  if (err && !d) return <Problem title={err.message} advice={err.advice} action={t('ui.back_to_list')} onAction={() => go('write')} />;
+  if (!d) return <Busy label={t('ui.opening')} />;
   const dirty = title !== (d.title ?? '') || body !== d.body || platform !== d.platform;
   const warns = limitWarnings(platform, title, body);
   const hits = (d.compliance ?? []).filter((c) => c.level === 'warn');
@@ -114,41 +114,41 @@ function Editor({ id, go, onChanged }: { id: number; go: (to: string) => void; o
   const reload = async () => apply((await get<{ draft: Draft }>(`/api/drafts/${id}`)).draft);
 
   return (
-    <section className="card flex flex-col gap-4" aria-label={t('编辑草稿')}>
+    <section className="card flex flex-col gap-4" aria-label={t('ui.edit_draft')}>
       {toast}
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="ghost !px-1" onClick={() => go('write')} aria-label={t('返回列表')}><Icon name="arrowLeft" size={18} /></button>
+        <button type="button" className="ghost !px-1" onClick={() => go('write')} aria-label={t('ui.back_to_list_2')}><Icon name="arrowLeft" size={18} /></button>
         <StatusDot tone={tone(d.status)}>{t(STATUS_LABEL[d.status] ?? d.status)}</StatusDot>
         <span className="grow" />
-        <select aria-label={t('平台')} className="!w-auto" value={platform} onChange={(e) => setPlatform(e.target.value)}>{WRITE_PLATFORMS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select>
+        <select aria-label={t('ui.platforms')} className="!w-auto" value={platform} onChange={(e) => setPlatform(e.target.value)}>{WRITE_PLATFORMS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select>
       </div>
-      <label className="field !m-0"><span>{t('标题')}</span><input value={title} onChange={(e) => setTitle(e.target.value)} data-testid="edit-title" /></label>
-      <label className="field !m-0"><span>{t('正文')} <span className="font-normal text-muted">· {[...body].length} {t('字')}</span></span><textarea rows={14} value={body} onChange={(e) => setBody(e.target.value)} data-testid="edit-body" /></label>
+      <label className="field !m-0"><span>{t('ui.title')}</span><input value={title} onChange={(e) => setTitle(e.target.value)} data-testid="edit-title" /></label>
+      <label className="field !m-0"><span>{t('ui.body')} <span className="font-normal text-muted">· {[...body].length} {t('ui.chars')}</span></span><textarea rows={14} value={body} onChange={(e) => setBody(e.target.value)} data-testid="edit-body" /></label>
       {warns.length > 0 && <p className="m-0 text-[14px] text-warn" role="status">{warns.join('；')}</p>}
-      {hits.length > 0 && <p className="m-0 text-[14px] text-fg-2"><Icon name="alert" size={14} className="mr-1 inline" />{t('可能违规的词')}：{hits.map((h) => `「${h.match}」${h.rule}`).join('、')}</p>}
-      {d.model && <p className="m-0 text-[13px] text-muted">{t('由')} {d.model} {t('生成')}</p>}
+      {hits.length > 0 && <p className="m-0 text-[14px] text-fg-2"><Icon name="alert" size={14} className="mr-1 inline" />{t('ui.possibly_prohibited_words')}：{hits.map((h) => `「${h.match}」${h.rule}`).join('、')}</p>}
+      {d.model && <p className="m-0 text-[13px] text-muted">{t('ui.by')} {d.model} {t('ui.generate')}</p>}
 
-      <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); if (ask.trim()) void act(t('正在改写…'), async () => { if (dirty) await save(); apply(await revise({ ...d, title, body }, ask, pick)); setAsk(''); }, t('已按要求改写')); }}>
-        <span className="text-[14px] font-medium text-fg">{t('一句话修改')}</span>
+      <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); if (ask.trim()) void act(t('ui.rewriting'), async () => { if (dirty) await save(); apply(await revise({ ...d, title, body }, ask, pick)); setAsk(''); }, t('ui.rewritten_as_requested')); }}>
+        <span className="text-[14px] font-medium text-fg">{t('ui.edit_in_one_sentence')}</span>
         <div className="flex flex-wrap gap-2">
-          <input className="!min-w-0 flex-1" value={ask} onChange={(e) => setAsk(e.target.value)} placeholder={t('例如：改得更口语一点，开头加一个问题')} aria-label={t('一句话修改')} />
-          <button type="submit" disabled={!ask.trim() || !!busy}>{t('按这个改')}</button>
+          <input className="!min-w-0 flex-1" value={ask} onChange={(e) => setAsk(e.target.value)} placeholder={t('ui.e_g_make_it_more')} aria-label={t('ui.edit_in_one_sentence')} />
+          <button type="submit" disabled={!ask.trim() || !!busy}>{t('ui.change_it_like_this')}</button>
         </div>
         <ModelPicker value={pick} onChange={setPick} go={go} />
       </form>
 
-      {err && <Problem title={err.message} advice={err.advice} action={err.code.startsWith('model_') ? t('去检查模型') : undefined} onAction={() => go('me/models')} />}
+      {err && <Problem title={err.message} advice={err.advice} action={err.code.startsWith('model_') ? t('ui.check_models') : undefined} onAction={() => go('me/models')} />}
       {busy && <Busy label={busy} />}
 
       <div className="flex flex-wrap gap-2 border-t border-line pt-4">
-        {d.status === 'pending' && <button type="button" className="primary" disabled={!!busy} data-testid="approve" onClick={() => void act(t('处理中…'), async () => { if (dirty) await save(); await setStatus(id, 'approved'); await reload(); }, t('已通过，去“去发布”里发出去'))}>{t('通过')}</button>}
-        {d.status === 'approved' && <button type="button" className="primary" onClick={() => go('publish')}>{t('去发布')}</button>}
-        {d.status === 'rejected' && <button type="button" className="primary" onClick={() => void act(t('处理中…'), async () => { await setStatus(id, 'pending'); await reload(); }, t('已改回待审核'))}>{t('改回待审核')}</button>}
-        <button type="button" disabled={!dirty || !!busy} onClick={() => void act(t('保存中…'), async () => { await save(); await reload(); }, t('已保存'))}>{t('保存修改')}</button>
-        {d.status === 'approved' && <button type="button" className="ghost" onClick={() => void act(t('处理中…'), async () => { await setStatus(id, 'pending'); await reload(); }, t('已改回待审核'))}>{t('改回待审核')}</button>}
-        {d.status === 'pending' && <button type="button" className="ghost" onClick={() => void act(t('处理中…'), async () => { await setStatus(id, 'rejected'); await reload(); }, t('已退回'))}>{t('不要这篇')}</button>}
+        {d.status === 'pending' && <button type="button" className="primary" disabled={!!busy} data-testid="approve" onClick={() => void act(t('ui.working'), async () => { if (dirty) await save(); await setStatus(id, 'approved'); await reload(); }, t('ui.approved_publish_it_from_go'))}>{t('ui.approve')}</button>}
+        {d.status === 'approved' && <button type="button" className="primary" onClick={() => go('publish')}>{t('ui.go_publish')}</button>}
+        {d.status === 'rejected' && <button type="button" className="primary" onClick={() => void act(t('ui.working'), async () => { await setStatus(id, 'pending'); await reload(); }, t('ui.moved_back_to_pending_review'))}>{t('ui.move_back_to_pending')}</button>}
+        <button type="button" disabled={!dirty || !!busy} onClick={() => void act(t('ui.saving'), async () => { await save(); await reload(); }, t('ui.saved'))}>{t('ui.save_changes')}</button>
+        {d.status === 'approved' && <button type="button" className="ghost" onClick={() => void act(t('ui.working'), async () => { await setStatus(id, 'pending'); await reload(); }, t('ui.moved_back_to_pending_review'))}>{t('ui.move_back_to_pending')}</button>}
+        {d.status === 'pending' && <button type="button" className="ghost" onClick={() => void act(t('ui.working'), async () => { await setStatus(id, 'rejected'); await reload(); }, t('ui.returned'))}>{t('ui.discard_this_draft')}</button>}
         <span className="grow" />
-        <button type="button" className="ghost danger" onClick={() => { if (confirm(t('删除这篇草稿？删除后无法恢复。'))) void del(`/api/drafts/${id}`).then(() => { onChanged(); go('write'); }).catch((e) => setErr(e)); }}>{t('删除')}</button>
+        <button type="button" className="ghost danger" onClick={() => { if (confirm(t('ui.delete_this_draft_this_cant'))) void del(`/api/drafts/${id}`).then(() => { onChanged(); go('write'); }).catch((e) => setErr(e)); }}>{t('ui.delete')}</button>
       </div>
     </section>
   );

@@ -40,37 +40,37 @@ export function ProviderForm({ initial, onConnected, onChecked, compact }: { ini
   };
 
   return (
-    <form className="flex flex-col gap-1" aria-label={`${v.label} ${t('连接设置')}`} onSubmit={(e) => { e.preventDefault(); void test(); }}>
+    <form className="flex flex-col gap-1" aria-label={`${v.label} ${t('ui.connection_settings')}`} onSubmit={(e) => { e.preventDefault(); void test(); }}>
       {v.custom && (
         <>
-          <label className="field"><span>{t('名称')}</span><input value={v.label} onChange={(e) => set('label', e.target.value)} placeholder={t('例如：我的中转服务')} /></label>
-          <label className="field"><span>{t('接口格式')}</span>
+          <label className="field"><span>{t('ui.name')}</span><input value={v.label} onChange={(e) => set('label', e.target.value)} placeholder={t('ui.e_g_my_relay_service')} /></label>
+          <label className="field"><span>{t('ui.api_format')}</span>
             <select value={v.protocol} onChange={(e) => set('protocol', e.target.value)}>
-              <option value="openai">{t('OpenAI 兼容（大多数服务）')}</option>
-              <option value="anthropic">{t('Anthropic 兼容')}</option>
+              <option value="openai">{t('ui.openai_compatible_most_services')}</option>
+              <option value="anthropic">{t('ui.anthropic_compatible')}</option>
             </select>
           </label>
         </>
       )}
       <label className="field"><span>API Key</span>
         {editingKey || !v.apiKey
-          ? <input type="password" autoComplete="off" spellCheck={false} value={v.apiKey} placeholder={preset?.noKey ? t('不需要 Key') : (preset?.keyHint ?? 'sk-…')} onChange={(e) => set('apiKey', e.target.value)} data-testid="key-input" />
-          : <span className="flex items-center gap-2"><input readOnly value={maskKey(v.apiKey)} aria-label={t('已保存的 Key（只显示末四位）')} /><button type="button" onClick={() => { setEditingKey(true); set('apiKey', ''); }}>{t('更换')}</button></span>}
+          ? <input type="password" autoComplete="off" spellCheck={false} value={v.apiKey} placeholder={preset?.noKey ? t('ui.no_key_needed') : (preset?.keyHint ?? 'sk-…')} onChange={(e) => set('apiKey', e.target.value)} data-testid="key-input" />
+          : <span className="flex items-center gap-2"><input readOnly value={maskKey(v.apiKey)} aria-label={t('ui.saved_keys_last_4_shown')} /><button type="button" onClick={() => { setEditingKey(true); set('apiKey', ''); }}>{t('ui.change_2')}</button></span>}
       </label>
       <label className="field"><span>Base URL</span>
         <input value={v.baseURL} spellCheck={false} onChange={(e) => set('baseURL', e.target.value)} placeholder="https://api.example.com/v1" data-testid="base-input" />
-        {preset && v.baseURL !== preset.baseURL && !compact && <button type="button" className="ghost self-start" onClick={() => set('baseURL', preset.baseURL)}>{t('恢复官方地址')}</button>}
+        {preset && v.baseURL !== preset.baseURL && !compact && <button type="button" className="ghost self-start" onClick={() => set('baseURL', preset.baseURL)}>{t('ui.restore_official_url')}</button>}
         {preset?.baseURLPresets && !compact && (
           <span className="flex flex-wrap gap-2 pt-1">{preset.baseURLPresets.map((p) => <button key={p.url} type="button" className="ghost" aria-pressed={v.baseURL === p.url} onClick={() => set('baseURL', p.url)}>{p.label}</button>)}</span>
         )}
       </label>
-      <label className="field"><span>{t('模型')}</span>
-        <input list={`models-${v.id}`} value={v.model} spellCheck={false} onChange={(e) => set('model', e.target.value)} placeholder={models[0] ?? t('填服务商文档里的模型名')} data-testid="model-input" />
+      <label className="field"><span>{t('ui.models')}</span>
+        <input list={`models-${v.id}`} value={v.model} spellCheck={false} onChange={(e) => set('model', e.target.value)} placeholder={models[0] ?? t('ui.model_name_from_the_providers')} data-testid="model-input" />
         <datalist id={`models-${v.id}`}>{models.map((m) => <option key={m} value={m} />)}</datalist>
       </label>
       <div className="flex flex-col gap-3 pt-2">
-        <button type="submit" className="primary !min-h-12 w-full text-[16px]" disabled={busy} data-testid="test-connection">{busy ? <Busy label={t('正在测试…')} /> : t('测试连接')}</button>
-        {ok && <p className="ok-line m-0" role="status" data-testid="test-ok"><Icon name="check" size={18} />{t('已连通')}，{t('用时')} {(ok.ms / 1000).toFixed(1)} {t('秒')}<span className="muted">· {ok.model}</span></p>}
+        <button type="submit" className="primary !min-h-12 w-full text-[16px]" disabled={busy} data-testid="test-connection">{busy ? <Busy label={t('ui.testing')} /> : t('ui.test_connection')}</button>
+        {ok && <p className="ok-line m-0" role="status" data-testid="test-ok"><Icon name="check" size={18} />{t('ui.connected')}，{t('ui.time_taken')} {(ok.ms / 1000).toFixed(1)} {t('ui.s')}<span className="muted">· {ok.model}</span></p>}
         {err && <Problem title={err.message} advice={err.advice} testId="test-error" />}
       </div>
     </form>

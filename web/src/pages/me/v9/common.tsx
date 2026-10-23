@@ -29,7 +29,7 @@ export function SegTabs<T extends string>({ value, options, onChange, label }: {
 }
 export function BackBar({ label, onBack }: { label: string; onBack: () => void }) {
   const { t } = useT();
-  return <div className="flex items-center gap-2"><button type="button" className="ghost v9-touch" aria-label={t('返回')} onClick={onBack}><Icon name="arrowLeft" size={18} /></button><h2 className="m-0 grow text-[17px]">{label}</h2></div>;
+  return <div className="flex items-center gap-2"><button type="button" className="ghost v9-touch" aria-label={t('ui.back')} onClick={onBack}><Icon name="arrowLeft" size={18} /></button><h2 className="m-0 grow text-[17px]">{label}</h2></div>;
 }
 export function Section({ title, children, actions, testId }: { title?: string; children: ReactNode; actions?: ReactNode; testId?: string }) {
   return (

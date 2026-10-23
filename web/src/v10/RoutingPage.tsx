@@ -36,7 +36,7 @@ export function RoutingPage({ go }: { go: (to: string) => void }) {
   const { data: s, error } = useModelsV3();
   const [toast, show] = useToast();
   const [busy, setBusy] = useState<string | null>(null);
-  if (error) return <div className="page page-narrow"><Problem title={t('读取模型配置失败')} advice={error} /></div>;
+  if (error) return <div className="page page-narrow"><Problem title={t('ui.failed_to_read_model_settings')} advice={error} /></div>;
   if (!s) return null;
   const change = async (r: RoutingTask, entryId: string) => {
     setBusy(`${r.role}.${r.task}`);
@@ -45,22 +45,22 @@ export function RoutingPage({ go }: { go: (to: string) => void }) {
       await saveModelsV3(next);
       const f = entryId ? findEntry(next, entryId) : null;
       await audit({ kind: 'setting_change', actor: 'user', summary: `按任务路由：${roleLabel(r.role)}·${r.label} → ${f ? displayModel(f.entry) : '跟随默认'}`, outcome: 'ok' });
-      show(t('已保存，下一次调用生效'));
+      show(t('ui.saved_applies_to_the_next'));
     } finally { setBusy(null); }
   };
   const roles = [...new Set(ROUTING_TASKS.map((x) => x.role))];
   return (
     <div className="page page-narrow flex flex-col gap-3" data-testid="routing-page">
       {toast}
-      <BackBar label={t('高级：按任务路由')} onBack={() => go('me/models')} />
-      <Note>{t('给某一类里的特定任务单独指定模型；没指定就用这一类的默认模型。只列出这一版真的会用到的任务。')}</Note>
+      <BackBar label={t('ui.advanced_per_task_routing')} onBack={() => go('me/models')} />
+      <Note>{t('ui.assign_a_model_to_specific')}</Note>
       {roles.map((role) => {
         const b = s.roles[role];
         const def = b?.primary ? findEntry(s, b.primary.modelEntryId) : null;
         const cands = candidatesFor(s, role);
         return (
           <Section key={role} title={t(roleLabel(role))} testId={`routing-${role}`}>
-            <Note>{t('默认')}：{def ? `${displayModel(def.entry)} · ${def.account.label}` : t('未接')}</Note>
+            <Note>{t('ui.default')}：{def ? `${displayModel(def.entry)} · ${def.account.label}` : t('ui.not_set')}</Note>
             {ROUTING_TASKS.filter((x) => x.role === role).map((r) => {
               const cur = b?.tasks?.[r.task];
               const missing = !!cur && !findEntry(s, cur.modelEntryId);
@@ -68,18 +68,18 @@ export function RoutingPage({ go }: { go: (to: string) => void }) {
                 <label key={r.task} className="field !m-0" data-testid={`route-${role}-${r.task}`}>
                   <span>{t(r.label)}<span className="ml-2 text-[12px] font-normal text-muted">{t(r.hint)}</span></span>
                   <select value={missing ? '__missing' : cur?.modelEntryId ?? ''} disabled={busy === `${r.role}.${r.task}`} onChange={(e) => void change(r, e.target.value === '__missing' ? '' : e.target.value)} aria-label={`${t(roleLabel(role))} · ${t(r.label)}`}>
-                    <option value="">{t('跟随默认')}{def ? `（${displayModel(def.entry)}）` : ''}</option>
-                    {missing && <option value="__missing">{t('未配置（指定的模型已删除）')}</option>}
+                    <option value="">{t('ui.follow_default')}{def ? `（${displayModel(def.entry)}）` : ''}</option>
+                    {missing && <option value="__missing">{t('ui.not_set_the_chosen_model')}</option>}
                     {cands.map((c) => <option key={c.entry.id} value={c.entry.id}>{c.text}</option>)}
                   </select>
-                  {!cands.length && <span className="text-[12px] text-muted">{t('还没有勾选这一类能力的模型名，先到“账号与 Key”添加')}</span>}
+                  {!cands.length && <span className="text-[12px] text-muted">{t('ui.no_model_name_has_this')}</span>}
                 </label>
               );
             })}
           </Section>
         );
       })}
-      <Note>{t('@ 指定的模型优先于这里；这里优先于健康路由与默认。指定的模型被删除时显示“未配置”，不会悄悄换成别家。')}</Note>
+      <Note>{t('ui.models_chosen_with_win_over')}</Note>
     </div>
   );
 }

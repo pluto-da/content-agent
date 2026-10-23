@@ -10,6 +10,7 @@ import { getPrefs, setPrefs, type Prefs } from '../../local/store';
 import { testConnector } from '../../hot/connectors';
 import { openExternal } from '../../runtime';
 import { GroupList } from '../../ui';
+import { tr } from '../../i18n';
 
 type Meta = Pick<ConnectorMeta, 'id' | 'label' | 'note' | 'apply' | 'fields'> & { docs?: string; status: ConnectorMeta['status']; covers?: string; route: 'a' | 'b' };
 const ALL: Meta[] = [
@@ -25,18 +26,18 @@ export function SourcesPage() {
   useStoreChange(['kv:sources.creds', 'kv:prefs'], () => void load());
   return (
     <div className="page page-narrow" data-testid="sources-page">
-      <p className="m-0 mb-4 text-[14px] text-muted">Agent 会按你连接 / 启用的来源自动规划“五路并行”收集热点；它不会在平台页面里点击、滚动或读取内容。凭证只存在这台设备上（加密），界面只显示末四位。</p>
-      <GroupList title={`a · ${ROUTE_LABEL.a}（第三方数据服务，你自己的 API Key）`}>
+      <p className="m-0 mb-4 text-[14px] text-muted">{tr('ui.the_agent_plans_a_five')}</p>
+      <GroupList plain title={`a · ${ROUTE_LABEL.a}（第三方数据服务，你自己的 API Key）`}>
         {ALL.filter((m) => m.route === 'a').map((m) => <ConnectorRow key={m.id} m={m} cred={creds[m.id]} onChange={load} />)}
       </GroupList>
-      <GroupList title={`b · ${ROUTE_LABEL.b}（平台官方数据）`}>
+      <GroupList plain title={`b · ${ROUTE_LABEL.b}（平台官方数据）`}>
         {ALL.filter((m) => m.route === 'b').map((m) => <ConnectorRow key={m.id} m={m} cred={creds[m.id]} onChange={load} />)}
-        <div className="px-4 py-3 text-[14px] text-fg-2">巨量算数等官方页面没有公开接口，只能在内置浏览器里打开给你本人看（热点巡视里也有）。</div>
+        <div className="px-4 py-3 text-[14px] text-fg-2">{tr('ui.official_pages_like_ocean_engine')}</div>
       </GroupList>
-      <GroupList title={`c · ${ROUTE_LABEL.c}`}>
-        <div className="px-4 py-3 text-[14px] text-fg-2">在抖音、小红书等官方 App 里点“分享 → 超级工作台”，或在任何地方选中文字后点“发给 Agent”。内容先出预览，确认后进入素材箱与当前会话。</div>
+      <GroupList plain title={`c · ${ROUTE_LABEL.c}`}>
+        <div className="px-4 py-3 text-[14px] text-fg-2">{tr('ui.in_douyin_xiaohongshu_and_other')}</div>
       </GroupList>
-      <GroupList title={`d · ${ROUTE_LABEL.d}（公开 RSS 与榜单，先查 robots）`}>
+      <GroupList plain title={`d · ${ROUTE_LABEL.d}（公开 RSS 与榜单，先查 robots）`}>
         {PUBLIC_SOURCES.map((s) => {
           const on = !!prefs?.hotSources.includes(s.id);
           return (
@@ -47,12 +48,12 @@ export function SourcesPage() {
           );
         })}
       </GroupList>
-      <GroupList title={`e · ${ROUTE_LABEL.e}（你本人翻看，Agent 不读页面）`}>
+      <GroupList plain title={`e · ${ROUTE_LABEL.e}（你本人翻看，Agent 不读页面）`}>
         <div className="px-4 py-3 text-[14px] text-fg-2">对 Agent 说“开始热点巡视”，它会在内置浏览器依次打开：{PATROL_STOPS.map((s) => s.label).join('、')}。底部浮条有“下一个 / 发给 Agent / 结束”。</div>
       </GroupList>
-      <GroupList title="来源说明（逐平台）">
+      <GroupList plain title={tr('ui.source_notes_per_platform')}>
         <table className="w-full text-left text-[13px]" data-testid="source-table">
-          <thead><tr className="text-muted"><th className="px-3 py-2 font-normal">平台</th><th className="px-3 py-2 font-normal">路数</th><th className="px-3 py-2 font-normal">方式与状态</th></tr></thead>
+          <thead><tr className="text-muted"><th className="px-3 py-2 font-normal">{tr('ui.platforms')}</th><th className="px-3 py-2 font-normal">{tr('ui.routes')}</th><th className="px-3 py-2 font-normal">{tr('ui.method_status')}</th></tr></thead>
           <tbody>
             {PLATFORM_SOURCES.map((r) => (
               <tr key={r.platform} className="border-t border-line align-top">
@@ -92,7 +93,7 @@ function ConnectorRow({ m, cred, onChange }: { m: Meta; cred?: SourceCred; onCha
       {connected && Object.keys(tails).length > 0 && <p className="m-0 mt-1 text-[12px] text-muted" data-testid="masked">{m.fields.filter((f) => f.secret).map((f) => `${f.label} ${tails[f.key] ?? ''}`).join(' · ')}{cred?.check?.reason ? ` · ${cred.check.reason}` : ''}</p>}
       <div className="mt-1 flex flex-wrap gap-3 text-[13px]">
         <button type="button" className="!min-h-0 !border-0 !bg-transparent !p-0 !text-[13px] !text-accent" onClick={() => void openExternal(m.apply)}>{m.status === 'unsupported' ? '打开官网' : '申请 / 购买指引'}</button>
-        {m.docs && <button type="button" className="!min-h-0 !border-0 !bg-transparent !p-0 !text-[13px] !text-accent" onClick={() => void openExternal(m.docs!)}>接口文档</button>}
+        {m.docs && <button type="button" className="!min-h-0 !border-0 !bg-transparent !p-0 !text-[13px] !text-accent" onClick={() => void openExternal(m.docs!)}>{tr('ui.api_docs')}</button>}
       </div>
       {open && (
         <form className="mt-2 flex flex-col gap-2" onSubmit={async (e) => { e.preventDefault(); setBusy(true); await saveCred(m.id, vals, secretKeys); setVals({}); setMsg('已加密保存'); setBusy(false); onChange(); }}>
@@ -102,9 +103,9 @@ function ConnectorRow({ m, cred, onChange }: { m: Meta; cred?: SourceCred; onCha
             </label>
           ))}
           <div className="flex flex-wrap gap-2">
-            <button type="submit" className="primary !min-h-10" disabled={busy}>保存</button>
-            <button type="button" className="!min-h-10" disabled={busy || !connected} onClick={async () => { setBusy(true); setMsg('正在测试…'); const r = await testConnector(m.id); setMsg(r.ok ? `连接成功${r.ms ? `，用时 ${(r.ms / 1000).toFixed(1)} 秒` : ''}` : `连接失败：${r.reason}`); setBusy(false); onChange(); }}>测试连接</button>
-            {cred && <button type="button" className="!min-h-10" onClick={async () => { await removeCred(m.id); setMsg('已删除'); onChange(); }}>删除凭证</button>}
+            <button type="submit" className="primary !min-h-10" disabled={busy}>{tr('ui.save')}</button>
+            <button type="button" className="!min-h-10" disabled={busy || !connected} onClick={async () => { setBusy(true); setMsg('正在测试…'); const r = await testConnector(m.id); setMsg(r.ok ? `连接成功${r.ms ? `，用时 ${(r.ms / 1000).toFixed(1)} 秒` : ''}` : `连接失败：${r.reason}`); setBusy(false); onChange(); }}>{tr('ui.test_connection')}</button>
+            {cred && <button type="button" className="!min-h-10" onClick={async () => { await removeCred(m.id); setMsg('已删除'); onChange(); }}>{tr('ui.delete_credential')}</button>}
           </div>
           {msg && <p className="m-0 text-[13px] text-muted" role="status">{msg}</p>}
         </form>

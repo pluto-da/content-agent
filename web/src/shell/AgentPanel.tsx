@@ -24,6 +24,7 @@ import { overlayManager } from '../browser/browserHost';
 import { AtChips, AtMenu, atQuery, pickLabel, type AtPick } from '../v10/AtMenu';
 import { useModelsV3 } from '../pages/me/v9/common';
 import { ROLE_IDS, findEntry, displayModel, roleLabel, type RoleId } from '@content-agent/shared';
+import { tr } from '../i18n';
 
 const Write = lazy(() => import('../pages/write').then((m) => ({ default: m.Write })));
 
@@ -144,12 +145,12 @@ function OverviewCard({ onOpen, onResume }: { onOpen: (p: string) => void; onRes
   const o = useStoreValue<Overview>(computeOverview, ['drafts', 'inbox', 'tasks', 'kv:prefs', 'kv:hot.cache']).value ?? null;
   if (!o || (!o.rows.length && !o.resume)) return null;
   return (
-    <section className="mb-4 rounded-[12px] border border-line bg-surface" data-testid="overview" aria-label="工作台总览">
+    <section className="mb-4 rounded-[12px] border border-line bg-surface" data-testid="overview" aria-label={tr('ui.workspace_overview')}>
       {o.resume && (
         <div className="flex items-center gap-2 border-b border-line px-3 py-2 text-[14px]">
           <Icon name="history" size={15} className="text-muted" />
           <span className="min-w-0 flex-1 truncate">上次的任务停在第 {o.resume.steps.length} 步：{o.resume.steps.at(-1)?.name}</span>
-          <button type="button" className="!min-h-9 !px-3 !text-[14px]" data-testid="resume" onClick={onResume}>接着上次继续</button>
+          <button type="button" className="!min-h-9 !px-3 !text-[14px]" data-testid="resume" onClick={onResume}>{tr('ui.continue_from_last_time')}</button>
         </div>
       )}
       <ul className="m-0 list-none p-0">
@@ -204,20 +205,20 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
 
   const header = (
     <header className="flex min-h-12 shrink-0 items-center gap-1 border-b border-line px-2" data-testid="agent-header">
-      {variant === 'sheet' && onBackToWeb && <button type="button" className="!min-h-11 !border-0 !bg-transparent !px-2 !text-[14px]" onClick={onBackToWeb} data-testid="back-to-web"><Icon name="chevronDown" size={16} /> 回到网页</button>}
+      {variant === 'sheet' && onBackToWeb && <button type="button" className="!min-h-11 !border-0 !bg-transparent !px-2 !text-[14px]" onClick={onBackToWeb} data-testid="back-to-web"><Icon name="chevronDown" size={16} /> {tr('ui.back_to_web_page')}</button>}
       {renaming && conv ? (
-        <input autoFocus defaultValue={conv.title} aria-label="会话标题" className="!min-h-9 min-w-0 flex-1 !text-[15px]" onBlur={async (e) => { await updateConversation(conv.id, { title: e.target.value.trim().slice(0, 30) || conv.title }); setRenaming(false); void a.refreshConvs(); }} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} />
+        <input autoFocus defaultValue={conv.title} aria-label={tr('ui.conversation_title')} className="!min-h-9 min-w-0 flex-1 !text-[15px]" onBlur={async (e) => { await updateConversation(conv.id, { title: e.target.value.trim().slice(0, 30) || conv.title }); setRenaming(false); void a.refreshConvs(); }} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} />
       ) : (
-        <button type="button" className="!min-h-11 min-w-0 flex-1 !justify-start !border-0 !bg-transparent !px-2 !text-[15px] !font-semibold" onClick={() => conv && setRenaming(true)} aria-label="会话标题（点按改名）" data-testid="conv-title">
+        <button type="button" className="!min-h-11 min-w-0 flex-1 !justify-start !border-0 !bg-transparent !px-2 !text-[15px] !font-semibold" onClick={() => conv && setRenaming(true)} title={tr('ui.conversation_title_tap_to_rename')} data-testid="conv-title">
           <span className="truncate">{conv?.title ?? (variant === 'full' ? '超级工作台' : 'Agent')}</span>
         </button>
       )}
-      <button type="button" aria-label="模型" data-testid="model-pill" className="!min-h-9 max-w-[42%] !rounded-full !px-3 !text-[13px] !font-normal" onClick={() => setModelOpen(true)}>
-        <span className="shrink-0 text-muted" data-testid="model-pill-role">文本：</span>{a.models === null ? <span className="skeleton inline-block h-3 w-24" aria-label="正在读取模型" /> : <span key={a.cfg ? `${a.cfg.id}:${a.cfg.model}` : 'none'} className="anim-swap truncate" data-testid="model-pill-label">{a.cfg ? `${presetOf(a.cfg.id)?.label ?? a.cfg.label} · ${a.cfg.model}` : '未连接模型'}</span>}{a.cfgState && a.cfgState !== 'ok' && <span className="shrink-0 text-[12px] text-muted" data-testid="model-untested">{a.cfgState === 'failed' ? '测试未通过' : '未测试'}</span>}<Icon name="chevronDown" size={14} />
+      <button type="button" title={tr('ui.switch_model')} data-testid="model-pill" className="!min-h-9 max-w-[42%] !rounded-full !px-3 !text-[13px] !font-normal" onClick={() => setModelOpen(true)}>
+        <span className="shrink-0 text-muted" data-testid="model-pill-role">{tr('ui.text_2')}</span>{a.models === null ? <span className="skeleton inline-block h-3 w-24" aria-label={tr('ui.loading_models')} /> : <span key={a.cfg ? `${a.cfg.id}:${a.cfg.model}` : 'none'} className="anim-swap truncate" data-testid="model-pill-label">{a.cfg ? `${presetOf(a.cfg.id)?.label ?? a.cfg.label} · ${a.cfg.model}` : '未连接模型'}</span>}{a.cfgState && a.cfgState !== 'ok' && <span className="shrink-0 text-[12px] text-muted" data-testid="model-untested">{a.cfgState === 'failed' ? '测试未通过' : '未测试'}</span>}<Icon name="chevronDown" size={14} />
       </button>
-      <button type="button" aria-label="新会话" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => { a.setCid(null); setTab('chat'); }}><Icon name="newChat" size={18} /></button>
-      {!showSideList && <button type="button" aria-label="会话列表" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => setSessionsOpen(true)}><Icon name="history" size={18} /></button>}
-      {onCollapse && <button type="button" aria-label="收起 Agent 面板" className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={onCollapse}><Icon name="panelRight" size={18} /></button>}
+      <button type="button" aria-label={tr('ui.new_conversation')} className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => { a.setCid(null); setTab('chat'); }}><Icon name="newChat" size={18} /></button>
+      {!showSideList && <button type="button" aria-label={tr('ui.conversations')} className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={() => setSessionsOpen(true)}><Icon name="history" size={18} /></button>}
+      {onCollapse && <button type="button" aria-label={tr('ui.collapse_agent_panel')} className="!min-h-11 !min-w-11 !border-0 !bg-transparent !p-0" onClick={onCollapse}><Icon name="panelRight" size={18} /></button>}
     </header>
   );
 
@@ -233,14 +234,14 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
     <div className="anim-fade mx-auto w-full max-w-[720px] px-4 pt-6" data-testid="agent-empty">
       {!connected.length ? (
         <div className="py-8 text-center" data-testid="no-model">
-          <h2 className="text-[22px]">超级工作台</h2>
-          <p className="mt-2 text-muted">先连接一个模型，Agent 才能工作</p>
-          <button type="button" className="primary mt-4" onClick={() => go('me/models')}>去连接</button>
+          <h2 className="text-[22px]">{tr('ui.super_workbench')}</h2>
+          <p className="mt-2 text-muted">{tr('ui.connect_a_model_first_so')}</p>
+          <button type="button" className="primary mt-4" onClick={() => go('me/models')}>{tr('ui.connect')}</button>
         </div>
       ) : (
         <>
           <OverviewCard onOpen={onOpenPlatform} onResume={() => void a.send('接着上次继续')} />
-          <h2 className="text-[22px]" data-testid="hero-title">超级工作台</h2>
+          <h2 className="text-[22px]" data-testid="hero-title">{tr('ui.super_workbench')}</h2>
           <p className="mt-1 text-[15px] text-fg-2" data-testid="definition">{DEFINITION}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {STARTERS.map((s) => <button key={s} type="button" className="!min-h-10 !rounded-full !px-4 !text-[14px] !font-normal" data-testid="starter" onClick={() => void a.send(s)}>{s}</button>)}
@@ -261,11 +262,11 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
             </div>
           ) : (
             <div className="anim-msg max-w-full text-[15px] leading-relaxed text-fg" data-testid="msg-agent" data-streamed={m.streamed ? 'true' : 'false'}>
-              {m.reasoning && <details className="mb-1 text-[13px] text-muted"><summary>已思考</summary><div className="whitespace-pre-wrap">{m.reasoning.slice(0, 3000)}</div></details>}
+              {m.reasoning && <details className="mb-1 text-[13px] text-muted"><summary>{tr('ui.thought')}</summary><div className="whitespace-pre-wrap">{m.reasoning.slice(0, 3000)}</div></details>}
               {m.content && <div className={cn(!!m.meta?.error && 'text-bad')}><Markdown text={m.content} /></div>}
               {!!m.meta?.streaming && <span className="stream-caret" aria-hidden="true" />}
-              {!m.content && !m.cards?.length && a.running && m.id === visible.at(-1)?.id && <p className="m-0 text-[14px] text-muted" data-testid="generating">正在生成…</p>}
-              {m.stopped && <p className="m-0 text-[12px] text-muted">已停止</p>}
+              {!m.content && !m.cards?.length && a.running && m.id === visible.at(-1)?.id && <p className="m-0 text-[14px] text-muted" data-testid="generating">{tr('ui.generating_2')}</p>}
+              {m.stopped && <p className="m-0 text-[12px] text-muted">{tr('ui.stopped')}</p>}
               {(m.cards ?? []).map((c: CardData, i) => <ToolCard key={i} card={c} actions={{ ...actions, retry: c.status === 'error' ? () => void a.send(`重试：${toolByName(c.tool)?.label ?? c.tool}`) : undefined }} />)}
               {m.model && !m.meta?.error && (m.content || m.cards?.length) ? <p className="m-0 mt-0.5 text-[12px] text-faint">{m.model}{m.streamed === false ? ' · 整段返回' : ''}</p> : null}
             </div>
@@ -279,31 +280,31 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
 
   const input = (
     <div className="shrink-0 border-t border-line bg-canvas px-3 pt-2 pb-[calc(8px+var(--sa-bottom))]">
-      {a.notice && <p className="m-0 mb-1 text-[13px] text-muted" role="status">{a.notice} <button type="button" className="!min-h-0 !border-0 !bg-transparent !p-0 !text-[13px] !text-accent" onClick={() => a.setNotice('')}>知道了</button></p>}
+      {a.notice && <p className="m-0 mb-1 text-[13px] text-muted" role="status">{a.notice} <button type="button" className="!min-h-0 !border-0 !bg-transparent !p-0 !text-[13px] !text-accent" onClick={() => a.setNotice('')}>{tr('ui.got_it')}</button></p>}
       <AtChips picks={atPicks} onRemove={(r) => setAtPicks((l) => l.filter((x) => x.role !== r))} />
       <div className="relative flex items-end gap-2">
         {atQ !== null && <AtMenu state={v3} q={atQ} onPick={onAtPick} onClose={() => setAtQ(null)} />}
-        <button type="button" aria-label="附加" className="!min-h-11 !min-w-11 !rounded-full !p-0" onClick={() => setPlusOpen(true)}><Icon name="plus" size={18} /></button>
-        <textarea value={text} rows={1} placeholder="和 Agent 说点什么…" aria-label="和 Agent 说点什么" data-testid="agent-input"
+        <button type="button" aria-label={tr('ui.attachment')} className="!min-h-11 !min-w-11 !rounded-full !p-0" onClick={() => setPlusOpen(true)}><Icon name="plus" size={18} /></button>
+        <textarea value={text} rows={1} placeholder={tr('ui.say_something_to_the_agent_2')} aria-label={tr('ui.say_something_to_the_agent')} data-testid="agent-input"
           className="!min-h-11 max-h-40 min-w-0 flex-1 resize-none !py-2.5 !text-[15px]"
           onChange={(e) => { setText(e.target.value); const q = atQuery(e.target.value, e.target.selectionStart ?? e.target.value.length); setAtQ(q ? q.q : null); }}
           onKeyDown={(e) => { if (e.key === 'Escape' && atQ !== null) { setAtQ(null); return; } if (e.key === 'Enter' && !e.shiftKey && lay !== 'phone' && atQ === null) { e.preventDefault(); submit(); } }} />
         {a.running
-          ? <button type="button" aria-label="停止" data-testid="stop" className="!min-h-11 !min-w-11 !rounded-full !p-0" onClick={a.stop}><Icon name="stop" size={16} /></button>
-          : <button type="button" aria-label="发送" data-testid="send" className="primary !min-h-11 !min-w-11 !rounded-full !p-0" disabled={!text.trim()} onClick={submit}><Icon name="sendUp" size={18} /></button>}
+          ? <button type="button" aria-label={tr('ui.stop')} data-testid="stop" className="!min-h-11 !min-w-11 !rounded-full !p-0" onClick={a.stop}><Icon name="stop" size={16} /></button>
+          : <button type="button" aria-label={tr('ui.send')} data-testid="send" className="primary !min-h-11 !min-w-11 !rounded-full !p-0" disabled={!text.trim()} onClick={submit}><Icon name="sendUp" size={18} /></button>}
       </div>
     </div>
   );
 
   const body = tab === 'chat' ? (visible.length ? thread : empty)
-    : tab === 'drafts' ? <Suspense fallback={<div className="p-4" aria-label="加载中"><SkeletonLines lines={4} /></div>}><Write filter={route.query?.filter ?? 'all'} id={route.id} go={go} lay={variant === 'full' ? lay : 'phone'} /></Suspense>
+    : tab === 'drafts' ? <Suspense fallback={<div className="p-4" aria-label={tr('ui.loading')}><SkeletonLines lines={4} /></div>}><Write filter={route.query?.filter ?? 'all'} id={route.id} go={go} lay={variant === 'full' ? lay : 'phone'} /></Suspense>
     : <InboxTab onUse={(i) => { setTab('chat'); void a.send(`结合这条素材：${i.title || i.text || i.url}`); }} />;
 
   return (
     <div className={cn('flex h-full min-h-0 min-w-0 flex-1 bg-canvas', variant !== 'full' && 'flex-col')} data-testid={`agent-${variant}`}>
       {showSideList && (
-        <aside className="flex w-[240px] shrink-0 flex-col border-r border-line" aria-label="会话列表" data-testid="session-list">
-          <div className="flex min-h-12 items-center px-3 text-[13px] text-muted">会话</div>
+        <aside className="flex w-[240px] shrink-0 flex-col border-r border-line" aria-label={tr('ui.conversations')} data-testid="session-list">
+          <div className="flex min-h-12 items-center px-3 text-[13px] text-muted">{tr('ui.conversation')}</div>
           <SessionList a={a} onPick={() => setTab('chat')} onDelete={setDelId} />
         </aside>
       )}
@@ -315,12 +316,12 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
       </div>
 
       <Drawer open={sessionsOpen} onOpenChange={setSessionsOpen}>
-        <DrawerContent title="会话">
+        <DrawerContent title={tr('ui.conversation')}>
           <SessionList a={a} onPick={() => { setSessionsOpen(false); setTab('chat'); }} onDelete={(id) => { setSessionsOpen(false); setDelId(id); }} />
         </DrawerContent>
       </Drawer>
       <Drawer open={modelOpen} onOpenChange={setModelOpen}>
-        <DrawerContent title="切换模型" description="只影响之后的回复；每条消息会标注所用模型">
+        <DrawerContent title={tr('ui.switch_model')} description="只影响之后的回复；每条消息会标注所用模型">
           {connected.flatMap((p) => {
             const models = [...new Set([p.model, ...(presetOf(p.id)?.models ?? [])].filter(Boolean))];
             const base = presetOf(p.id)?.prices?.[models[0]!]?.input;
@@ -331,7 +332,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
           })}
           {v3 && ROLE_IDS.filter((r) => v3.roles[r]?.primary && findEntry(v3, v3.roles[r]!.primary!.modelEntryId)).length > 0 && (
             <div className="px-3 pt-2 pb-1" data-testid="role-bindings">
-              <p className="m-0 text-[12px] font-semibold text-muted">本会话各能力当前绑定（输入 @ 可只换这一轮）</p>
+              <p className="m-0 text-[12px] font-semibold text-muted">{tr('ui.current_model_per_capability_in')}</p>
               <ul className="m-0 list-none p-0 text-[13px] text-fg-2">{ROLE_IDS.filter((r) => v3.roles[r]?.primary).map((r: RoleId) => { const f = findEntry(v3, v3.roles[r]!.primary!.modelEntryId); return f ? <li key={r} className="py-0.5">{roleLabel(r)}：{displayModel(f.entry)} · {f.account.label}</li> : null; })}</ul>
             </div>
           )}
@@ -339,7 +340,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
         </DrawerContent>
       </Drawer>
       <Drawer open={plusOpen} onOpenChange={setPlusOpen}>
-        <DrawerContent title="附加">
+        <DrawerContent title={tr('ui.attachment')}>
           <DrawerItem label="当前网页" hint="发送当前平台页面的网址与标题（不读页面内容）" onClick={() => { setPlusOpen(false); window.dispatchEvent(new CustomEvent('ca:send-current-page')); }} />
           <DrawerItem label="素材箱里的一条" onClick={() => { setPlusOpen(false); setTab('inbox'); }} />
           <DrawerItem label="粘贴文本" onClick={async () => { setPlusOpen(false); try { const t = await navigator.clipboard.readText(); if (t) setText((x) => `${x}${x ? '\n' : ''}${t}`); } catch { a.setNotice('读取剪贴板失败，请在输入框长按粘贴'); } }} />
@@ -347,7 +348,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
         </DrawerContent>
       </Drawer>
       <Drawer open={delId !== null} onOpenChange={(o) => { if (!o) setDelId(null); }}>
-        <DrawerContent title="删除这个会话？" description="会话里的消息会一起删除，不能恢复">
+        <DrawerContent title={tr('ui.delete_this_conversation')} description="会话里的消息会一起删除，不能恢复">
           <DrawerItem label="删除" tone="danger" onClick={async () => { const id = delId!; setDelId(null); await deleteConversation(id); if (a.cid === id) a.setCid(null); void a.refreshConvs(); }} />
           <DrawerItem label="取消" onClick={() => setDelId(null)} />
         </DrawerContent>
@@ -361,7 +362,7 @@ function SessionList({ a, onPick, onDelete }: { a: AgentState; onPick: () => voi
   const shown = a.convs.filter((c) => !q || c.title.includes(q));
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索会话标题" aria-label="搜索会话" className="!mx-2 !mb-2 !w-[calc(100%-16px)] !min-h-9 !text-[14px]" />
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('ui.search_conversation_titles')} aria-label={tr('ui.search_conversations')} className="!mx-2 !mb-2 !w-[calc(100%-16px)] !min-h-9 !text-[14px]" />
       <ul className="m-0 min-h-0 flex-1 list-none overflow-y-auto p-0 px-1">
         {shown.map((c) => (
           <li key={c.id} className={cn('group flex items-center rounded-[10px]', c.id === a.cid && 'bg-side-active')}>
@@ -369,10 +370,10 @@ function SessionList({ a, onPick, onDelete }: { a: AgentState; onPick: () => voi
               {c.pinned && <Icon name="pin" size={13} className="mr-1 text-muted" />}<span className="truncate">{c.title}</span>
             </button>
             <button type="button" aria-label={c.pinned ? '取消置顶' : '置顶'} className="!min-h-11 !min-w-9 !border-0 !bg-transparent !p-0 !text-muted" onClick={async () => { await updateConversation(c.id, { pinned: !c.pinned }); void a.refreshConvs(); }}><Icon name="pin" size={14} /></button>
-            <button type="button" aria-label="删除会话" className="!min-h-11 !min-w-9 !border-0 !bg-transparent !p-0 !text-muted" onClick={() => onDelete(c.id)}><Icon name="trash" size={14} /></button>
+            <button type="button" aria-label={tr('ui.delete_conversation')} className="!min-h-11 !min-w-9 !border-0 !bg-transparent !p-0 !text-muted" onClick={() => onDelete(c.id)}><Icon name="trash" size={14} /></button>
           </li>
         ))}
-        {!shown.length && <li className="px-3 py-4 text-[13px] text-muted">还没有会话</li>}
+        {!shown.length && <li className="px-3 py-4 text-[13px] text-muted">{tr('ui.no_conversations_yet')}</li>}
       </ul>
     </div>
   );
@@ -387,8 +388,8 @@ function InboxTab({ onUse }: { onUse: (i: InboxItem) => void }) {
   return (
     <div className="mx-auto w-full max-w-[760px] p-3" data-testid="inbox-tab">
       <form className="mb-3 flex gap-2" onSubmit={async (e) => { e.preventDefault(); if (paste.trim()) { await addInbox({ kind: /^https?:\/\//.test(paste.trim()) ? 'url' : 'text', text: paste.trim(), url: /^https?:\/\//.test(paste.trim()) ? paste.trim() : undefined, channel: 'paste' }); setPaste(''); } }}>
-        <input value={paste} onChange={(e) => setPaste(e.target.value)} placeholder="粘贴一段文字或链接，存进素材箱" aria-label="粘贴到素材箱" className="!min-h-10 min-w-0 flex-1 !text-[14px]" />
-        <button type="submit" className="!min-h-10">存入</button>
+        <input value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={tr('ui.paste_text_or_a_link')} aria-label={tr('ui.paste_into_asset_box')} className="!min-h-10 min-w-0 flex-1 !text-[14px]" />
+        <button type="submit" className="!min-h-10">{tr('ui.save_2')}</button>
       </form>
       <ul className="m-0 list-none p-0">
         {items.map((i) => (
@@ -397,11 +398,11 @@ function InboxTab({ onUse }: { onUse: (i: InboxItem) => void }) {
               <p className="m-0 line-clamp-2 text-fg">{i.title || i.text || i.url}</p>
               <p className="m-0 text-[12px] text-muted">{i.platform ? `${center(i.platform)?.label ?? i.platform} · ` : ''}{i.channel === 'share' ? '系统分享' : i.channel === 'process_text' ? '选中文字' : i.channel === 'toolbar' ? '工具栏' : i.channel === 'patrol' ? '巡视' : '粘贴'} · {i.createdAt.slice(5, 16).replace('T', ' ')}{i.used ? ' · 已使用' : ''}</p>
             </div>
-            <button type="button" className="!min-h-9 !px-3 !text-[13px]" onClick={() => onUse(i)}>用这条</button>
-            <button type="button" aria-label="删除素材" className="!min-h-9 !min-w-9 !border-0 !bg-transparent !p-0 !text-muted" onClick={() => void deleteInbox(i.id)}><Icon name="trash" size={14} /></button>
+            <button type="button" className="!min-h-9 !px-3 !text-[13px]" onClick={() => onUse(i)}>{tr('ui.use_this_one')}</button>
+            <button type="button" aria-label={tr('ui.delete_asset')} className="!min-h-9 !min-w-9 !border-0 !bg-transparent !p-0 !text-muted" onClick={() => void deleteInbox(i.id)}><Icon name="trash" size={14} /></button>
           </li>
         ))}
-        {!items.length && <li className="py-6 text-center text-[14px] text-muted">素材箱是空的。在平台页面点“发给 Agent”，选中文字后点“发给 Agent”，或在官方 App 里“分享 → 超级工作台”。</li>}
+        {!items.length && <li className="py-6 text-center text-[14px] text-muted">{tr('ui.the_asset_box_is_empty_2')}</li>}
       </ul>
     </div>
   );

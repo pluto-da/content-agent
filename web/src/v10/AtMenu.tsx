@@ -33,15 +33,15 @@ export function AtMenu({ state, q, onPick, onClose }: { state: ModelsStateV3 | n
   const opts = useMemo(() => atOptions(state, q), [state, q]);
   const roles = [...new Set(opts.map((o) => o.role))];
   return (
-    <div className="at-menu absolute inset-x-0 bottom-full z-30 mb-2 max-h-[min(50vh,360px)] overflow-y-auto rounded-[18px] border border-line bg-surface p-1 shadow-lg" role="listbox" aria-label={t('指定这一轮用的模型')} data-testid="at-menu" onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}>
-      <div className="flex min-h-11 items-center justify-between px-3 text-[13px] text-muted"><span>{t('指定这一轮用的模型')}{q ? ` · “${q}”` : ''}</span><button type="button" className="ghost !min-h-11 !min-w-11 !p-0" aria-label={t('关闭')} onClick={onClose}><Icon name="close" size={16} /></button></div>
-      {!opts.length && <p className="m-0 px-3 pb-3 text-[14px] text-muted" data-testid="at-empty">{state && candidatesFor(state, 'chat').length + roles.length === 0 ? t('还没有配置模型。到“我的 → 模型”添加后就能 @ 指定') : t('没有匹配的模型')}</p>}
+    <div className="at-menu absolute inset-x-0 bottom-full z-30 mb-2 max-h-[min(50vh,360px)] overflow-y-auto rounded-[18px] border border-line bg-surface p-1 shadow-lg" role="listbox" aria-label={t('ui.pick_a_model_for_this')} data-testid="at-menu" onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}>
+      <div className="flex min-h-11 items-center justify-between px-3 text-[13px] text-muted"><span>{t('ui.pick_a_model_for_this')}{q ? ` · “${q}”` : ''}</span><button type="button" className="ghost !min-h-11 !min-w-11 !p-0" aria-label={t('ui.close')} onClick={onClose}><Icon name="close" size={16} /></button></div>
+      {!opts.length && <p className="m-0 px-3 pb-3 text-[14px] text-muted" data-testid="at-empty">{state && candidatesFor(state, 'chat').length + roles.length === 0 ? t('ui.no_models_configured_add_one') : t('ui.no_matching_model')}</p>}
       {roles.map((role) => (
         <div key={role} role="group" aria-label={t(roleLabel(role))}>
           <div className="px-3 pt-2 pb-1 text-[12px] font-semibold text-muted">{t(roleLabel(role))}</div>
           {opts.filter((o) => o.role === role).map((o) => (
             <button key={`${role}:${o.target.modelEntryId}`} type="button" role="option" aria-selected={false} className="!flex !min-h-11 w-full !justify-start !rounded-[12px] !border-0 !bg-transparent !px-3 !text-left !text-[14px] !font-normal hover:!bg-surface-2" onClick={() => onPick({ role, target: o.target, text: o.text })} data-testid={`at-opt-${role}`}>
-              <span className="min-w-0 flex-1 truncate">{o.text}</span>{!o.hasKey && <span className="shrink-0 text-[12px] text-warn">{t('没有 Key')}</span>}
+              <span className="min-w-0 flex-1 truncate">{o.text}</span>{!o.hasKey && <span className="shrink-0 text-[12px] text-warn">{t('ui.no_key')}</span>}
             </button>
           ))}
         </div>
@@ -54,11 +54,11 @@ export function AtChips({ picks, onRemove }: { picks: AtPick[]; onRemove: (role:
   const { t } = useT();
   if (!picks.length) return null;
   return (
-    <div className="mb-1 flex flex-wrap gap-1" data-testid="at-chips" aria-label={t('本轮指定的模型')}>
+    <div className="mb-1 flex flex-wrap gap-1" data-testid="at-chips" aria-label={t('ui.models_for_this_turn')}>
       {picks.map((p) => (
         <span key={p.role} className="inline-flex max-w-full items-center gap-1 rounded-full border border-line bg-surface-2 pl-3 text-[13px]" data-testid={`at-chip-${p.role}`}>
           <span className="min-w-0 truncate">@{pickLabel(p)}</span>
-          <button type="button" className="ghost !min-h-11 !min-w-11 !rounded-full !p-0" aria-label={`${t('移除')} ${pickLabel(p)}`} onClick={() => onRemove(p.role)}><Icon name="close" size={14} /></button>
+          <button type="button" className="ghost !min-h-11 !min-w-11 !rounded-full !p-0" aria-label={`${t('ui.remove_2')} ${pickLabel(p)}`} onClick={() => onRemove(p.role)}><Icon name="close" size={14} /></button>
         </span>
       ))}
     </div>

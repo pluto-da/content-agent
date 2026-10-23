@@ -55,35 +55,35 @@ export function Home({ go }: { go: (to: string) => void }) {
     <div className="page page-narrow flex flex-col gap-6">
       {toast}
       <section className="flex flex-col gap-2 pt-2">
-        <h2 className="!text-[22px] !leading-snug" data-testid="intro">{t('这个助手帮你找选题、写内容、准备发布，发布由你自己点。')}</h2>
-        <p className="sub">{t('全部在这台设备上完成，不需要服务器。')}</p>
+        <h2 className="!text-[22px] !leading-snug" data-testid="intro">{t('ui.this_assistant_finds_topics_writes')}</h2>
+        <p className="sub">{t('ui.everything_happens_on_this_device')}</p>
       </section>
 
-      <ErrorNext error={err} action={t('重新加载')} onAction={() => void load()} />
+      <ErrorNext error={err} action={t('ui.reload_2')} onAction={() => void load()} />
       {step ? (
-        <section className="next-card" data-testid="next-step" data-step={step.id} aria-label={t('下一步')}>
+        <section className="next-card" data-testid="next-step" data-step={step.id} aria-label={t('ui.next_step')}>
           <span className="next-ico"><Icon name={step.icon} size={20} /></span>
           <div className="grow"><strong>{t(step.title)}</strong><p>{t(step.hint)}</p></div>
           <button type="button" className="primary" onClick={() => go(step.to)}>{t(step.action)}</button>
         </section>
       ) : !err && <Skeleton h={84} r={20} />}
 
-      <section aria-label={t('一句话开始')} className="flex flex-col gap-2">
-        <h2 className="section-t !m-0 !mx-1">{t('一句话开始')}</h2>
+      <section aria-label={t('ui.start_with_one_sentence')} className="flex flex-col gap-2">
+        <h2 className="section-t !m-0 !mx-1">{t('ui.start_with_one_sentence')}</h2>
         <Composer
           go={go} onPlus={() => openAdd()} onDone={() => void load()}
           suggestions={[
-            ...(snap && !snap.hasModel ? [{ label: t('连接一个模型'), to: 'me/models' }] : []),
-            { label: t('帮我找今天的选题'), to: 'topics' },
-            { label: t('写一篇小红书：通勤时间怎么利用'), text: '写一篇小红书：通勤时间怎么利用' },
-            { label: t('添加手机上的 App'), to: 'me/platforms' },
+            ...(snap && !snap.hasModel ? [{ label: t('ui.connect_a_model_2'), to: 'me/models' }] : []),
+            { label: t('ui.find_todays_topics_for_me'), to: 'topics' },
+            { label: t('ui.write_a_xiaohongshu_post_making'), text: '写一篇小红书：通勤时间怎么利用' },
+            { label: t('ui.add_a_phone_app'), to: 'me/platforms' },
           ]}
         />
       </section>
 
       {entries.length > 0 && (
-        <section aria-label={t('打开平台')} data-testid="builtin-entries">
-          <div className="mb-2 flex items-center justify-between px-1"><h2 className="section-t !m-0">{t('打开平台')}</h2><button type="button" className="ghost" onClick={() => go('publish')}>{t('去发布')} ›</button></div>
+        <section aria-label={t('ui.open_platform')} data-testid="builtin-entries">
+          <div className="mb-2 flex items-center justify-between px-1"><h2 className="section-t !m-0">{t('ui.open_platform')}</h2><button type="button" className="ghost" onClick={() => go('publish')}>{t('ui.go_publish')} ›</button></div>
           <ul className="entry-grid">
             {entries.map((a) => {
               const c = center(a.platform)!;
@@ -100,8 +100,8 @@ export function Home({ go }: { go: (to: string) => void }) {
       )}
 
       {recent.length > 0 && (
-        <section aria-label={t('最近内容')}>
-          <div className="mb-2 flex items-center justify-between px-1"><h2 className="section-t !m-0">{t('最近内容')}</h2><button type="button" className="ghost" onClick={() => go('write')}>{t('查看全部')}</button></div>
+        <section aria-label={t('ui.recent_content')}>
+          <div className="mb-2 flex items-center justify-between px-1"><h2 className="section-t !m-0">{t('ui.recent_content')}</h2><button type="button" className="ghost" onClick={() => go('write')}>{t('ui.view_all')}</button></div>
           <ul className="item-list">
             {recent.map((d) => (
               <li key={d.id}>

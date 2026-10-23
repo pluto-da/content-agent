@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global indexedDB, document */
 /**
  * 1.0 存储治理：IndexedDB 1 GB 媒体压测（沙盒 / 桌面 Chromium 尽力测；低端真机项另行标“待真机”）。
  * 做法：托管 web/dist（hash 路由、无服务端）→ 持久化用户目录 → 首次打开建库 → 写入 N MB 随机（不可压缩）base64 媒体（每条 2 MB）

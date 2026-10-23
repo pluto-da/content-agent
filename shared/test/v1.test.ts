@@ -89,3 +89,12 @@ describe('费用护栏：运行时', () => {
     expect(h.pendings.length).toBe(0); expect(h.model.calls.length).toBe(1);
   });
 });
+
+describe('多语言：核心文案 id 制，英文缺失 0', () => {
+  it('en 覆盖 zh-CN 全部 id，插值占位一致', async () => {
+    const { missingIds, ZH, rawMessage } = await import('../src/core/i18n.js');
+    expect(missingIds('en')).toEqual([]);
+    const ph = (s = '') => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',');
+    for (const id of Object.keys(ZH)) expect(`${id}:${ph(rawMessage(id, 'en'))}`).toBe(`${id}:${ph(ZH[id])}`);
+  });
+});

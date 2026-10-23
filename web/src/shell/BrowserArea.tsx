@@ -9,6 +9,7 @@ import { Drawer, DrawerContent, DrawerItem } from '../components/ui/drawer';
 import { browserHost, overlayManager, type LoadError, type NavState } from '../browser/browserHost';
 import { copyText, openExternal } from '../runtime';
 import { PlatformGlyph } from './Sidebar';
+import { tr } from '../i18n';
 
 export interface BrowserTarget { id: string; label: string; url: string; publishUrl?: string; hosts: string[]; custom?: boolean; patrol?: boolean }
 export interface PatrolState { stops: { id: string; label: string; url: string; hosts: string[]; platform: string }[]; index: number }
@@ -84,25 +85,25 @@ export function BrowserArea({ target, startUrl, onSend, onMenu, patrol, onPatrol
         {tb('后退', 'arrowLeft', () => void browserHost.nav(target.id, 'back'), !st.canGoBack)}
         {tb('前进', 'arrowRight', () => void browserHost.nav(target.id, 'forward'), !st.canGoForward)}
         {loading ? tb('停止', 'close', () => void browserHost.nav(target.id, 'stop')) : tb('刷新', 'reload', () => void browserHost.nav(target.id, 'reload'))}
-        <button type="button" className="!min-h-9 min-w-0 flex-1 !justify-start gap-1 !rounded-full !border-0 !bg-surface-2 !px-3 !text-[13px] !font-normal !text-fg-2" aria-label="复制完整网址" data-testid="address" onClick={async () => { setCopied(await copyText(st.url || target.url)); setTimeout(() => setCopied(false), 1200); }}>
+        <button type="button" className="!min-h-9 min-w-0 flex-1 !justify-start gap-1 !rounded-full !border-0 !bg-surface-2 !px-3 !text-[13px] !font-normal !text-fg-2" aria-label={tr('ui.copy_full_url')} data-testid="address" onClick={async () => { setCopied(await copyText(st.url || target.url)); setTimeout(() => setCopied(false), 1200); }}>
           <Icon name="lock" size={13} className="shrink-0 text-muted" /><span className="truncate">{copied ? '已复制网址' : domainOf(st.url || target.url)}</span>
         </button>
-        <button type="button" data-testid="send-to-agent" className="!min-h-9 shrink-0 !rounded-full !px-3 !text-[13px]" onClick={send}><Icon name="send" size={14} /> 发给 Agent</button>
+        <button type="button" data-testid="send-to-agent" className="!min-h-9 shrink-0 !rounded-full !px-3 !text-[13px]" onClick={send}><Icon name="send" size={14} /> {tr('ui.send_to_agent')}</button>
         {tb('更多', 'more', () => setMenu(true))}
         <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[2px] bg-accent transition-[width] duration-150" style={{ width: loading ? `${st.progress}%` : 0 }} />
       </div>
       {hint && (
         <div className="flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3 py-2 text-[13px] text-fg-2" role="note" data-testid="browser-hint">
           <Icon name="shield" size={14} className="shrink-0 text-muted" />
-          <span className="min-w-0 flex-1">在这里你本人登录、浏览、发布。超级工作台不会读取或操作这个页面。</span>
-          <button type="button" className="!min-h-8 !px-2 !text-[13px]" onClick={() => { localStorage.setItem(HINT_KEY, '1'); setHint(false); }}>知道了</button>
+          <span className="min-w-0 flex-1">{tr('ui.log_in_browse_and_publish')}</span>
+          <button type="button" className="!min-h-8 !px-2 !text-[13px]" onClick={() => { localStorage.setItem(HINT_KEY, '1'); setHint(false); }}>{tr('ui.got_it')}</button>
         </div>
       )}
       {scheme && (
         <div className="flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3 py-2 text-[13px]" role="status">
-          <span className="min-w-0 flex-1">页面想打开官方 App</span>
-          <button type="button" className="!min-h-8 !px-2 !text-[13px]" onClick={() => { onMenu('app'); setScheme(null); }}>打开</button>
-          <button type="button" className="!min-h-8 !px-2 !text-[13px]" onClick={() => setScheme(null)}>忽略</button>
+          <span className="min-w-0 flex-1">{tr('ui.the_page_wants_to_open')}</span>
+          <button type="button" className="!min-h-8 !px-2 !text-[13px]" onClick={() => { onMenu('app'); setScheme(null); }}>{tr('ui.open')}</button>
+          <button type="button" className="!min-h-8 !px-2 !text-[13px]" onClick={() => setScheme(null)}>{tr('ui.ignore')}</button>
         </div>
       )}
       <div ref={slot} data-browser-slot className="relative min-h-0 flex-1" data-testid="browser-slot">
@@ -110,31 +111,31 @@ export function BrowserArea({ target, startUrl, onSend, onMenu, patrol, onPatrol
           <div className="mx-auto flex h-full max-w-[420px] flex-col items-center justify-center gap-3 px-6 text-center" data-testid="web-fallback">
             <PlatformGlyph id={target.id} label={target.label} size={44} />
             <h2 className="text-[18px]">{target.label}</h2>
-            <p className="m-0 text-[14px] text-muted">网页版不能内嵌平台页面（官方站点禁止被嵌入）。</p>
-            <button type="button" className="primary" onClick={() => void openExternal(st.url || target.url)}>在新标签页打开</button>
-            <p className="m-0 text-[13px] text-muted">用 App 获得完整工作台：平台页面与 Agent 同屏、切换不丢页面。</p>
+            <p className="m-0 text-[14px] text-muted">{tr('ui.the_web_version_cant_embed')}</p>
+            <button type="button" className="primary" onClick={() => void openExternal(st.url || target.url)}>{tr('ui.open_in_new_tab')}</button>
+            <p className="m-0 text-[13px] text-muted">{tr('ui.use_the_app_for_the')}</p>
           </div>
         ) : covered ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted" data-testid="browser-covered"><PlatformGlyph id={target.id} label={target.label} size={36} /><span className="text-[13px]">网页已暂时收起</span></div>
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted" data-testid="browser-covered"><PlatformGlyph id={target.id} label={target.label} size={36} /><span className="text-[13px]">{tr('ui.web_page_temporarily_hidden')}</span></div>
         ) : err ? (
           <div className="mx-auto flex h-full max-w-[420px] flex-col items-center justify-center gap-2 px-6 text-center" role="alert" data-testid="browser-error">
             <Icon name="error" size={22} className="text-bad" />
             <p className="m-0 text-fg">{errText(err)}</p>
             <div className="mt-2 flex flex-wrap justify-center gap-2">
-              <button type="button" className="primary" onClick={() => { setErr(null); void browserHost.nav(target.id, 'reload'); }}>重试</button>
-              <button type="button" onClick={() => void openExternal(st.url || target.url)}>在系统浏览器打开</button>
-              {!target.custom && !target.patrol && <button type="button" onClick={() => onMenu('app')}>打开官方 App</button>}
+              <button type="button" className="primary" onClick={() => { setErr(null); void browserHost.nav(target.id, 'reload'); }}>{tr('ui.retry')}</button>
+              <button type="button" onClick={() => void openExternal(st.url || target.url)}>{tr('ui.open_in_system_browser')}</button>
+              {!target.custom && !target.patrol && <button type="button" onClick={() => onMenu('app')}>{tr('ui.open_official_app')}</button>}
             </div>
           </div>
         ) : null}
-        {restored && <div className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-ink px-3 py-1 text-[13px] text-ink-fg" role="status" data-testid="restored">已恢复</div>}
+        {restored && <div className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-ink px-3 py-1 text-[13px] text-ink-fg" role="status" data-testid="restored">{tr('ui.restored')}</div>}
       </div>
       {patrol && (
-        <div className="flex shrink-0 items-center gap-2 border-t border-line bg-surface px-3 py-2 pb-[calc(8px+var(--sa-bottom))]" data-testid="patrol-bar" role="toolbar" aria-label="热点巡视">
+        <div className="flex shrink-0 items-center gap-2 border-t border-line bg-surface px-3 py-2 pb-[calc(8px+var(--sa-bottom))]" data-testid="patrol-bar" role="toolbar" aria-label={tr('ui.trend_patrol')}>
           <span className="min-w-0 flex-1 truncate text-[13px] text-muted">巡视 {patrol.index + 1}/{patrol.stops.length} · {patrol.stops[patrol.index]?.label}</span>
-          <button type="button" className="!min-h-10 !px-3 !text-[14px]" disabled={patrol.index >= patrol.stops.length - 1} onClick={() => onPatrol?.('next')} data-testid="patrol-next">下一个</button>
-          <button type="button" className="primary !min-h-10 !px-3 !text-[14px]" onClick={send} data-testid="patrol-send">发给 Agent</button>
-          <button type="button" className="!min-h-10 !px-3 !text-[14px]" onClick={() => onPatrol?.('end')} data-testid="patrol-end">结束</button>
+          <button type="button" className="!min-h-10 !px-3 !text-[14px]" disabled={patrol.index >= patrol.stops.length - 1} onClick={() => onPatrol?.('next')} data-testid="patrol-next">{tr('ui.next')}</button>
+          <button type="button" className="primary !min-h-10 !px-3 !text-[14px]" onClick={send} data-testid="patrol-send">{tr('ui.send_to_agent')}</button>
+          <button type="button" className="!min-h-10 !px-3 !text-[14px]" onClick={() => onPatrol?.('end')} data-testid="patrol-end">{tr('ui.end')}</button>
         </div>
       )}
       <Drawer open={menu} onOpenChange={setMenu}>
