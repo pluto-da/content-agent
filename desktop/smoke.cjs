@@ -17,6 +17,9 @@ async function runSmoke({ app, win, origin, safeStorage, session, dataDir }) {
   const shot = async (name) => { try { win.show(); win.focus(); win.webContents.invalidate(); await js('new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 300))))'); } catch { /* 忽略 */ } const img = await win.webContents.capturePage(); const f = path.join(dir, `${name}.png`); fs.writeFileSync(f, img.toPNG()); return path.basename(f); };
   const js = (code) => win.webContents.executeJavaScript(code, true);
   const write = () => fs.writeFileSync(path.join(dir, 'smoke.json'), JSON.stringify(out, null, 2));
+  const consoleLog = [];
+  win.webContents.on('console-message', (...a) => { const e = a[0]; const m = e && typeof e === 'object' && 'message' in e ? `${e.level}: ${e.message}` : `${a[1]}: ${a[2]}`; if (consoleLog.length < 60) consoleLog.push(String(m).slice(0, 400)); });
+  out.console = consoleLog;
   const killer = setTimeout(() => { out.error = 'timeout 150 s'; write(); app.exit(2); }, 150000);
   try {
     const health = await (await fetch(`${origin}/api/health`)).json();
@@ -36,9 +39,17 @@ async function runSmoke({ app, win, origin, safeStorage, session, dataDir }) {
     let state = 'pending';
     session.defaultSession.once('will-download', (_e, item) => { item.setSavePath(zipPath); item.once('done', (_e2, st) => { state = st; }); });
     await js(`(() => { window.__caSmoke = null; const orig = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { if (this.download && String(this.href).startsWith('blob:')) { const name = this.download; fetch(this.href).then((r) => r.arrayBuffer()).then((ab) => { const u = new Uint8Array(ab); let bin = ''; for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode(...u.subarray(i, i + 0x8000)); window.__caSmoke = { name, b64: btoa(bin) }; }); } return orig.call(this); }; return true; })()`);
-    await js("document.querySelector('[data-testid=export-zip]').click()");
-    let hooked = null;
-    for (let i = 0; i < 120 && !hooked && state !== 'completed'; i++) { await sleep(500); hooked = await js('window.__caSmoke'); }
+    let hooked = null; const errs = [];
+    for (let attempt = 0; attempt < 3 && !hooked && state !== 'completed'; attempt++) {
+      await js("document.querySelector('[data-testid=export-zip]').click()");
+      for (let i = 0; i < 40 && !hooked && state !== 'completed'; i++) { await sleep(500); hooked = await js('window.__caSmoke'); const e = await js("document.querySelector('[role=alert]')?.textContent ?? ''"); if (e) { errs.push(e); break; } }
+      if (!hooked && state !== 'completed') await sleep(1500);
+    }
+    if (errs.length) {
+      out.exportErrors = errs;
+      // 诊断：逐个对象仓库 getAll / 逐条 get，找出哪一个读不出来（只读本 App 自己的 IndexedDB）
+      out.idbProbe = await js(`(async () => { const names = (await indexedDB.databases()).map((d) => d.name); const res = { names, stores: {} }; for (const n of names) { const db = await new Promise((ok, no) => { const r = indexedDB.open(n); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }); for (const st of db.objectStoreNames) { try { const keys = await new Promise((ok, no) => { const r = db.transaction(st).objectStore(st).getAllKeys(); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }); const bad = []; for (const k of keys) { try { await new Promise((ok, no) => { const r = db.transaction(st).objectStore(st).get(k); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }); } catch (e) { bad.push(String(k).slice(0, 60) + ': ' + (e && e.name) + ' ' + (e && e.message)); } } res.stores[n + '/' + st] = { keys: keys.length, bad }; } catch (e) { res.stores[n + '/' + st] = { error: (e && e.name) + ' ' + (e && e.message) }; } } db.close(); } return res; })()`).catch((e) => String(e));
+    }
     if (hooked && !(state === 'completed' && fs.existsSync(zipPath))) { fs.writeFileSync(zipPath, Buffer.from(hooked.b64, 'base64')); if (state !== 'completed') state = 'captured-blob'; }
     const bytes = fs.existsSync(zipPath) ? fs.statSync(zipPath).size : 0;
     await sleep(800);
