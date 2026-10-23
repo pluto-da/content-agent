@@ -5,3 +5,4 @@ export * from './context.js';
 export * from './sessions.js';
 export * from './discussion.js';
 export * from './meetings.js';
+export * from './race.js';
