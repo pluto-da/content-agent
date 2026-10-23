@@ -28,6 +28,8 @@ export interface ToolSpec {
   /** 子任务里禁止使用（对外 / 删除 / 写入类） */
   noSubtask?: boolean;
   estimateCost?(args: Record<string, unknown>): number | null;
+  /** L2 工具按参数判断是否真的需要确认（如“覆盖已有数据”才需要）；返回 false 时按 L1 处理（代码硬性项除外） */
+  needsConfirm?(args: Record<string, unknown>): Promise<boolean>;
   approvalScope?(args: Record<string, unknown>): string;
   run(args: Record<string, unknown>, ctx: ToolRunCtx): Promise<ToolOutput>;
 }

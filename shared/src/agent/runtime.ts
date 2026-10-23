@@ -384,7 +384,8 @@ export class AgentRuntime {
     if (prev?.status === 'ok' && prev.output) { this.p.emit?.({ type: 'tool', runId: run.id, stepId, tool: name, status: 'reused', output: prev.output }); this.noteOutcome(run, name, prev.output); return prev.output; }
     // 审批（代码强制项不受文件影响）
     const est = spec.estimateCost?.(args!) ?? (spec.role ? null : 0);
-    const approval = needsApproval({ tool: name, level: spec.level, kind: spec.kind ?? (spec.role ? 'model' : 'other'), role: spec.role, estCost: est, spentToday: (await this.p.spentToday?.()) ?? 0, mediaRole: !!spec.media, thresholds: this.lim.budget, remembered: (await this.p.remembered?.()) ?? [], scope: spec.approvalScope?.(args!) ?? '*' });
+    const level = spec.level === 'L2' && spec.needsConfirm && !(await spec.needsConfirm(args!).catch(() => true)) ? 'L1' : spec.level;
+    const approval = needsApproval({ tool: name, level, kind: spec.kind ?? (spec.role ? 'model' : 'other'), role: spec.role, estCost: est, spentToday: (await this.p.spentToday?.()) ?? 0, mediaRole: !!spec.media, thresholds: this.lim.budget, remembered: (await this.p.remembered?.()) ?? [], scope: spec.approvalScope?.(args!) ?? '*' });
     const pendId = `p-${sha256(idemKey).slice(0, 10)}`;
     if (approval.confirm && !this.approvedOnce.has(pendId) && run.state === 'waiting_user') { run.toolCallCount--; return 'waiting'; }   // 同批另一个工具已在等确认：本工具留到确认后再跑
     if (approval.confirm && !this.approvedOnce.has(pendId)) {
@@ -424,8 +425,8 @@ export class AgentRuntime {
     await this.p.store.saveToolCall(r);
     this.noteOutcome(run, tool, out);
     this.p.emit?.({ type: 'tool', runId: run.id, stepId, tool, status: out.ok ? 'ok' : 'failed', output: out });
-    if (out.card) await this.p.store.appendMessage({ conversationId: run.conversationId, role: 'card', content: tool, runId: run.id, card: out.card });
-    else if (!out.ok) await this.p.store.appendMessage({ conversationId: run.conversationId, role: 'card', content: tool, runId: run.id, card: { type: out.error.kind === 'role_not_configured' ? 'not_configured' : 'tool_error', data: { tool, reason: out.error.reason, advice: out.error.advice, actions: out.error.actions } } });
+    if (out.card) await this.p.store.appendMessage({ conversationId: run.conversationId, role: 'card', content: tool, runId: run.id, card: out.card, meta: { stepId, ok: out.ok } });
+    else if (!out.ok) await this.p.store.appendMessage({ conversationId: run.conversationId, role: 'card', content: tool, runId: run.id, meta: { stepId, ok: false }, card: { type: out.error.kind === 'role_not_configured' ? 'not_configured' : 'tool_error', data: { tool, reason: out.error.reason, advice: out.error.advice, actions: out.error.actions } } });
     return out;
   }
 

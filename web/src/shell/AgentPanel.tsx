@@ -9,12 +9,14 @@ import { Drawer, DrawerContent, DrawerItem } from '../components/ui/drawer';
 import type { Layout } from '../nav';
 import { presetOf } from '../data/providers';
 import { center } from '../data/platforms';
-import { checkState, configuredProviders, resolveProvider } from '../local/store';
+import { checkState, configuredProviders, getPrefs, resolveProvider } from '../local/store';
 import { useModels } from '../local/useModels';
 import { useStoreChange, useStoreValue } from '../local/useStore';
 import { SkeletonLines } from '../ui';
 import type { ProviderConfig } from '../local/llm';
 import { runTurn, type AgentEvent } from '../agent/loop';
+import { runTurnV9 } from '../v9/engine';
+import { flagOn } from '@content-agent/shared';
 import { ConfirmCard, ToolCard, type CardActions } from '../agent/cards';
 import { addInbox, bus, createConversation, deleteConversation, deleteInbox, listConversations, listInbox, listMessages, updateConversation, type CardData, type Conversation, type InboxItem, type StoredMsg } from '../agent/store';
 import { toolByName } from '../agent/tools';
@@ -110,7 +112,9 @@ export function useAgent() {
       if (!id) { const c = await createConversation(); id = c.id; setCid(id); setMsgs([]); }
       abort.current = new AbortController();
       if (pick) await updateConversation(id, { model: `${cfg.label} · ${cfg.model}` });
-      await runTurn({ conversationId: id, text: t, cfg, signal: abort.current.signal, onEvent: (e) => { onEvent(e); if (e.type === 'done') { setMsgs((m) => m.map((x) => ({ ...x, meta: { ...(x.meta ?? {}), streaming: false }, stopped: e.stopped && x.meta?.streaming ? true : x.stopped }))); if (e.error && cfgState !== 'ok') setNotice(`发送失败：${e.error}。这个模型还没测试通过，可到“我的 → 模型”点“测试连接”看具体原因`); void refreshConvs(); } } });
+      const pf = await getPrefs();
+      const turn = flagOn('agent.runtime.v9', pf.flags ?? {}) ? runTurnV9 : runTurn;
+      await turn({ conversationId: id, text: t, cfg, signal: abort.current.signal, onEvent: (e) => { onEvent(e); if (e.type === 'done') { setMsgs((m) => m.map((x) => ({ ...x, meta: { ...(x.meta ?? {}), streaming: false }, stopped: e.stopped && x.meta?.streaming ? true : x.stopped }))); if (e.error && cfgState !== 'ok') setNotice(`发送失败：${e.error}。这个模型还没测试通过，可到“我的 → 模型”点“测试连接”看具体原因`); void refreshConvs(); } } });
     } catch (e) {
       setNotice(`发送失败：${e instanceof Error ? e.message : String(e)}。可以再发一次，或到“我的 → 模型”检查设置`);
     } finally {
@@ -190,7 +194,7 @@ export function AgentPanel({ a, variant, lay, go, onOpenPlatform, onCollapse, ro
 
   const actions: CardActions = { ask: (t) => void a.send(t), userTool: a.userTool, openDraft: (id) => go(`agent/drafts/${id}`) };
   const submit = () => { const t = text; setText(''); void a.send(t); };
-  const visible = a.msgs.filter((m) => m.role !== 'tool' && !m.meta?.toolResult);
+  const visible = a.msgs.filter((m) => m.role !== 'tool' && !m.meta?.toolResult && !m.meta?.hidden);
   const connected = a.models ? configuredProviders(a.models) : [];
 
   const header = (

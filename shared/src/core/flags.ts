@@ -10,6 +10,7 @@ export interface FeatureFlag { id: string; label: string; description: string; d
 
 export const FLAGS = new Registry<FeatureFlag>('特性开关');
 const def = (f: FeatureFlag) => FLAGS.register(f);
+def({ id: 'agent.runtime.v9', label: '新 Agent 运行时', description: '状态机、续跑、审批阈值、自检、多模态工具；关闭时退回 0.8 的对话循环（应急开关）', default: true, stage: 'stable', since: '0.9.0', reviewBy: '0.11' });
 def({ id: 'agent.planner', label: '任务图规划', description: '多步任务先生成任务图再执行；关闭时用逐步模式（每轮只决定下一步）', default: true, stage: 'stable', since: '0.9.0' });
 def({ id: 'agent.selfcheck.judge', label: '自检判官', description: '多步任务结束、含事实陈述或刚被纠正时，用快速模型做一次判官检查（会多一次调用）', default: false, stage: 'beta', since: '0.9.0' });
 def({ id: 'agent.subtasks', label: '子任务', description: '把可独立完成的一块交给子运行（深度 1、预算独立）', default: true, stage: 'stable', since: '0.9.0' });

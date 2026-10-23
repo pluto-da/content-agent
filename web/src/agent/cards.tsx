@@ -11,6 +11,7 @@ import { saveProfile, type CardData } from './store';
 import { toolByName } from './tools';
 import { db } from '../local/db';
 
+import { V9Body } from '../v9/cards';
 export interface CardActions {
   ask: (text: string) => void;
   retry?: () => void;
@@ -178,7 +179,7 @@ function Body({ card, actions }: { card: CardData; actions: CardActions }) {
     case 'open': return <p className="m-0">{d.opened ? `已在主区打开 ${d.label}${d.page === 'publish' ? ' · 发布页' : ''}` : `没有打开：${d.reason}`}</p>;
     case 'patrol': return <p className="m-0">已开始巡视：{(d.stops ?? []).map((s: { label: string }) => s.label).join(' → ')}。由你本人翻看，看到值得写的就点“发给 Agent”。</p>;
     case 'note': return <p className="m-0">{d.text}</p>;
-    default: return <p className="m-0 text-muted">完成</p>;
+    default: return <V9Body card={card} actions={actions} />;
   }
 }
 

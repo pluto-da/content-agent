@@ -178,7 +178,9 @@ export function importModels(cur: ModelsStateV3, incoming: Record<string, any>, 
 export interface LegacyProvider { id: string; label: string; protocol: 'openai' | 'anthropic'; baseURL: string; apiKey?: string; model: string; custom?: boolean; toolMode?: 'native' | 'json'; check?: { ok: boolean; at: string; ms?: number; model?: string; reason?: string } }
 export interface ModelsStateV2 { schemaVersion?: 2; providers: LegacyProvider[]; defaultProvider: string | null; advanced?: { thinking: 'off' | 'on'; temperature: number | null; fallbackProvider: string | null } }
 
-const legacyVendor = (p: LegacyProvider) => (p.protocol === 'anthropic' ? 'anthropic' : p.id === 'mimo' ? 'mimo' : p.id === 'ollama' ? 'ollama' : p.id === 'zhipu' ? 'zhipu' : p.id === 'dashscope' ? 'dashscope' : p.id === 'ark' ? 'ark' : p.id === 'minimax' ? 'minimax' : p.id === 'gemini' ? 'gemini' : 'openai-compatible');
+const KNOWN_VENDOR_IDS = ['mimo', 'ollama', 'zhipu', 'dashscope', 'ark', 'minimax', 'gemini', 'deepseek', 'kimi', 'openai', 'siliconflow', 'stepfun'];
+/** 0.8 服务商 id → 0.9 适配器（vendor）。自定义服务按协议走 OpenAI 兼容 / Anthropic 兼容。 */
+export const legacyVendor = (p: Pick<LegacyProvider, 'id' | 'protocol' | 'custom'>): string => (p.protocol === 'anthropic' ? 'anthropic' : !p.custom && KNOWN_VENDOR_IDS.includes(p.id) ? p.id : 'openai-compatible');
 
 /** v2 → v3（纯函数、幂等）：每个旧 provider 生成一个账号 + 一条 migrated 模型名（名字原样）；defaultProvider → chat.primary；fallbackProvider → chat.fallback。 */
 export function upV2toV3(v2: ModelsStateV2): ModelsStateV3 & { legacy: ModelsStateV2 } {

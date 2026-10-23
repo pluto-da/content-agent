@@ -3,12 +3,20 @@
  * 集合：drafts、topics、hot、apps、metrics、logs；键值：settings（含模型配置）。密钥只存本机，不写日志。
  */
 export type Row = Record<string, unknown> & { id: number };
-/** 0.8.0（DB_VERSION 2）只新增集合：conversations、messages、inbox、tasks、hot_snapshots；旧集合不改。 */
-export const COLLECTIONS = ['drafts', 'topics', 'apps', 'metrics', 'logs', 'conversations', 'messages', 'inbox', 'tasks', 'hot_snapshots'] as const;
+/**
+ * 0.8.0（DB_VERSION 2）只新增集合：conversations、messages、inbox、tasks、hot_snapshots；旧集合不改。
+ * 0.9.0（DB_VERSION 3）只新增集合（见 shared LOCAL_DB_VERSIONS）：媒体、异步任务、用量明细、VFS、运行与工具调用、锁、提醒、审计、收益、经验、提案、记忆。
+ * 回滚：IndexedDB 不能降版本打开；回到 0.8 前请用“备份 → 导出 0.8 兼容备份”（BackupMigrator.down，见 ADR-003）。
+ */
+export const COLLECTIONS = ['drafts', 'topics', 'apps', 'metrics', 'logs', 'conversations', 'messages', 'inbox', 'tasks', 'hot_snapshots',
+  'media', 'jobs', 'usage_log', 'runs', 'toolcalls', 'locks', 'reminders', 'audit', 'revenue', 'attribution', 'experiments', 'lessons', 'proposals', 'memories'] as const;
 export type Collection = (typeof COLLECTIONS)[number];
 
 const DB_NAME = 'content-agent';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
+/** 以路径为主键的集合（VFS）：不自增。 */
+export const KEYED = ['vfs_files', 'vfs_versions'] as const;
+export type Keyed = (typeof KEYED)[number];
 
 interface Backend {
   all(c: Collection): Promise<Row[]>;
@@ -17,6 +25,10 @@ interface Backend {
   clear(c: Collection): Promise<void>;
   getKV<T>(k: string): Promise<T | undefined>;
   setKV(k: string, v: unknown): Promise<void>;
+  kget<T>(c: Keyed, k: string): Promise<T | undefined>;
+  kput(c: Keyed, k: string, v: unknown): Promise<void>;
+  kdel(c: Keyed, k: string): Promise<void>;
+  kall<T>(c: Keyed): Promise<T[]>;
 }
 
 function memory(): Backend {
@@ -31,6 +43,10 @@ function memory(): Backend {
     async clear(c) { col(c).clear(); },
     async getKV<T>(k: string) { return structuredClone(kv.get(k)) as T | undefined; },
     async setKV(k, v) { kv.set(k, structuredClone(v)); },
+    async kget<T>(c: Keyed, k: string) { return structuredClone((data.get(`k:${c}`) as unknown as Map<string, unknown> | undefined)?.get(k)) as T | undefined; },
+    async kput(c, k, v) { const m = (data.get(`k:${c}`) as unknown as Map<string, unknown>) ?? new Map(); m.set(k, structuredClone(v)); data.set(`k:${c}`, m as never); },
+    async kdel(c, k) { (data.get(`k:${c}`) as unknown as Map<string, unknown> | undefined)?.delete(k); },
+    async kall<T>(c: Keyed) { return [...((data.get(`k:${c}`) as unknown as Map<string, unknown> | undefined)?.values() ?? [])].map((v) => structuredClone(v)) as T[]; },
   };
 }
 
@@ -42,6 +58,7 @@ function idb(factory: IDBFactory): Backend {
       const db = req.result;
       for (const c of COLLECTIONS) if (!db.objectStoreNames.contains(c)) db.createObjectStore(c, { keyPath: 'id', autoIncrement: true });
       if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+      for (const c of KEYED) if (!db.objectStoreNames.contains(c)) db.createObjectStore(c);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error ?? new Error('本机数据库打开失败'));
@@ -68,6 +85,10 @@ function idb(factory: IDBFactory): Backend {
     async clear(c) { await tx(c, 'readwrite', (s) => s.clear()); },
     getKV: <T,>(k: string) => tx<T | undefined>('kv', 'readonly', (s) => s.get(k) as IDBRequest<T | undefined>),
     async setKV(k, v) { await tx('kv', 'readwrite', (s) => s.put(v, k)); },
+    kget: <T,>(c: Keyed, k: string) => tx<T | undefined>(c, 'readonly', (s) => s.get(k) as IDBRequest<T | undefined>),
+    async kput(c, k, v) { await tx(c, 'readwrite', (s) => s.put(v, k)); },
+    async kdel(c, k) { await tx(c, 'readwrite', (s) => s.delete(k)); },
+    kall: <T,>(c: Keyed) => tx<T[]>(c, 'readonly', (s) => s.getAll() as IDBRequest<T[]>),
   };
 }
 
@@ -104,4 +125,8 @@ export const db = {
   clear: (c: Collection) => after(be().clear(c), c),
   getKV: <T,>(k: string) => be().getKV<T>(k),
   setKV: (k: string, v: unknown) => after(be().setKV(k, v), `kv:${k}`),
+  kget: <T,>(c: Keyed, k: string) => be().kget<T>(c, k),
+  kput: (c: Keyed, k: string, v: unknown) => after(be().kput(c, k, v), `kv:${c}`),
+  kdel: (c: Keyed, k: string) => after(be().kdel(c, k), `kv:${c}`),
+  kall: <T,>(c: Keyed) => be().kall<T>(c),
 };
