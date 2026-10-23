@@ -215,7 +215,7 @@ export function SkillsPage({ go }: { go: (to: string) => void }) {
             <div className="list-row static flex-wrap">
               <span className="row-text"><span className="row-label">{s.name}{s.source === 'user' ? ` · ${t('自定义')}` : ''}{s.version ? ` · v${s.version}` : ''}{docOf(s.path).status ? ` · ${String(docOf(s.path).status)}` : ''}</span><span className="row-hint">{s.description}</span></span>
               <button type="button" className="ghost" onClick={() => setOpen(s.path)}>{t('查看')}</button>
-              <label className="flex items-center gap-1 text-[13px]"><input type="checkbox" checked={s.enabled} onChange={() => void toggle(s.path, !s.enabled)} aria-label={`${t('启用')} ${s.name}`} />{t('启用')}</label>
+              <label className="flex min-h-11 items-center gap-1 px-1 text-[13px]"><input type="checkbox" checked={s.enabled} onChange={() => void toggle(s.path, !s.enabled)} aria-label={`${t('启用')} ${s.name}`} />{t('启用')}</label>
             </div>
           </li>
         ))}

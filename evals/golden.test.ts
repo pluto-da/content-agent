@@ -1,7 +1,7 @@
 /** 黄金任务评测 G01–G28（12.3）：回放模式（ScriptedModel）+ 真实运行时 / 工具 / 能力层（Mock 适配器）。结果写 out/eval-golden.json。 */
 import { describe, it, expect, afterAll } from 'vitest';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { makeHarness, replies, cards, toolCalls, type EvalResult, type ScriptTurn, type Harness } from './harness.js';
+import { makeHarness, replies, cards, toolCalls, type EvalResult, type Harness } from './harness.js';
 import { callError, previewImport, validateRevenue, computeAttribution, summarize, applyProposal, rollbackProposal, validateLesson, lessonFile, DEFAULT_LIMITS, DEFAULT_FILES, VfsError, validateProposal, MOCK_PNG_64, FORBIDDEN_TOOL, SAFE_SUFFIX, makeWav, shDateTime, type Lesson } from '../shared/src/index.js';
 
 const results: EvalResult[] = [];
@@ -94,6 +94,7 @@ describe('黄金任务 G01–G28', () => {
   }, 'evals/golden.test.ts#G07'));
 
   it('G08 运行中再发新消息', () => evalCase('G08', '运行中再发新消息进入队列', async () => {
+    // eslint-disable-next-line prefer-const -- h 在下面的回调里自引用，必须先声明
     let h!: Harness; let queuedResult: unknown;
     h = await makeHarness([{ purpose: 'turn', text: '第一条处理完了。', check: () => { queuedResult = h.runtime.send(1, '第二条要求'); return null; } }, { purpose: 'turn', text: '第二条也处理了。' }]);
     await h.runtime.send(1, '第一条要求');

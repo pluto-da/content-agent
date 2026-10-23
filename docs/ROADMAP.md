@@ -1,0 +1,74 @@
+# 超级工作台路线图（0.10 → 0.11 → 1.0 及以后）
+
+写于 2026-10-23（0.9.0 交付时）。这里只写计划，0.9.0 没有实现其中任何一项。每版都遵守同一组硬边界：不做多账号 / 团队；不自动点赞、评论、私信、关注；不刷量、不绕风控、不抓登录后的私有数据；发布必须由你本人点击；回复只生成草稿；任何地方都不写真实密钥。
+
+工作量按“一个熟悉本仓库的开发者”的人日估算，不含等待真机或资质审批的时间。
+
+---
+
+## 0.10「装进手机里更稳」——密钥硬件绑定、真机补验、合规标识补全
+
+**目标**：把 0.9.0 里“待真机”和“只做了 PNG”的部分在安卓真机上做完、做实。
+
+| 功能 | 具体内容 | 扩展点 / 适配器 | 可测的验收项 |
+|---|---|---|---|
+| 原生 Android Keystore 硬件绑定 | 新 Capacitor 插件 `SecureKeys`：AES-256-GCM 主密钥生成在 AndroidKeyStore（StrongBox 可用时优先），`setUserAuthenticationRequired` 可选；WebView 只拿到加解密结果，拿不到密钥本身；旧 WebCrypto 存储一次性迁入，迁完删除 | `web/src/local/secrets.ts` 后端改为可插拔（`SecretBackend`：webcrypto / android-keystore / electron-safeStorage） | ① 真机上 `KeyInfo.isInsideSecureHardware()` 为 true 并写入诊断页；② 卸载重装后旧密文无法解密（预期）且界面提示重填；③ 备份 / 日志 / VFS 扫描仍 0 命中；④ 迁移失败时回退 WebCrypto 并明确提示 |
+| JPEG 隐式标识 | EXIF `UserComment` + XMP `dc:description`/自定义 `AIGC` 命名空间（生成模型、服务提供者、内容编号、时间） | `web/src/v9/aigc.ts` 增加 `labelImplicitJpeg`（纯 TS 写 APP1 段，不引第三方库） | 用 exiftool 读出全部字段；原图已有 EXIF 时保留不剥离 |
+| 音频隐式标识 | MP3 写 ID3v2.4 `TXXX:AIGC`；WAV 写 `LIST/INFO ICMT`；可选开头 0.5 秒提示音（默认关） | `aigc.ts` 增加 `labelAudio` | ffprobe 读出标签；提示音开关在设置里，默认关 |
+| 视频隐式标识 | MP4 `udta/©cmt` 与 `meta/ilst` 写入；服务商已有标识保留 | `aigc.ts` 增加 `labelMp4`（只改 moov 元数据盒，不重编码） | ffprobe 读出 comment；文件可正常播放（真机 + 桌面） |
+| CapacitorHttp multipart / 二进制真机验证 | 改图、转写、配音二进制在真机跑通；不行则改为 JS 构造 multipart 或原生插件 | `web/src/v9/transport.ts` | 真机 trace：请求体字段、返回 Base64 长度；失败路径白话 |
+| 本机通知精确时间 | Android 13+ 通知权限、`SCHEDULE_EXACT_ALARM` 处理；到期前预排通知（App 关闭也能弹） | `web/src/v9/reminders.ts` + local-notifications | 真机：关闭 App 后准点弹出；拒绝权限时 App 内显示且不崩 |
+| 新卡片截图补齐 | 11 类卡片正常 / 失败态逐张截图 | `work/v9/shots_v9.py` 增加回放会话 | shots-v10 报告 cards ≥ 22 张、溢出 / 越界 / 触控 <44 为 0 |
+
+- **依赖**：0.9.0 的统一能力层与 AIGC PNG 实现；GitHub Actions 自带 Android SDK。
+- **预计工作量**：10–14 人日（Keystore 插件 4、JPEG / 音频 / 视频标识 4、真机补验与修复 3–5、截图 1）。
+- **需要你提供**：一台 Android 13+ 真机（最好再有一台 Android 10 低端机）做安装与权限验证；不需要新 Key（可用 Mock 与已有 MiMo Key）。
+
+---
+
+## 0.11「真实联调与质量」——真 Key 跑通 C5 / C6、话术评测、移除旧循环
+
+**目标**：让 0.9.0 里“待 Key”的项全部有真实 trace，评测加入真实模型的判官打分。
+
+| 功能 | 具体内容 | 扩展点 / 适配器 | 可测的验收项 |
+|---|---|---|---|
+| MiMo 真实文本 / 推理 / TTS / ASR | C5、C6 真实调用，trace 存 `out/real-trace-0.11.json`（不含 Key） | `server/src/scripts/mimo-smoke.ts` 扩展到 v9 角色 | chat 流式首字 < 3 s；reason 返回思考；TTS 音频可播；ASR 文本非空 |
+| 其他服务商逐家实测 | 百炼（文本 / 生图 / 配音 / 转写）、智谱、方舟、MiniMax 至少各 1 个角色 | 已有适配器；不足的方言补到各自 `adapters/<vendor>.ts` | 能力声明 `verified` 由 doc → live；失败的如实标“未实测” |
+| 行为评测判官 | BQ-01–BQ-32 用真实快速模型做判官（temperature 0），人工抽检 20% | `evals/` 增加 `judge.ts` | 判官结论与人工抽检一致率 ≥ 90% |
+| 移除 0.8 对话循环 | `agent.runtime.v9` 开关到期，删除旧 `agent/loop.ts` 路径 | ADR-005 重审 | 全部 0.8 回归测试改为在 v9 运行时上通过 |
+| 向量检索转正 | `search.vector` 从 experimental → beta；记忆与素材 BM25 + 向量混合 | `shared/vfs/search.ts` | 检索前 5 命中率在 30 条样例上 ≥ 0.8 |
+
+- **依赖**：0.10 的真机传输验证（multipart / 二进制）。
+- **预计工作量**：8–12 人日（真实联调 4–6、判官 2–3、旧循环移除 2、向量 1）。
+- **需要你提供**：MiMo Key（已有）、百炼 / 智谱 / 方舟 / MiniMax 中你想用的几家的 Key（在 App 内“账号与 Key”填写或经安全表单给我，不在聊天里发）；每月测试预算上限（建议 ¥30）。
+
+---
+
+## 1.0「可以放心长期用」——稳定性、桌面与 iOS、数据安全
+
+**目标**：一个人长期使用不丢数据、不出意外费用，三端安装包齐全。
+
+| 功能 | 具体内容 | 扩展点 / 适配器 | 可测的验收项 |
+|---|---|---|---|
+| 桌面安装包 | Electron（Windows / macOS）签名安装包；Key 用 `safeStorage` | `SecretBackend: electron-safeStorage`；CI 增加 Windows / macOS runner | 安装 → 首启 → 备份恢复 → 卸载全流程截图 |
+| iOS | Capacitor iOS 构建；Key 进 Keychain；内置网页用 SFSafariViewController | `SecretBackend: ios-keychain` | TestFlight 安装；通知、分享、内置网页真机验证 |
+| 存储治理 | 媒体配额与清理、版本修剪可视化、IndexedDB 1 GB 压测 | `web/src/v9/media` 清理任务 | 低端机 1 GB 媒体下首屏 < 2 s |
+| 费用护栏 | 月度预算、按角色日上限、异常花费提醒（只提醒） | `shared/agent/policy.ts` | 超预算一定先问；审计里每笔花费可追溯 |
+| 可访问性与多语言 | 文案统一 id 制、英文完整、读屏标签 | ADR-007 重审 | axe 扫描 0 严重问题；英文缺失 0 |
+
+- **依赖**：0.10 Keystore 插件模式（复用为 Keychain / safeStorage 后端）；0.11 真实联调。
+- **预计工作量**：20–30 人日。
+- **需要你提供 / 官方资质**：Apple 开发者账号（iOS 签名与 TestFlight，年费）；Windows 代码签名证书（可选，没有则安装时会有“未知发布者”提示）；macOS 公证需要 Apple 开发者账号；iPhone 与 Windows / Mac 各一台用于真机验证。
+
+---
+
+## 1.x 以后（候选，按你的需要排序）
+
+| 方向 | 说明 | 前提 |
+|---|---|---|
+| 连接自己的服务器同步（单人多设备） | `sync.server` 开关转正；VFS 冲突裁决已预留（core/sync.ts）；仍然只有你一个账号，不做团队 | 你自己的服务器（不使用 154.8.183.93） |
+| 平台官方数据接口导入 | 只接官方开放平台的数据接口（如抖音开放平台、公众号接口）自动导入你本人账号的数据，替代手动 CSV | 各平台开放平台的开发者资质与审核（需你本人申请） |
+| 声音复刻 / 数字人 | 只在授权确认卡之后开放；默认不在工具里 | 声音本人书面授权；服务商实名与合规审核 |
+| 音乐 / 3D 等新能力角色 | 按 ADR-001 注册新角色 + 适配器 + 卡片 | 对应服务商 Key |
+
+**明确不做（任何版本）**：多账号 / 团队协作、自动点赞 / 评论 / 私信 / 关注、刷量买粉、绕过风控或验证码、抓取登录后的私有页面、替你点击发布。

@@ -362,7 +362,7 @@ function AccountDetail({ accountId, go }: { accountId: string; go: (to: string) 
       <BackBar label={a.label} onBack={() => go('me/models/accounts')} />
       <Note>{ad?.label ?? a.vendor} · {a.baseURL || t('（无地址）')}</Note>
       <Section title={t('Key')}>
-        <Note tone={a.hasKey ? 'ok' : 'warn'}>{a.hasKey ? `${t('已保存')} ••••${tails[a.secretRef ?? '']?.tail ?? a.keyTail ?? ''}${tails[a.secretRef ?? '']?.encrypted === false ? ` · ${t('未加密（浏览器不支持加密存储）')}` : ''}` : ad?.keyRequired === false ? t('这家服务不需要 Key') : t('还没填 Key')}</Note>
+        <Note tone={a.hasKey || ad?.keyRequired === false ? 'ok' : 'warn'}>{ad?.keyRequired === false ? t('这家服务不需要 Key') : a.hasKey ? `${t('已保存')} ••••${tails[a.secretRef ?? '']?.tail ?? a.keyTail ?? ''}${tails[a.secretRef ?? '']?.encrypted === false ? ` · ${t('未加密（浏览器不支持加密存储）')}` : ''}` : t('还没填 Key')}</Note>
         <div className="flex flex-wrap items-end gap-2"><label className="field !m-0 grow"><span>{t('换一个 Key')}</span><input type="password" autoComplete="off" value={newKey} onChange={(e) => setNewKey(e.target.value)} /></label><button type="button" onClick={() => void replaceKey()}>{t('保存 Key')}</button>{a.hasKey && <button type="button" className="danger" onClick={() => void removeKey()}>{t('删除 Key')}</button>}</div>
       </Section>
       <Section title={t('模型名')} testId="entries">
