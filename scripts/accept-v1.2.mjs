@@ -105,7 +105,7 @@ const E13 = [test('E13 自定义软件入口与四类数据源')];
 // ---- E14–E16 工作流、MCP、A2A
 const E14 = [
   test('E14 工作流 >'), test('E14 工作流（App）'),
-  device('定时工作流只在 App 打开时执行到期任务；App 关闭时的提醒通知需在真机上验证（见 deviations-v1.2）'),
+  device('定时工作流只在 App 打开时执行到期任务；App 关闭时的工作流提醒通知尚未接入系统通知，接入后需真机验证（deviations-v1.2 V12-05 / V12-06）'),
 ];
 const E15 = [test('E15 MCP 客户端'), file('shared/src/super/mcpMock.ts', '本机模拟 MCP 服务器（两版规范）')];
 const E16 = [test('E16 A2A（beta，默认关闭）'), test('E16 A2A 服务端')];

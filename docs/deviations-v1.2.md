@@ -8,3 +8,14 @@
 | V12-01 | AGENTS.md 增加“指挥职责”章节，代码侧作为新安装默认值 | 不修改 AGENTS.md 默认正文；指挥职责放入非核心文件 `super/SUPER.md`（超级 Agent 加载）；AGENTS.md 的改动只写进 proposals-v1.2 P1，并在 App 内生成一条修订建议等确认 | 用户硬规则：高风险文件只写入 proposals，不直接修改 |
 | V12-03 | 子 Agent 单次上限（Prompt 未给默认值） | 默认 ¥1/次，可逐个调整 | 与 1.0 “单次预计 ≥¥1 先问”阈值一致 |
 | V12-04 | `workflows/<id>.yaml` | 文件为 YAML 1.2 的 JSON 兼容写法（JSON 是 YAML 1.2 的子集，开头允许 # 注释） | 本机不引入 YAML 依赖；读写无歧义，任何 YAML 工具都能读 |
+| V12-05 | 定时触发：App 打开时执行到期任务；关闭时发通知提醒，点开执行 | **定时工作流只在 App 打开时运行**：web/src/v12/store.ts `startSuperScheduler` 在 App 打开期间每 60 秒检查一次（启动 5 秒后先补跑一次），`runDue` 执行到期且未暂停的工作流；App 关闭期间不运行，下次打开时补跑 | 手机本机模式没有可靠的后台执行（Android 后台限制、iOS 无常驻），与 Prompt 2.2“调度”现状一致 |
+| V12-06 | App 关闭时发通知提醒 | **待真机验证，且尚未接入**：shared `scheduleAction` 在 App 关闭时判定为“通知”并有单测，但 App 里还没有为定时工作流预排系统通知（1.0 的提醒走 web/src/v9/reminders.ts 的系统闹钟预排，工作流未接入）。因此目前 App 关闭期间不会弹工作流提醒；接入后需在安卓 / iOS 真机上验证弹出与点开执行 | 系统通知只能在真机上验证；本轮如实记录为未完成，accept-v1.2 E14 记“待真机” |
+| V12-07 | 已连接自己的服务器时，由服务器执行定时工作流（仅不涉及硬边界的步骤） | 判定函数 `serverRunnable`（含审批节点的工作流不交给服务器）已实现并有单测；服务器端还没有工作流执行接口，`scheduleAction` 的 `server` 分支目前没有调用方 | 1.2 优先保证本机路径与治理；服务器执行留作后续 |
+| V12-08 | 交付 APK + zip + Windows / Mac 安装包，记录字节数与 sha256（E22） | 未产出：GitHub Actions 被账单拦截，APK、桌面包、产物 sha256、CI 结论均未取回；accept-v1.2 E22 记“部分” | 用户指示：以本地验证为准，不为 CI 失败改代码；账单恢复后由 CI 出包 |
+| V12-09 | 版本号统一 1.2.0 | 备份清单 `APP_VERSION`（web/src/v9/backup.ts）原本停在 0.9.0，本轮改为 1.2.0；它只写入备份 manifest.appVersion 供恢复时展示，不参与迁移判断（迁移按内容与 schemaVersion） | 让备份里的版本与 App 一致 |
+| V12-10 | 平台模板规格以官方帮助页为准，附来源与核对日期 | 14 个模板中只有 YouTube（标题 100 / 说明 5000）与 Instagram（说明 2200 / 标签 ≤5）的字段已核实；其余 12 个平台全部规格字段标“待核实”、值留空（见 docs/refs-v1.2/platforms.md） | 本轮未打开这些平台的官方帮助页，不写未核实的数字 |
+| V12-11 | refs-v1.2 调研来源逐条核对 | 第 8 条（Claude Agent SDK subagents、OpenAI Agents SDK agents-as-tools / handoffs）沿用执行者既有知识，未重新打开原页，标“未重新核对” | 只影响设计取舍的参考，不影响任何规格数字 |
+| V12-12 | MCP 客户端兼容两版规范；A2A 客户端读取外部 Agent Card | MCP 只对本机模拟服务器（2026-07-28 与 2025-11-25 两版，shared/src/super/mcpMock.ts）测试；A2A 只对测试桩与本仓库服务端测试；没有连接任何真实第三方 MCP 服务器或外部 A2A Agent | 本轮没有第三方服务的账号与授权；不抓私有数据、不写入真实密钥 |
+| V12-13 | MiMo 实测：超级 Agent 派 2 个子 Agent 完成一次真实一稿多发 | 已真实跑通（evals/real/mimo-v1.2.json）。超级 Agent 与两个子 Agent 都用 mimo-v2.6-flash、思考关闭；合规审核员第一次输出未通过交接契约校验，按规则退回一次后通过；审批节点在脚本里自动批准（代表用户点击，不涉及任何发布）。修复了脚本漏传 `WfCtx.signal` 导致的启动失败 | 控制花费（实际 ¥0.005294 ≤ ¥2）；退回一次是 E8 规则的正常路径 |
+| V12-14 | 回归：web 单测 | 本地 web 单测分 3 批跑（out/vitest-web-1/2/3.json，共 21 个文件，通过 314、跳过 6、失败 0），CI 里仍一次跑完 | 沙盒单条命令 120 秒上限 |
+| V12-15 | 高风险文件改动等用户确认后再应用 | proposals-v1.2 的 P1（AGENTS.md 指挥职责引用）、P2（SYSTEM.md 加载表）、P3（BOUNDARIES.md 补句）仍待你确认；accept-v1.2 E1 记“待人工” | 硬规则：高风险文件只写入 proposals |
