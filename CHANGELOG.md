@@ -9,6 +9,7 @@
 - **桌面安装包（未签名）**：Windows NSIS、macOS dmg（Apple 芯片）。后端用 esbuild 打成单文件，不再整份打包 node_modules。CI 在 windows-latest / macos-latest 上构建 → 静默安装 → 首启 → 备份导出 → 恢复 → 卸载，并截图；产物推到 desktop-build-win / desktop-build-mac 分支。Key 用系统钥匙串（electron-safeStorage）。没有代码签名证书：Windows 会提示“未知发布者”，macOS 首次需右键打开（docs/desktop.md）。
 - **iOS**：Capacitor iOS 工程由 CI 生成；新原生插件 SecureKeys（iOS 版，SecretBackend ios-keychain：主密钥存钥匙串、仅本机、CryptoKit AES-256-GCM）；内置网页用 SFSafariViewController（@capacitor/browser）；CI 在 macOS 上做无签名模拟器构建并截图（ios-build 分支）。TestFlight / 真机待 Apple 开发者账号（docs/ios.md）。
 - **CI 修绿**：run 39949500676 的 accept:v10 / v11 失败是因为前面 lint 失败、单测与评测步骤被跳过（没有 out/vitest-*.json、search-v11.json）；run 39950626595 失败在密钥扫描（测试里的假 Key 字面量）——扫描器改为忽略明显假夹具，测试改成运行时拼接。
+- **Windows 桌面“导出备份”报 Internal error. 已修**：根因是同一台电脑上开了两个实例（CI 里是静默安装后自动启动的那个 + 冒烟启动的那个，冒烟前 tasklist 有 5 个 content-agent.exe 进程），两者共用 userData，Chromium 本机数据库互相锁住，后开的读写报 UnknownError: Internal error.（导出时首次初始化 Agent 文件库失败，且失败结果被缓存，重试三次都一样）。修复：桌面单实例锁（再次双击只把已有窗口调到前面）；本机端口固定下来（userData/port.json；IndexedDB 按 http://127.0.0.1:<端口> 分开存，原来每次启动换端口等于每次换空库）；退出时收掉后端子进程；Agent 文件库初始化失败不再缓存；导出失败按步骤白话报错，不再一律提示“发现疑似密钥”；VFS 大文件分片存（防御性，单条 < 64 KB）。冒烟增加页面未处理错误与大值读写探针；NSIS 卸载改为轮询等待。
 - 版本 1.0.0 / Android versionCode 10000 / iOS CFBundleVersion 10000。逐项验收见 design/acceptance-v1.md（scripts/accept-v1.mjs），偏离见 design/deviations-v1.md。
 
 ## 0.11.0（2026-10-23）真实联调与质量：MiMo 真跑 C5 / C6、真实判官、移除旧循环、混合检索

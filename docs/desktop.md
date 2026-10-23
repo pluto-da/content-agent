@@ -10,6 +10,7 @@
 ## 包里有什么
 - Electron 39 外壳（desktop/main.cjs），本机后端由 `scripts/stage-desktop.mjs` 用 esbuild 打成单文件 `server/dist/index.mjs`（只监听 127.0.0.1，数据在系统应用数据目录），加上 web/dist 与 agent/ 默认设定。不再整份复制 node_modules。
 - Key 加密：SecretBackend `electron-safeStorage`——Windows DPAPI、macOS 钥匙串；首次在桌面端用到 Key 时把旧 WebCrypto 密文一次性迁入，失败则继续用 WebCrypto 并在“诊断”里说明原因。
+- 只允许一个实例：再次双击只把已有窗口调到前面（两个实例共用数据目录会让本机数据库互锁，表现为“Internal error.”）。本机端口第一次启动时选定并存在数据目录 port.json，之后固定（界面数据按端口来源存，端口不变数据才在）。
 - macOS 包是 Apple 芯片（arm64）版；Intel Mac 需要另打 x64 或 universal 包（未做）。
 
 ## 没有代码签名证书时会看到什么
