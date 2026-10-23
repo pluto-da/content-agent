@@ -719,3 +719,18 @@ button:active:not(:disabled), .button-like:active { transform: scale(.97); trans
   .card-details { transition: none; }
   button:active:not(:disabled), .button-like:active { transform: none; }
 }
+
+/* ---------- 0.9.0「我的」新页（模型角色、Agent 设定、记忆、技能、收益、成长、运行状态、审计、提醒、备份） ----------
+   沿用磨砂大圆角卡片与分组列表；不新增渐变 / 吉祥物；可点控件 ≥44px（与 0.8.1 触控规则一致）。 */
+.v9-card { border-radius: var(--r); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: saturate(1.2) blur(12px); -webkit-backdrop-filter: saturate(1.2) blur(12px); }
+.v9-touch { min-width: 44px; min-height: 44px; }
+.v9-return { align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-size: 14px; text-decoration: none; }
+.v9-entry { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
+.v9-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; }
+.v9-chip input { margin: 0; }
+.v9-chip.on { color: var(--text); border-color: var(--border-strong); background: var(--surface-2); }
+.v9-diff { margin: 0; max-height: 320px; overflow: auto; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface-2); font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-all; }
+.v9-diff .add { color: var(--ok); background: var(--ok-bg); display: block; }
+.v9-diff .del { color: var(--bad); background: var(--bad-bg); display: block; text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+.v9-editor { width: 100%; min-height: 320px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.6; border-radius: var(--r-sm); }
+.v9-disclaimer { padding: 12px 16px; border-radius: var(--r); background: var(--surface-2); color: var(--text-2); font-size: 14px; }

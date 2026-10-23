@@ -7,7 +7,7 @@ export type Space = 'agent' | 'p' | 'me' | 'onboarding';
 export interface Route { space: Space; sub: string; id: string | null; query?: Record<string, string> }
 
 export const SPACES: Space[] = ['agent', 'p', 'me', 'onboarding'];
-export const ME_SUBS = ['models', 'platforms', 'sources', 'profile', 'agent', 'prefs', 'backup', 'logs', 'server'] as const;
+export const ME_SUBS = ['models', 'platforms', 'sources', 'profile', 'agent', 'prefs', 'backup', 'logs', 'server', 'files', 'memory', 'skills', 'revenue', 'growth', 'reminders', 'status', 'audit', 'settings'] as const;
 export const WRITE_FILTERS = ['all', 'pending', 'approved', 'handed_off'] as const;
 export const AGENT_SUBS = ['', 'drafts', 'inbox'] as const;
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStoreChange } from '../local/useStore';
-import { ApiError, apiMode, del, get, post } from '../api';
+import { ApiError, apiMode, del, get } from '../api';
 import { useT, type Lang } from '../i18n';
 import { Icon } from '../icons';
 import { ME_GROUPS, type Layout } from '../nav';
@@ -12,7 +12,10 @@ import { getAssistantOverrides, getPrefs, setAssistantOverride, setPrefs, usageT
 import { HARD_BOUNDARIES } from '../../../server/src/boundaries';
 import { useLocalApps, OS_LABEL } from '../format';
 import { Busy, EmptyState, ErrorNext, GroupList, ListRow, Problem, useToast } from '../ui';
-import { ModelsPage } from './me/models';
+import { RolesPage } from './me/v9/roles';
+import { AgentSettingsPage, MemoryPage, SkillsPage } from './me/v9/agentfiles';
+import { RevenuePage, GrowthPage } from './me/v9/revenue';
+import { StatusPage, AuditPage, SettingsV9Page, RemindersPage, BackupV9Page } from './me/v9/ops';
 import { SourcesPage } from './me/sources';
 import { ProfilePage } from './me/profile';
 import { KEEP_ALIVE_MAX, KEEP_ALIVE_MIN } from '../browser/pool';
@@ -22,13 +25,22 @@ import type { Theme } from '../state';
 
 export function Me({ sub, id, go, lay, theme, setTheme, lang, setLang }: { sub: string; id: string | null; go: (to: string) => void; lay: Layout; theme: Theme; setTheme: (t: Theme) => void; lang: Lang; setLang: (l: Lang) => void }) {
   switch (sub) {
-    case 'models': return <ModelsPage id={id} go={go} lay={lay} />;
+    case 'models': return <RolesPage id={id} go={go} lay={lay} />;
+    case 'files': return <AgentSettingsPage go={go} />;
+    case 'memory': return <MemoryPage />;
+    case 'skills': return <SkillsPage go={go} />;
+    case 'revenue': return <RevenuePage />;
+    case 'growth': return <GrowthPage />;
+    case 'reminders': return <RemindersPage />;
+    case 'status': return <StatusPage go={go} />;
+    case 'audit': return <AuditPage />;
+    case 'settings': return <SettingsV9Page />;
     case 'platforms': return <PlatformsSub go={go} />;
     case 'sources': return <SourcesPage />;
     case 'profile': return <ProfilePage />;
     case 'agent': return <AgentSub go={go} />;
     case 'prefs': return <PrefsSub theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />;
-    case 'backup': return <BackupSub />;
+    case 'backup': return <BackupV9Page />;
     case 'logs': return <LogsSub />;
     case 'server': return <ServerSub />;
     default: return <MeIndex go={go} />;
@@ -185,43 +197,6 @@ function PrefsSub({ theme, setTheme, lang, setLang }: { theme: Theme; setTheme: 
           <li key={s.id}><label className="list-row cursor-pointer"><input type="checkbox" checked={!!prefs?.hotSources.includes(s.id)} onChange={async () => { if (!prefs) return; const on = prefs.hotSources.includes(s.id); setP(await setPrefs({ hotSources: on ? prefs.hotSources.filter((x) => x !== s.id) : [...prefs.hotSources, s.id] })); }} aria-label={s.label} /><span className="row-text"><span className="row-label">{s.label}</span><span className="row-hint">{s.kind === 'rss' ? t('官方 RSS') : t('公开榜单（先检查 robots.txt）')}</span></span></label></li>
         ))}
       </GroupList>
-    </div>
-  );
-}
-
-function BackupSub() {
-  const { t } = useT();
-  const [withKeys, setWithKeys] = useState(false);
-  const [msg, setMsg] = useState('');
-  const [err, setErr] = useState<ApiError | null>(null);
-  const exportNow = async () => {
-    setErr(null);
-    try {
-      const data = await get(`/api/backup/export${withKeys ? '?keys=1' : ''}`);
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob); a.download = `content-agent-backup-${new Date().toISOString().slice(0, 10)}.json`; a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-      setMsg(withKeys ? t('已导出（含 Key，请妥善保管文件）') : t('已导出（不含 Key）'));
-    } catch (e) { setErr(e instanceof ApiError ? e : new ApiError('error', String(e))); }
-  };
-  const importFile = async (f: File) => {
-    setErr(null);
-    try { const r = await post<{ restored?: number }>('/api/backup/import', JSON.parse(await f.text())); setMsg(`${t('已恢复')} ${r.restored ?? ''} ${t('条记录')}`); }
-    catch (e) { setErr(e instanceof ApiError ? e : new ApiError('import_failed', t('文件读不出来'), t('请选择本应用导出的 .json 备份文件'))); }
-  };
-  return (
-    <div className="page page-narrow flex flex-col gap-4">
-      <p className="m-0 text-[15px] text-fg-2">{t('数据只存在这台设备上。换手机或清理数据前，先导出一份。')}</p>
-      <GroupList title={t('导出')}>
-        <li><label className="list-row cursor-pointer"><input type="checkbox" checked={withKeys} onChange={(e) => setWithKeys(e.target.checked)} aria-label={t('同时导出 API Key')} /><span className="row-text"><span className="row-label">{t('同时导出 API Key')}</span><span className="row-hint">{t('默认不包含；包含时请勿把文件发给别人')}</span></span></label></li>
-        <ListRow icon="backup" label={t('导出备份文件')} onClick={() => void exportNow()} testId="export" />
-      </GroupList>
-      <GroupList title={t('恢复')}>
-        <li><label className="list-row cursor-pointer"><span className="row-ico"><Icon name="upload" size={18} /></span><span className="row-text"><span className="row-label">{t('从备份文件恢复')}</span><span className="row-hint">{t('会替换当前的草稿、选题、软件与数据')}</span></span><input type="file" accept="application/json,.json" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void importFile(f); }} /></label></li>
-      </GroupList>
-      {msg && <p className="ok-line m-0" role="status"><Icon name="check" size={16} />{msg}</p>}
-      <ErrorNext error={err} />
     </div>
   );
 }

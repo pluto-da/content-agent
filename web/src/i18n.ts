@@ -170,6 +170,18 @@ const en: Record<string, string> = {
   '局部重写要求': 'Rewrite instruction',
   '续跑失败步骤': 'Resume failed steps',
   '发布由你本人在官方后台或 App 中点击完成': 'You publish yourself in the official hub or app',
+  // 0.9.0「我的」新页（集中文案；缺失的回退中文原文）
+  '已接': 'Connected', '类': 'roles', '文字': 'Text', '看与画': 'See & draw', '声音': 'Voice', '视频': 'Video', '检索': 'Retrieval',
+  '文本对话': 'Chat', '深度推理': 'Reasoning', '快速小模型': 'Fast model', '看图理解': 'Vision', '生图': 'Image', '改图': 'Image edit', '配音': 'Speech', '转写': 'Transcribe', '视频生成': 'Video', '向量': 'Embeddings', '重排': 'Rerank',
+  '未接': 'Not set', '已实测': 'Verified', '未实测': 'Not verified', '最近测试失败': 'Last test failed', '账号与 Key': 'Accounts & keys', '用量与费用': 'Usage & cost', '常用服务快速连接': 'Quick connect',
+  '默认': 'Default', '备用': 'Fallback', '试一试': 'Try it', '测试通过': 'Test passed', '测试未通过': 'Test failed', '还没测试': 'Not tested', '获取列表': 'Fetch list', '改模型名': 'Rename model',
+  '配置好后回到对话': 'Back to chat when done', '可用服务商': 'Providers', '添加并测试': 'Add & test', '添加模型名': 'Add model name', '模型名': 'Model names', '＋ 添加服务商': '+ Add provider', '已添加的服务商': 'Added providers',
+  'Agent 设定': 'Agent settings', '加载预览': 'Load preview', '版本历史': 'Version history', '恢复默认': 'Restore default', '确认保存': 'Confirm save', '确认改动': 'Review changes', '保存（先看改动）': 'Save (review diff)',
+  '技能': 'Skills', '收益': 'Revenue', '成长记录': 'Growth log', '提醒': 'Reminders', '审计日志': 'Audit log', '花钱与实验功能': 'Spending & experiments',
+  '修订建议': 'Proposals', '打法看板': 'Playbook board', '收益趋势': 'Revenue trend', '我学到了什么': 'What I learned', '采纳': 'Approve', '拒绝': 'Reject', '一键回滚': 'Roll back',
+  '汇总': 'Summary', '录入': 'Add entry', '导入 CSV': 'Import CSV', '确认导入': 'Confirm import', '还没有收入数据': 'No revenue data yet',
+  '花钱先问我': 'Ask before spending', '实验功能': 'Experimental features', 'Key 共用方式': 'Key sharing', '导出 CSV': 'Export CSV', '导出 JSONL': 'Export JSONL', '新提醒': 'New reminder', '设提醒': 'Set reminder', '立即检查': 'Check now',
+  '导出备份（.zip）': 'Export backup (.zip)', '从备份文件恢复': 'Restore from backup', '撤销这次恢复': 'Undo this restore', '近 7 天': 'Last 7 days', '调用': 'Calls', '费用': 'Cost', '错误率': 'Error rate', '缓存命中': 'Cache hits',
 };
 
 export function translate(lang: Lang, key: string): string {

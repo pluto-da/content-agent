@@ -1,4 +1,5 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { startReminderScheduler } from './v9/reminders';
 import { apiMode } from './api';
 import { LangContext, translate, type Lang } from './i18n';
 import { Icon } from './icons';
@@ -164,6 +165,8 @@ export function App() {
     return () => window.removeEventListener('keydown', on);
   }, []);
   useEffect(() => { document.title = '超级工作台'; }, []);
+  // 0.9.0 本机提醒：App 打开期间每 30 秒检查一次；只发本机通知，不执行任何动作（ADR-009）
+  useEffect(() => (import.meta.env.MODE === 'test' ? undefined : startReminderScheduler()), []);
 
   const dark = theme === 'dark' || (theme === 'system' && systemDark());
   const isPhone = lay === 'phone';
