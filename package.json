@@ -34,7 +34,8 @@
     "app:desktop:stage": "node scripts/stage-desktop.mjs",
     "real:v11": "npm run build -w shared --silent && node scripts/real-v11.mjs",
     "real:v1.1": "npm run build -w shared --silent && node scripts/real-v1.1.mjs",
-    "judge:v11": "npx tsx evals/judge.ts"
+    "judge:v11": "npx tsx evals/judge.ts",
+    "real:v1.4": "npm run build -w shared --silent && node scripts/real-v1.4.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

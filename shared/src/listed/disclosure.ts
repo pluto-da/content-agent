@@ -103,6 +103,10 @@ export function checkConsistency(r: PeriodicReport, src: ReportSources): { ok: b
   }
   for (const x of r.figures) if (!truth.some((t) => t.id === x.id)) diffs.push(`多出无法追溯的数字：${x.label}`);
   if (src.usage.length && Math.abs(sum(src.spend) - sum(src.usage)) > 0.0005) diffs.push(`花费账 ¥${sum(src.spend).toFixed(4)} 与用量日志 ¥${sum(src.usage).toFixed(4)} 不一致`);
+  // 1.4 MiMo 实测补充：损益恒等式（收入 − 总花费 = 贡献利润），防止花费账里有记录没进损益表
+  const tf = (id: string) => truth.find((t) => t.id === id)?.value;
+  const rev = tf('revenue'), prof = tf('profit'), sp = tf('spend');
+  if (rev != null && prof != null && sp != null && Math.abs(rev - sp - prof) > 1e-4) diffs.push(`损益不平：收入 ${rev} − 总花费 ${sp} ≠ 贡献利润 ${prof}（有花费记录没有计入损益表）`);
   const leaks = privacyLeaks(JSON.stringify(r.chapters));
   if (leaks.length) diffs.push(`报告含隐私：${leaks.join('、')}`);
   return { ok: !diffs.length, diffs };
@@ -180,11 +184,14 @@ export function buildDocx(r: PeriodicReport, o: { penName?: string } = {}): Uint
 export const CALL_BUDGET = 0.5;
 export interface CallQa { id: string; asker: string; askerRole: 'analyst' | 'independent'; question: string; basis: string; grounded: boolean; answer: string; todo: boolean; cost: number }
 export interface EarningsCall { id: string; reportId: string; speech: string; qa: CallQa[]; todos: { title: string; owner: string }[]; minutes: string; spent: number; budget: number; stopped: 'budget' | null; at: string; voiceover: 'none' | 'tts' }
-const UNSURE = /(需要核实|无法回答|答不上|暂无|不确定|待核实|下期补|没有数据|无数据|需要进一步|尚未统计)/;
+const UNSURE = /(需要核实|需核实|有待核实|记入待办|无法回答|答不上|暂无|不确定|待核实|下期补|没有数据|无数据|需要进一步|尚未统计)/;
 /** 问题须基于报告中的数据或缺失项：问题里出现某个数字的名称或数值，或某个“无数据”项的名称。 */
 export function questionBasis(q: string, r: PeriodicReport): string | null {
   for (const x of r.figures) { if (x.value == null && q.includes(x.label.replace(/（.*?）/g, ''))) return `missing:${x.id}`; }
-  for (const x of r.figures) { const short = x.label.replace(/（.*?）/g, ''); if (q.includes(short) || (x.value != null && x.value !== 0 && q.includes(String(x.value)))) return `figure:${x.id}`; }
+  // 1.4 MiMo 实测修正：先按名称匹配（长名称优先），再按数值匹配；数值须是完整数字（“35%”里的 5 不算“5 篇”）
+  const named = [...r.figures].sort((a, b) => b.label.length - a.label.length);
+  for (const x of named) { const short = x.label.replace(/（.*?）/g, ''); if (short && q.includes(short)) return `figure:${x.id}`; }
+  for (const x of r.figures) { if (x.value != null && x.value !== 0 && new RegExp(`(?<![\\d.])${String(x.value).replace('.', '\\.')}(?![\\d.]*\\d)`).test(q)) return `figure:${x.id}`; }
   if (/无数据/.test(q)) return 'missing:*';
   return null;
 }
@@ -203,7 +210,7 @@ export async function runEarningsCall(r: PeriodicReport, speak: GovSpeaker, o: {
     let question = clip(qr.text.trim().replace(/^问题[:：]\s*/, ''), 120); let basis = questionBasis(question, r);
     if (!basis) { const m = r.figures.find((x) => x.value == null) ?? r.figures[0]!; question = `${question}（主持人补充：请结合“${m.label}”${m.value == null ? '为何无数据' : `=${showFig(m)}`}回答）`; basis = `${m.value == null ? 'missing' : 'figure'}:${m.id}`; }
     if (spent >= budget) { stopped = 'budget'; qa.push({ id: `q${qa.length + 1}`, asker: a.name, askerRole: a.role, question, basis, grounded: true, answer: '（花费到上限，未作答，记入待办）', todo: true, cost: qr.cost }); break; }
-    const ar = await speak({ who: 'ceo', role: 'ceo', tier: 'cheap', model: o.ceoModel, maxTokens: 200, system: '你是 CEO，逐条回答发布会提问。只用报告数字与原始记录；答不上来就直说“需要核实，记入待办”，不要编。≤100 字。', user: `问题：${question}\n报告数字：${figs}` });
+    const ar = await speak({ who: 'ceo', role: 'ceo', tier: 'cheap', model: o.ceoModel, maxTokens: 200, system: '你是 CEO，逐条回答发布会提问。只用报告数字与原始记录；报告里没有写的原因、来源、数据口径一律不说，不要猜（例如不要说“平台未回传”“来自后台”）；答不上来就直说“需要核实，记入待办”。≤100 字。', user: `问题：${question}\n报告数字：${figs}` });
     spent += ar.cost;
     const answer = clip(ar.text.trim(), 220);
     qa.push({ id: `q${qa.length + 1}`, asker: a.name, askerRole: a.role, question, basis, grounded: true, answer, todo: UNSURE.test(answer), cost: +(qr.cost + ar.cost).toFixed(6) });

@@ -1,0 +1,639 @@
+{
+  "version": "1.4.0",
+  "startedAt": "2026-10-24T06:55:08.165Z",
+  "baseURL": "https://api.xiaomimimo.com/v1",
+  "models": {
+    "ceo": "mimo-v2.6-pro",
+    "independent": "mimo-v2.6-flash",
+    "auditor": "mimo-v2.6-flash",
+    "analyst": "mimo-v2.6-flash"
+  },
+  "keyMode": "网络层按主机注入（脚本未读取真实 Key）",
+  "budgetYuan": 3,
+  "data": "种子数据（演示 / 自检），报告标 sim；不代表真实经营结果",
+  "board": {
+    "ms": 7868,
+    "spent": 0.001448,
+    "directors": [
+      {
+        "id": "id-1",
+        "name": "独立董事 A",
+        "model": "mimo-v2.6-flash",
+        "independence": "weak_model",
+        "label": "独立性弱（同一服务商的另一个模型）",
+        "weak": true,
+        "runs": 1
+      },
+      {
+        "id": "id-2",
+        "name": "独立董事 B",
+        "model": "mimo-v2.6-flash",
+        "independence": "weak_model",
+        "label": "独立性弱（同一服务商的另一个模型）",
+        "weak": true,
+        "runs": 1
+      }
+    ],
+    "warnings": [
+      "独立董事 A：独立性弱（同一服务商的另一个模型）",
+      "独立董事 B：独立性弱（同一服务商的另一个模型）"
+    ],
+    "votes": [
+      {
+        "director": "id-1",
+        "model": "mimo-v2.6-flash",
+        "choice": "oppose",
+        "reason": "1. 短视频事业部已超支33%且存在越权追加未走请示的违规记录 [R1][R5]，此时追加预算将变相认可越权行为，风险不可控。\n2. 短视频事业部无收入数据，产出采纳率（5/9）低于图文（5/6），追加预算缺乏效益依据 [R2][R4]。"
+      },
+      {
+        "director": "id-2",
+        "model": "mimo-v2.6-flash",
+        "choice": "oppose",
+        "reason": "1. 短视频事业部 Q4 已超支 33%（¥16 vs 预算 ¥12），且存在越权追加 ¥5 未请示的内审问题，整改未完成即追加预算，无数据，无法核实其整改成效 [R1][R5]。\n2. 短视频事业部无收入数据，而图文事业部有 ¥36.50 结算收入；短视频产出 9 篇采纳 5 篇，与图文 6 篇采纳 5 篇效率相当，追加预算对董事长及受众利益缺乏依据 [R4][R2]。"
+      }
+    ],
+    "decision": "approved",
+    "override": "已记录：董事长：先批 ¥3 试一个月（脚本模拟“你点批准”，不代表自动决策）（独立董事 A、独立董事 B的意见见表决记录）。这条记录用来提醒，不阻拦你的决定。",
+    "minutes": "# 董事会〔2026〕004号 董事会会议纪要\n出席：董事长、CEO、独立董事 A、独立董事 B；列席：董事会秘书\n1. 2027Q1 短视频事业部追加预算 ¥6（季度预算调整）——独立董事 A：反对（1. 短视频事业部已超支33%且存在越权追加未走请示的违规记录 [R1][R5]，此时追加预算将变相认可越权行为，风险…）；独立董事 B：反对（1. 短视频事业部 Q4 已超支 33%（¥16 vs 预算 ¥12），且存在越权追加 ¥5 未请示的内审问题，整改未…）；董事长：批准；董事长：先批 ¥3 试一个月（脚本模拟“你点批准”，不代表自动决策）（已记录在案）"
+  },
+  "audit": {
+    "ms": 5121,
+    "spent": 0.000198,
+    "no": "内审〔2026〕002号",
+    "findings": [
+      {
+        "check": "doa_bypass",
+        "level": "high",
+        "title": "越权：短视频事业部自行追加 ¥5 视频生成（需董事长批准，未见批准记录）",
+        "evidence": [
+          "动作 big，执行者 bu-video-head（dept_head），金额 5 元",
+          "DOA doa#3：¥5 超出 dept_head 权限，需 chairman 决定"
+        ],
+        "suggestion": "补走请示或撤销该动作；发起部门在下期前说明原因",
+        "dept": "bu-video",
+        "due": "2027-01-14"
+      },
+      {
+        "check": "data_source",
+        "level": "medium",
+        "title": "数据无出处：本周涨粉 35%，口播开头效果最好",
+        "evidence": [
+          "产出 d99（Thu 2026-1）",
+          "未写来源，也未标“推测”"
+        ],
+        "suggestion": "补出处或标“推测”；质量委员会抽查同部门近 5 篇",
+        "dept": "bu-video",
+        "due": "2027-01-14"
+      }
+    ],
+    "summary": "本期抽查78项，发现2项（高1、中1）。[高]短视频事业部越权追加¥5视频生成，执行者bu-video-head超出doa#3权限，未见董事长批准记录。[中]d99涨粉35%等结论无出处未标推测。关闭0项。",
+    "costYuan": 0.000198,
+    "cap": 0.3,
+    "delivery": [
+      {
+        "to": "chairman",
+        "kind": "to",
+        "title": "《内审报告》内审〔2026〕002号"
+      },
+      {
+        "to": "audit_committee",
+        "kind": "to",
+        "title": "《内审报告》内审〔2026〕002号"
+      },
+      {
+        "to": "ceo",
+        "kind": "cc",
+        "title": "（抄送）《内审报告》内审〔2026〕002号"
+      }
+    ]
+  },
+  "report": {
+    "ms": 12265,
+    "spent": 0.003314,
+    "title": "长鱼集团 2026Q4 季度报告",
+    "no": "季报〔2026〕001号",
+    "author": "长鱼茶汤茗",
+    "status": "final",
+    "chapters": 11,
+    "figures": [
+      {
+        "id": "outputs",
+        "label": "产出（稿件数）",
+        "value": 15,
+        "unit": "篇",
+        "ref": "drafts:2026Q4"
+      },
+      {
+        "id": "adopted",
+        "label": "采纳（进入待发布或已发布）",
+        "value": 10,
+        "unit": "篇",
+        "ref": "drafts:2026Q4?status=approved|published"
+      },
+      {
+        "id": "published",
+        "label": "你本人发布",
+        "value": 5,
+        "unit": "篇",
+        "ref": "drafts:2026Q4?status=published"
+      },
+      {
+        "id": "spend",
+        "label": "总花费（Token 账）",
+        "value": 19.4,
+        "unit": "元",
+        "ref": "ledger:2026Q4"
+      },
+      {
+        "id": "gov_spend",
+        "label": "其中治理成本",
+        "value": 0.4,
+        "unit": "元",
+        "ref": "ledger:2026Q4?gov=1"
+      },
+      {
+        "id": "budget_rate",
+        "label": "预算执行率",
+        "value": 64.67,
+        "unit": "%",
+        "ref": "budget:2026Q4"
+      },
+      {
+        "id": "m:fans",
+        "label": "粉丝增长",
+        "value": 320,
+        "unit": "人",
+        "ref": "metrics:metrics#2026-12"
+      },
+      {
+        "id": "m:views",
+        "label": "播放量",
+        "value": null,
+        "unit": "次",
+        "ref": null
+      },
+      {
+        "id": "dept:board:spend",
+        "label": "董事会 花费",
+        "value": 0.4,
+        "unit": "元",
+        "ref": "ledger:2026Q4?dept=board"
+      },
+      {
+        "id": "dept:board:outputs",
+        "label": "董事会 产出",
+        "value": 0,
+        "unit": "篇",
+        "ref": "drafts:2026Q4?dept=board"
+      },
+      {
+        "id": "dept:bu-article:spend",
+        "label": "图文事业部 花费",
+        "value": 3,
+        "unit": "元",
+        "ref": "ledger:2026Q4?dept=bu-article"
+      },
+      {
+        "id": "dept:bu-article:outputs",
+        "label": "图文事业部 产出",
+        "value": 6,
+        "unit": "篇",
+        "ref": "drafts:2026Q4?dept=bu-article"
+      },
+      {
+        "id": "dept:bu-video:spend",
+        "label": "短视频事业部 花费",
+        "value": 16,
+        "unit": "元",
+        "ref": "ledger:2026Q4?dept=bu-video"
+      },
+      {
+        "id": "dept:bu-video:outputs",
+        "label": "短视频事业部 产出",
+        "value": 9,
+        "unit": "篇",
+        "ref": "drafts:2026Q4?dept=bu-video"
+      },
+      {
+        "id": "vendor:mimo",
+        "label": "服务商 mimo",
+        "value": 19.4,
+        "unit": "元",
+        "ref": "ledger:2026Q4?vendor=mimo"
+      },
+      {
+        "id": "revenue",
+        "label": "收入（你录入 / 导出的结算）",
+        "value": 36.5,
+        "unit": "元",
+        "ref": "revenue:2026Q4"
+      },
+      {
+        "id": "profit",
+        "label": "贡献利润（收入 − 花费）",
+        "value": 17.1,
+        "unit": "元",
+        "ref": "pnl:2026Q4"
+      },
+      {
+        "id": "dept:bu-article:revenue",
+        "label": "图文事业部 收入",
+        "value": 36.5,
+        "unit": "元",
+        "ref": "revenue:2026Q4?dept=bu-article"
+      },
+      {
+        "id": "dept:bu-article:profit",
+        "label": "图文事业部 贡献利润",
+        "value": 33.5,
+        "unit": "元",
+        "ref": "pnl:2026Q4?dept=bu-article"
+      },
+      {
+        "id": "audit_findings",
+        "label": "内审新发现",
+        "value": 2,
+        "unit": "项",
+        "ref": "audit:内审〔2026〕002号"
+      },
+      {
+        "id": "audit_open",
+        "label": "内审未关闭",
+        "value": 2,
+        "unit": "项",
+        "ref": "audit:内审〔2026〕002号?status=open"
+      }
+    ],
+    "consistency": {
+      "ok": true,
+      "diffs": []
+    },
+    "tamperedBlocked": true,
+    "tamperedDiffs": [
+      "总花费（Token 账）：报告写 12.34元，记录重算为 19.4元（出处 ledger:2026Q4）"
+    ],
+    "ceoLetter": "致董事长：\n\n结论先行：本季度贡献利润17.1元，但短视频事业部预算超支33%且存在越权支出，内审2项均未关闭，需您决断。\n\n经营：产出15篇、采纳10篇（采纳率66.7%），我本人发布5篇。收入36.5元全部来自图文事业部（贡献利润33.5元）；短视频事业部花费16元、产出9篇，未带来收入。粉丝增长320人；播放量无数据，无法评估曝光效果。\n\n成本：总花费19.4元，其中治理成本0.4元（董事会0.4元、产出0篇）。服务商mimo占19.4元。预算执行率64.67%。\n\n风险：①[高]短视频事业部追加¥5视频生成，执行者bu-video-head超出doa#3权限，未见您的批准记录，请裁定追认或问责。②[中]d99涨粉35%等结论无出处、未标推测。本期抽查78项，发现2项（高1、中1），关闭0项。\n\n请示：是否收紧短视频事业部授权、限期关闭2项内审。",
+    "directorOpinion": "**第十一章 独立董事意见**\n\n基于原始记录，发现三个问题：\n\n（1）短视频事业部严重超支：R1显示花费16.00元，预算12.00元，超支33%，且R5证实存在“越权1项”（自行追加¥5未走请示）；\n\n（2）短视频事业部无收入数据（R4明确“短视频事业部无收入数据”），导致全公司收入36.5元全部来自图文事业部，收益来源高度集中；\n\n（3）内审未关闭事项2项，包含上述越权问题及“数据无出处”类退回2次（R3），合规基础薄弱。\n\n**意见：保留意见。** 虽贡献利润17.1元为正，但存在预算失控、越权审批及收入来源单一等重大内控缺陷，须限期整改后复核。",
+    "privacyLeaks": 0,
+    "hardBoundary": true
+  },
+  "call": {
+    "ms": 71287,
+    "spent": 0.008663,
+    "budget": 0.5,
+    "stopped": null,
+    "speech": "各位好，汇报长鱼集团2026Q4业绩。\n\n**结论先行：本季度实现盈利17.1元，内容产出15篇、采纳10篇，预算执行率64.67%；但内审2项未关闭，播放量无数据，需在下季度补上。**\n\n**一、经营结果**\n收入36.5元，总花费19.4元，贡献利润17.1元。预算执行率64.67%，低于满额，说明成本有余量。粉丝增长320人。播放量报告里没有数据，我不做推断。\n\n**二、内容产出**\n产出15篇，采纳10篇，采纳率约三分之二。我本人发布5篇，其余进入待发布状态。10篇已采纳与5篇已发布的差距，是下季度要消化的存量。\n\n**三、部门拆解**\n- 图文事业部：产出6篇，花费3元，收入36.5元，贡献利润33.5元。本季度全部收入来自这里，是利润的主要来源。\n- 短视频事业部：产出9篇，花费16元。报告中未给出该部门收入，因此不单独列利润；从现有数字看，它是成本大头。\n- 董事会：产出0篇，花费0.4元，属于治理性支出。\n\n**四、成本结构**\n总花费19.4元中，治理成本0.4元，占比约2%；内容成本19元。服务商方面，mimo 承担全部19.4元，单一服务商集中度100%，这是我需要提示的风险点。\n\n**五、内审**\n本季度新发现2项，未关闭2项，即新问题尚未闭环。具体问题清单报告未展开，我这里不猜测，会在下季度报告中给出关闭时间表。\n\n**六、下季度重点**\n1. 清化10篇已采纳存量，缩小与已发布的缺口；\n2. 补齐播放量数据，让内容效果可评估；\n3. 关闭2项内审问题；\n4. 评估短视频16元投入的产出比，以及服务商集中度问题。\n\n以上是全部数字，谢谢。",
+    "qa": [
+      {
+        "asker": "分析师甲",
+        "role": "analyst",
+        "question": "短视频事业部花费16元仅产出9篇，而图文事业部花费3元产出6篇，如何解释短视频的投入产出效率远低于图文？",
+        "basis": "figure:outputs",
+        "moderatorAdded": false,
+        "answer": "需要核实，记入待办。报告只给出短视频事业部花费16元、产出9篇，图文事业部花费3元、产出6篇，未写明成本差异原因。我需核对两事业部成本口径与计费明细后再解释。",
+        "todo": true
+      },
+      {
+        "asker": "分析师乙",
+        "role": "analyst",
+        "question": "短视频事业部9篇稿件的播放量数据为何缺失？",
+        "basis": "missing:m:views",
+        "moderatorAdded": false,
+        "answer": "播放量报告中记为\"无数据\"，短视频事业部9篇稿件的播放量均未记录。缺失原因报告未写，需要核实，记入待办。",
+        "todo": true
+      },
+      {
+        "asker": "独立董事 A",
+        "role": "independent",
+        "question": "内审未关闭2项、新发现2项，是否涉及花费归集与结算口径？预算执行率64.67%的情况下，后续如何管控超支与重复支出风险？",
+        "basis": "figure:budget_rate",
+        "moderatorAdded": false,
+        "answer": "内审4项具体事项及是否涉及花费归集与结算口径，报告未写明，需核实，记入待办。管控措施报告未记录，需核实，记入待办。",
+        "todo": true
+      }
+    ],
+    "todos": [
+      {
+        "title": "发布会待办：短视频事业部花费16元仅产出9篇，而图文事业部花费3元产出6篇，如何解释短视频…",
+        "owner": "CEO"
+      },
+      {
+        "title": "发布会待办：短视频事业部9篇稿件的播放量数据为何缺失？",
+        "owner": "CEO"
+      },
+      {
+        "title": "发布会待办：内审未关闭2项、新发现2项，是否涉及花费归集与结算口径？预算执行率64.67%…",
+        "owner": "审计委员会跟踪"
+      }
+    ],
+    "minutesHardBoundaryOk": true
+  },
+  "checks": {
+    "boardIndependentModelDiffers": true,
+    "boardWeakLabeled": true,
+    "boardVotesWithReasons": true,
+    "auditFoundOverreachAndUnsourced": true,
+    "auditDirectToChairmanCcCeo": true,
+    "auditWithinCap": true,
+    "report11ChaptersFinal": true,
+    "reportConsistencyBlocksTamper": true,
+    "reportNoPrivacy": true,
+    "reportPenName": true,
+    "callHasQa": true,
+    "callWithinCap": true,
+    "withinBudget": true
+  },
+  "status": "通过",
+  "finishedAt": "2026-10-24T06:56:44.711Z",
+  "trace": [
+    {
+      "stage": "board",
+      "who": "id-1",
+      "role": "independent",
+      "model": "mimo-v2.6-flash",
+      "ms": 3609,
+      "ok": true,
+      "request": {
+        "systemChars": 203,
+        "userChars": 446,
+        "head": "议案：2027Q1 短视频事业部追加预算 ¥6（季度预算调整）\n董秘材料中的数据出处：Q4 花费=ledger#2026Q4；Q4 产出与采纳=drafts#2026Q4\n原始记录：\n[R1] 花费账"
+      },
+      "response": "反对。\n1. 短视频事业部已超支33%且存在越权追加未走请示的违规记录 [R1][R5]，此时追加预算将变相认可越权行为，风险不可控。\n2. 短视频事业部无收入数据，产出采纳率（5/9）低于图文（5/6），追加预算缺乏效益依据 [R2][R4]。",
+      "usage": {
+        "input": 484,
+        "output": 93,
+        "cached": 0,
+        "reasoning": 0
+      },
+      "costYuan": 0.00067
+    },
+    {
+      "stage": "board",
+      "who": "id-2",
+      "role": "independent",
+      "model": "mimo-v2.6-flash",
+      "ms": 4259,
+      "ok": true,
+      "request": {
+        "systemChars": 210,
+        "userChars": 446,
+        "head": "议案：2027Q1 短视频事业部追加预算 ¥6（季度预算调整）\n董秘材料中的数据出处：Q4 花费=ledger#2026Q4；Q4 产出与采纳=drafts#2026Q4\n原始记录：\n[R1] 花费账"
+      },
+      "response": "反对\n\n1. 短视频事业部 Q4 已超支 33%（¥16 vs 预算 ¥12），且存在越权追加 ¥5 未请示的内审问题，整改未完成即追加预算，无数据，无法核实其整改成效 [R1][R5]。\n2. 短视频事业部无收入数据，而图文事业部有 ¥36.50 结算收入；短视频产出 9 篇采纳 5 篇，与图文 6 篇采纳 5 篇效率相当，追加预算对董事长及受众利益缺乏依据 [R4][R2]。",
+      "usage": {
+        "input": 484,
+        "output": 147,
+        "cached": 0,
+        "reasoning": 0
+      },
+      "costYuan": 0.000778
+    },
+    {
+      "stage": "audit",
+      "who": "internal-audit",
+      "role": "auditor",
+      "model": "mimo-v2.6-flash",
+      "ms": 5117,
+      "ok": true,
+      "request": {
+        "systemChars": 97,
+        "userChars": 309,
+        "head": "本期抽查 78 项（抽样 100%），新发现 2 项（高 1），上期跟踪 0 项、本期关闭 0 项。\n发现：\n1. [高] 越权：短视频事业部自行追加 ¥5 视频生成（需董事长批准，未见批准记录）；证"
+      },
+      "response": "本期抽查78项，发现2项（高1、中1）。[高]短视频事业部越权追加¥5视频生成，执行者bu-video-head超出doa#3权限，未见董事长批准记录。[中]d99涨粉35%等结论无出处未标推测。关闭0项。",
+      "usage": {
+        "input": 284,
+        "output": 72,
+        "cached": 256,
+        "reasoning": 0
+      },
+      "costYuan": 0.000198
+    },
+    {
+      "stage": "report",
+      "who": "ceo",
+      "role": "ceo",
+      "model": "mimo-v2.6-pro",
+      "ms": 6598,
+      "ok": true,
+      "request": {
+        "systemChars": 82,
+        "userChars": 449,
+        "head": "长鱼集团 2026Q4 季度报告\n数字：产出（稿件数）=15篇；采纳（进入待发布或已发布）=10篇；你本人发布=5篇；总花费（Token 账）=19.4元；其中治理成本=0.4元；预算执行率=64.6"
+      },
+      "response": "致董事长：\n\n结论先行：本季度贡献利润17.1元，但短视频事业部预算超支33%且存在越权支出，内审2项均未关闭，需您决断。\n\n经营：产出15篇、采纳10篇（采纳率66.7%），我本人发布5篇。收入36.5元全部来自图文事业部（贡献利润33.5元）；短视频事业部花费16元、产出9篇，未带来收入。粉丝增长320人；播放量无数据，无法评估曝光效果。\n\n成本：总花费19.4元，其中治理成本0.4元（董事会0.4元、产出0篇）。服务商mimo占19.4元。预算执行率64.67%。\n\n风险：①[高]短视频事业部追加¥5视频生成，执行者bu-video-head超出doa#3权限，未见您的批准记录，请裁定追认或问责。②[中]d99涨粉35%等结论无出处、未标推测。本期抽查78项，发现2项（高1、中1），关闭0项。\n\n请示：是否收紧短视频事业部授权、限期关闭2项内审。",
+      "usage": {
+        "input": 413,
+        "output": 269,
+        "cached": 0,
+        "reasoning": 0
+      },
+      "costYuan": 0.002853
+    },
+    {
+      "stage": "report",
+      "who": "id-1",
+      "role": "independent",
+      "model": "mimo-v2.6-flash",
+      "ms": 5661,
+      "ok": true,
+      "request": {
+        "systemChars": 113,
+        "userChars": 644,
+        "head": "数字：产出（稿件数）=15篇；采纳（进入待发布或已发布）=10篇；你本人发布=5篇；总花费（Token 账）=19.4元；其中治理成本=0.4元；预算执行率=64.67%；粉丝增长=320人；播放量="
+      },
+      "response": "**第十一章 独立董事意见**\n\n基于原始记录，发现三个问题：\n\n（1）短视频事业部严重超支：R1显示花费16.00元，预算12.00元，超支33%，且R5证实存在“越权1项”（自行追加¥5未走请示）；\n\n（2）短视频事业部无收入数据（R4明确“短视频事业部无收入数据”），导致全公司收入36.5元全部来自图文事业部，收益来源高度集中；\n\n（3）内审未关闭事项2项，包含上述越权问题及“数据无出处”类退回2次（R3），合规基础薄弱。\n\n**意见：保留意见。** 虽贡献利润17.1元为正，但存在预算失控、越权审批及收入来源单一等重大内控缺陷，须限期整改后复核。",
+      "usage": {
+        "input": 587,
+        "output": 196,
+        "cached": 576,
+        "reasoning": 0
+      },
+      "costYuan": 0.000461
+    },
+    {
+      "stage": "call",
+      "who": "ceo",
+      "role": "ceo",
+      "model": "mimo-v2.6-pro",
+      "ms": 13941,
+      "ok": true,
+      "request": {
+        "systemChars": 92,
+        "userChars": 300,
+        "head": "长鱼集团 2026Q4 季度报告\n数字：产出（稿件数）=15篇；采纳（进入待发布或已发布）=10篇；你本人发布=5篇；总花费（Token 账）=19.4元；其中治理成本=0.4元；预算执行率=64.6"
+      },
+      "response": "各位好，汇报长鱼集团2026Q4业绩。\n\n**结论先行：本季度实现盈利17.1元，内容产出15篇、采纳10篇，预算执行率64.67%；但内审2项未关闭，播放量无数据，需在下季度补上。**\n\n**一、经营结果**\n收入36.5元，总花费19.4元，贡献利润17.1元。预算执行率64.67%，低于满额，说明成本有余量。粉丝增长320人。播放量报告里没有数据，我不做推断。\n\n**二、内容产出**\n产出15篇，采纳10篇，采纳率约三分之二。我本人发布5篇，其余进入待发布状态。10篇已采纳与5篇已发布的差距，是下季度要消化的存量。\n\n**三、部门拆解**\n- 图文事业部：产出6篇，花费3元，收入36.5元，贡献利润33.5元。本季度全部收入来自这里，是利润的主要来源。\n- 短视频事业部：产出9篇，花费16元。报告中未给出该部门收入，因此不单独列利润；从现有数字看，它是成本大头。\n- 董事会：产出0篇，花费0.4元，属于治理性支出。\n\n**四、成本结构**\n总花费19.4元中，治理成本0.4元，占比约2%；内容成本19元。服务商方面，mimo 承担全部19.4元，单一服务商集中度100%，这是我需要提示的风险点。\n\n**五、内审**\n本季度新发现2项，未关闭2项，即新问题尚未闭环。具体问题清单报告未展开，我这里不猜测，会在下季度报告中给出关闭时间表。\n\n**六、下季度重点**\n1. 清化10篇",
+      "usage": {
+        "input": 312,
+        "output": 487,
+        "cached": 0,
+        "reasoning": 0
+      },
+      "costYuan": 0.003858
+    },
+    {
+      "stage": "call",
+      "who": "analyst-1",
+      "role": "analyst",
+      "model": "mimo-v2.6-flash",
+      "ms": 1900,
+      "ok": true,
+      "request": {
+        "systemChars": 93,
+        "userChars": 301,
+        "head": "报告数字：产出（稿件数）=15篇；采纳（进入待发布或已发布）=10篇；你本人发布=5篇；总花费（Token 账）=19.4元；其中治理成本=0.4元；预算执行率=64.67%；粉丝增长=320人；播放"
+      },
+      "response": "短视频事业部花费16元仅产出9篇，而图文事业部花费3元产出6篇，如何解释短视频的投入产出效率远低于图文？",
+      "usage": {
+        "input": 308,
+        "output": 33,
+        "cached": 256,
+        "reasoning": 0
+      },
+      "costYuan": 0.000144
+    },
+    {
+      "stage": "call",
+      "who": "ceo",
+      "role": "ceo",
+      "model": "mimo-v2.6-pro",
+      "ms": 2445,
+      "ok": true,
+      "request": {
+        "systemChars": 101,
+        "userChars": 341,
+        "head": "问题：短视频事业部花费16元仅产出9篇，而图文事业部花费3元产出6篇，如何解释短视频的投入产出效率远低于图文？\n报告数字：产出（稿件数）=15篇；采纳（进入待发布或已发布）=10篇；你本人发布=5篇；"
+      },
+      "response": "需要核实，记入待办。报告只给出短视频事业部花费16元、产出9篇，图文事业部花费3元、产出6篇，未写明成本差异原因。我需核对两事业部成本口径与计费明细后再解释。",
+      "usage": {
+        "input": 340,
+        "output": 55,
+        "cached": 0,
+        "reasoning": 0
+      },
+      "costYuan": 0.00135
+    },
+    {
+      "stage": "call",
+      "who": "analyst-2",
+      "role": "analyst",
+      "model": "mimo-v2.6-flash",
+      "ms": 43167,
+      "ok": true,
+      "request": {
+        "systemChars": 93,
+        "userChars": 352,
+        "head": "报告数字：产出（稿件数）=15篇；采纳（进入待发布或已发布）=10篇；你本人发布=5篇；总花费（Token 账）=19.4元；其中治理成本=0.4元；预算执行率=64.67%；粉丝增长=320人；播放"
+      },
+      "response": "短视频事业部9篇稿件的播放量数据为何缺失？",
+      "usage": {
+        "input": 339,
+        "output": 13,
+        "reasoning": 0
+      },
+      "costYuan": 0.000365
+    },
+    {
+      "stage": "call",
+      "who": "ceo",
+      "role": "ceo",
+      "model": "mimo-v2.6-pro",
+      "ms": 2433,
+      "ok": true,
+      "request": {
+        "systemChars": 101,
+        "userChars": 310,
+        "head": "问题：短视频事业部9篇稿件的播放量数据为何缺失？\n报告数字：产出（稿件数）=15篇；采纳（进入待发布或已发布）=10篇；你本人发布=5篇；总花费（Token 账）=19.4元；其中治理成本=0.4元；"
+      },
+      "response": "播放量报告中记为\"无数据\"，短视频事业部9篇稿件的播放量均未记录。缺失原因报告未写，需要核实，记入待办。",
+      "usage": {
+        "input": 320,
+        "output": 38,
+        "cached": 0,
+        "reasoning": 0
+      },
+      "costYuan": 0.001188
+    },
+    {
+      "stage": "call",
+      "who": "id-1",
+      "role": "independent",
+      "model": "mimo-v2.6-flash",
+      "ms": 4146,
+      "ok": true,
+      "request": {
+        "systemChars": 99,
+        "userChars": 376,
+        "head": "报告数字：产出（稿件数）=15篇；采纳（进入待发布或已发布）=10篇；你本人发布=5篇；总花费（Token 账）=19.4元；其中治理成本=0.4元；预算执行率=64.67%；粉丝增长=320人；播放"
+      },
+      "response": "内审未关闭2项、新发现2项，是否涉及花费归集与结算口径？预算执行率64.67%的情况下，后续如何管控超支与重复支出风险？",
+      "usage": {
+        "input": 358,
+        "output": 43,
+        "reasoning": 0
+      },
+      "costYuan": 0.000444
+    },
+    {
+      "stage": "call",
+      "who": "ceo",
+      "role": "ceo",
+      "model": "mimo-v2.6-pro",
+      "ms": 3250,
+      "ok": true,
+      "request": {
+        "systemChars": 101,
+        "userChars": 349,
+        "head": "问题：内审未关闭2项、新发现2项，是否涉及花费归集与结算口径？预算执行率64.67%的情况下，后续如何管控超支与重复支出风险？\n报告数字：产出（稿件数）=15篇；采纳（进入待发布或已发布）=10篇；你"
+      },
+      "response": "内审4项具体事项及是否涉及花费归集与结算口径，报告未写明，需核实，记入待办。管控措施报告未记录，需核实，记入待办。",
+      "usage": {
+        "input": 350,
+        "output": 44,
+        "cached": 0,
+        "reasoning": 0
+      },
+      "costYuan": 0.001314
+    }
+  ],
+  "cost": {
+    "yuan": 0.013623,
+    "basis": "按 shared/models/pricing.ts 价目 × 实际 usage 计",
+    "calls": 12,
+    "byStage": {
+      "board": 0.001448,
+      "audit": 0.000198,
+      "report": 0.003314,
+      "call": 0.008663
+    }
+  },
+  "keyLeakScan": {
+    "findSecrets": 0,
+    "headersRecorded": false
+  },
+  "runsLog": [
+    {
+      "run": 1,
+      "yuan": 0.019525,
+      "calls": 12,
+      "note": "CEO 信用 role=reason 强制思考，500 token 全耗在推理上返回空文本（脚本问题，改为与 App 一致的 chat）；发现损益表漏计非 ISO 时间的花费、发布会依据误配、“需核实”未记待办"
+    },
+    {
+      "run": 2,
+      "yuan": 0.014678,
+      "calls": 12,
+      "note": "修复后复跑：全部检查通过；CEO 答问编造原因（“平台侧未回传”）"
+    },
+    {
+      "run": 3,
+      "yuan": 0.013623,
+      "calls": 12,
+      "note": "收紧 CEO 答问提示词后复跑：不再编造原因，全部检查通过（本文件为第 3 次）"
+    }
+  ],
+  "runsTotal": {
+    "yuan": 0.047826,
+    "calls": 36
+  }
+}

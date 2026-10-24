@@ -75,3 +75,24 @@ describe('G26 经营收入与全球商机', () => {
     expect(assess({ agentId: 'a', quarter: 'q', kpi: 80, peer: null, quota: 5, tier: '标准档', profit: null }).score).toBe(80);
   });
 });
+
+describe('1.4 MiMo 实测发现的回归', () => {
+  it('花费 at 不是 ISO 开头也计入损益（贡献利润 = 收入 − 总花费）；有花费漏进损益表时一致性检查报“损益不平”', async () => {
+    const { pnl, inPeriod, buildReport, checkConsistency } = await import('../src/index.js');
+    expect(inPeriod('2026Q4', 'Thu 2026-12-31 4:00 PM CST (UTC+08:00)')).toBe(true);
+    expect(inPeriod('2026Q4', 'not a date')).toBe(false);
+    const P = pnl([{ id: 'r', deptId: 'bu-a', platform: 'B站', amount: 36.5, currency: 'CNY', period: '2026-11', source: 'user_entry', ref: 'x', at: '2026-11-30' }], [{ deptId: 'bu-a', yuan: 3, at: 'Thu 2026-12-31 4:00 PM CST' }, { deptId: 'bu-v', yuan: 16, at: 'Thu 2026-12-31 4:00 PM CST' }], '2026Q4');
+    expect(P.total.profit).toBe(17.5);
+    const src = { period: '2026Q4', kind: 'quarter' as const, groupName: 'G', at: '2026-12-31', spend: [{ ref: 'a', yuan: 3, at: '2026-12-01', deptId: 'bu-a' }, { ref: 'b', yuan: 1, at: '2025-01-01', deptId: 'bu-a' }], usage: [], drafts: [], metrics: [], gaps: [], budgetTotal: null, budgetAlerts: [], cases: [], audit: null, controlsText: null, risks: [], talent: [], outlook: [], deptNames: {}, revenues: [{ id: 'r', deptId: 'bu-a', platform: 'B站', amount: 10, currency: 'CNY' as const, period: '2026-11', source: 'user_entry' as const, ref: 'x', at: '2026-11-30' }] };
+    expect(checkConsistency(buildReport(src, { seq: 1 }), src).diffs.join()).toMatch(/损益不平/);
+  });
+  it('发布会：问题依据先按名称匹配；“35%”不被当成“5 篇”；“需核实，记入待办”算待办', async () => {
+    const { questionBasis, buildReport, runEarningsCall } = await import('../src/index.js');
+    const src = { period: '2026Q4', kind: 'quarter' as const, groupName: 'G', at: '2026-12-31', spend: [{ ref: 'a', yuan: 3, at: '2026-12-01', deptId: 'bu-a' }], usage: [], drafts: Array.from({ length: 5 }, (_, i) => ({ id: `${i}`, deptId: 'bu-a', status: 'published' as const, at: '2026-12-01' })), metrics: [], gaps: [], budgetTotal: 10, budgetAlerts: [], cases: [], audit: null, controlsText: null, risks: [], talent: [], outlook: [], deptNames: {} };
+    const r = buildReport(src, { seq: 1 });
+    expect(questionBasis('预算执行率仅 30%，剩余 35% 怎么用？', r)).toBe('figure:budget_rate');
+    expect(questionBasis('剩余 35% 怎么用？', r)).toBeNull();
+    const call = await runEarningsCall(r, async (q) => ({ text: q.role === 'ceo' && /逐条回答/.test(q.system) ? '具体明细需核实，记入待办。' : q.role === 'ceo' ? '讲解' : '总花费为何是 3 元？', cost: 0 }), { askers: [{ id: 'a', name: '甲', role: 'analyst' }], at: '2026-12-31' });
+    expect(call.qa[0]!.todo).toBe(true);
+  });
+});

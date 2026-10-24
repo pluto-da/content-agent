@@ -64,7 +64,8 @@ export interface PnlRow { deptId: string; label: string; revenue: number | null;
 export interface Pnl { period: string; rows: PnlRow[]; total: PnlRow; text: string }
 const r4 = (n: number) => +n.toFixed(4);
 /** period：YYYY-MM（月）、YYYYQn（季度）或 YYYY（年度）。花费 = Token / 工具花费（本机记账）。 */
-export const inPeriod = (p: string, at: string): boolean => { const y = at.slice(0, 4), m = Number(at.slice(5, 7)); if (/^\d{4}$/.test(p)) return y === p; if (/^\d{4}Q[1-4]$/.test(p)) return y === p.slice(0, 4) && Math.floor((m - 1) / 3) + 1 === Number(p[5]); return at.slice(0, 7) === p; };
+/** 1.4 MiMo 实测修正：at 不一定以 YYYY-MM 开头（如“Thu 2026-12-31 4:00 PM CST”），取第一个 YYYY-MM；取不到则不计入任何期间。 */
+export const inPeriod = (p: string, at0: string): boolean => { const hit = /(\d{4})-(\d{2})/.exec(at0); if (!hit) return false; const at = `${hit[1]}-${hit[2]}`; const y = hit[1]!, m = Number(hit[2]); if (/^\d{4}$/.test(p)) return y === p; if (/^\d{4}Q[1-4]$/.test(p)) return y === p.slice(0, 4) && Math.floor((m - 1) / 3) + 1 === Number(p[5]); return at.slice(0, 7) === p; };
 export function pnl(revenues: RevenueEntry[], spend: { deptId: string; yuan: number; at: string }[], period: string, names: Record<string, string> = {}): Pnl {
   const rev = revenues.filter((e) => inPeriod(period, `${e.period}-15`));
   const sp = spend.filter((e) => inPeriod(period, e.at));
