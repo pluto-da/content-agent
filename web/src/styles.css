@@ -769,6 +769,9 @@ textarea[data-testid="agent-input"]::placeholder { white-space: nowrap; overflow
 /* ---------------- 1.4.0 治理分区（上市公司模式） ---------------- */
 .gov-plain { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 10px 14px; border-radius: var(--r-lg, 18px); background: color-mix(in srgb, var(--accent, #5b6cff) 9%, var(--surface-2)); }
 .gov-plain > p { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.gov-plain > button.ghost { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+[data-testid="gov-page"] details > summary { min-height: 44px; }
+.gov-table-wrap:focus-visible { outline: 2px solid var(--accent, #5b6cff); outline-offset: 2px; }
 .gov-term, button.gov-term { display: inline !important; width: auto !important; min-height: 0 !important; height: auto !important; min-width: 0 !important; margin: 0 !important; padding: 0 1px !important; border: 0 !important; border-bottom: 1px dashed currentColor !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: inherit !important; font: inherit !important; line-height: inherit !important; vertical-align: baseline !important; cursor: help; }
 .gov-term-pop { position: absolute; z-index: 30; left: 0; top: 1.6em; width: min(280px, 80vw); padding: 10px 12px; border-radius: var(--r-md, 14px); background: var(--surface); color: var(--text); box-shadow: 0 8px 28px rgba(0, 0, 0, .18); font-size: 13px; line-height: 1.55; white-space: normal; }
 .gov-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 10px; border-radius: 999px; font-size: 12px; background: color-mix(in srgb, var(--ok, #16a34a) 14%, transparent); color: var(--text); white-space: normal; }

@@ -2164,6 +2164,7 @@ export const ZH_UI: Record<string, string> = {
   'ui.v14_z_67': '低',
   'ui.v14_z_68': '这是由 AI Agent 组成的虚拟治理体系，用于提升决策质量；不是法律实体，不涉及真实股权、证券或信息披露义务。数据来自本机记录与你录入的数据。',
   'ui.v14_sec_revenue': '经营收入',
+  'ui.v14_table_scroll': '表格（可左右滚动）',
   'ui.v14_pnl': '损益表（收入 − 花费 = 贡献利润）',
   'ui.v14_revenue': '收入',
   'ui.v14_profit': '贡献利润',

@@ -2164,6 +2164,7 @@ export const EN_UI: Record<string, string> = {
   'ui.v14_z_67': 'Low',
   'ui.v14_z_68': 'This is a virtual governance system made of AI agents to improve decisions. It is not a legal entity and involves no real equity, securities or disclosure duties. Data comes from this device and what you enter.',
   'ui.v14_sec_revenue': 'Revenue',
+  'ui.v14_table_scroll': 'Table (scrolls sideways)',
   'ui.v14_pnl': 'P&L (revenue − cost = contribution)',
   'ui.v14_revenue': 'Revenue',
   'ui.v14_profit': 'Contribution profit',

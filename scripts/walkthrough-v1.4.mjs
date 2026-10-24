@@ -250,7 +250,7 @@ const FLOW = [
     must(/集团不是法律实体，真实收入归属用户本人/.test(await tid(W, 'gov-rev-honesty').innerText()), '没有收入诚实声明');
     let s = await listed(W); must(!s.revenues?.length, '应从无收入开始');
     const g = await groupState(W); const bu = g.org.depts.find((d) => d.kind === 'bu').id;
-    await tid(W, 'gov-rev-dept').fill(bu); await tid(W, 'gov-rev-platform').fill('B站'); await tid(W, 'gov-rev-amount').fill('36.5'); await clickTid(W, 'gov-rev-add', 1000);
+    await tid(W, 'gov-rev-dept').selectOption(bu); await tid(W, 'gov-rev-platform').fill('B站'); await tid(W, 'gov-rev-amount').fill('36.5'); await clickTid(W, 'gov-rev-add', 1000);
     s = await listed(W); must(s.revenues.length === 1 && s.revenues[0].source === 'user_entry', '收入没记上');
     must(/¥36\.50/.test(await tid(W, 'gov-pnl-table').innerText()), '损益表没更新');
     await clickTid(W, 'gov-radar-scan', 1000);
