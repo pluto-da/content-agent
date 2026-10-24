@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global document, getComputedStyle, innerWidth, innerHeight */
+/* global document, getComputedStyle, innerWidth, innerHeight, scrollTo */
 /**
  * 1.4.0 截图矩阵（PROMPT-v1.4-listed-governance 第十五、十七部分 / G19）：“治理”9 个子页（含经营收入） + 首页（指挥页）董事长简报卡片，三布局（手机 360×800 / 平板 834×1194 / 桌面 1440×900）× 浅深 × 中英。
  * 演示数据经界面真实点出：a11y-seed → 启用集团 → 启用上市公司模式（3 屏引导）→ 召开董事会 → 拍板 → 模拟一个月（演示开关）→ 经营分析 → 内审 → 内控测试 → 季报 → 发布会 → 影子上岗 → 入职培训 → 简报。
@@ -124,11 +124,12 @@ for (const combo of only) {
     await page.goto(URL0 + '#' + p); await page.waitForTimeout(800);
     const file = path.join(dir, `${p.replace(/[/?=]/g, '_')}.png`);
     await page.screenshot({ path: file });
-    if (p.endsWith('disclosure')) { const k = page.locator('.gov-keys').first(); if (await k.count()) { await k.scrollIntoViewIfNeeded(); await page.waitForTimeout(200); await k.screenshot({ path: file.replace('.png', '_keys.png') }); await page.evaluate(() => scrollTo(0, 0)); } }
     const m = await page.evaluate(measure, [vp === 'desktop' ? 24 : 44, lang]); // 触控（手机 / 平板）≥44px；桌面鼠标按 WCAG 2.2 2.5.8 ≥24px（deviations V11-09）
     const ax = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
     const cnt = (k) => ax.violations.filter((v) => v.impact === k).reduce((s, v) => s + v.nodes.length, 0);
     run.pages[p] = { shot: path.relative(path.resolve(OUT, '..'), file), ...m, axeCritical: cnt('critical'), axeSerious: cnt('serious'), axe: ax.violations.filter((v) => ['critical', 'serious'].includes(v.impact)).map((v) => `${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`), consoleErrors: consoleErrors.slice(ce0), pageErrors: pageErrors.slice(pe0) };
+    // 量完再截披露页关键数字卡（复核标签溢出修复），避免滚动影响上面的测量
+    if (p.endsWith('disclosure')) { const k = page.locator('.gov-keys').first(); if (await k.count()) { await k.scrollIntoViewIfNeeded(); await page.waitForTimeout(200); await k.screenshot({ path: file.replace('.png', '_keys.png') }); await page.evaluate(() => { for (const el of document.querySelectorAll('*')) if (el.scrollTop) el.scrollTop = 0; scrollTo(0, 0); }); } }
   }
   report.runs[combo] = run;
   const sum = (f) => Object.values(run.pages).reduce((s, x) => s + f(x), 0);

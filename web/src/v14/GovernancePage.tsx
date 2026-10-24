@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   ACADEMY_CARDS, cardById, findTerms, PAGE_PLAIN, LISTED_HONESTY, BOARD_MATTER_TEXT, VOTE_TEXT, DIRECTOR_KIND_TEXT, INDEPENDENCE_TEXT, AUDIT_CHECK_TEXT, FINDING_LEVEL_TEXT, COSO, BSC_TEXT, BSC_DIMS, REPORT_CHAPTERS,
-  BLM_STEPS, SCENARIO_TEXT, CHANNEL_TEXT, estimateText, REVENUE_HONESTY, COMP_RULES_TEXT, CASE_KIND_TEXT, AGM_STEPS, NO_DATA, independenceOf, isWeak, riskRegisterView, govNow, showFig, type ListedState, type Motion, type AcademyCard, type WeeklyLesson,
+  BLM_STEPS, SCENARIO_TEXT, CHANNEL_TEXT, estimateText, REVENUE_HONESTY, COMP_RULES_TEXT, CASE_KIND_TEXT, AGM_STEPS, NO_DATA, independenceOf, isWeak, riskRegisterView, govNow, showFig, OKR_METRIC_TEXT, type ListedState, type Motion, type AcademyCard, type WeeklyLesson,
 } from '@content-agent/shared';
 import { useT } from '../i18n';
 import { Section, Note, SegTabs, download } from '../pages/me/v9/common';
@@ -15,7 +15,7 @@ import {
   getListed, onListedChange, enableListed, finishOnboarding, disableListed, refreshBoardModels, setMonthBudget, conveneBoard, decideMotion, runVotes, refreshMinutes, startAgm, agmNext, runInternalAudit, noteRemediation, runControls,
   addRevenueEntry, importSettlement, revenueView, scanRadar, reviewOpp, proposeOpp, approveOpp,
   reviewAllRisks, runMonthlyReview, budgetView, requestBudgetAdjust, generateReport, editReportFigure, recheckReport, reportHtml, reportDocx, holdEarningsCall, computeBrief, startStrategy, reviewStrategy, nominateAgent,
-  decideNomination, runAssessments, startSuccession, rollbackHandover, syncCases, startTraining, quarterBestPractice, universityHealth, markCardRead, setWeeklyOff, thisWeekLesson, badges, simulateMonth, simulateRemediation, demoAllowed,
+  decideNomination, runAssessments, startSuccession, rollbackHandover, syncCases, startTraining, quarterBestPractice, universityHealth, markCardRead, setWeeklyOff, thisWeekLesson, badges, simulateMonth, simulateRemediation, demoAllowed, deptNamesOf,
 } from './store';
 
 export type GovSec = 'board' | 'oversight' | 'ops' | 'revenue' | 'disclosure' | 'strategy' | 'talent' | 'university' | 'academy';
@@ -23,6 +23,9 @@ export const GOV_SECS: [GovSec, string][] = [['board', 'ui.v14_sec_board'], ['ov
 type Run = (fn: () => Promise<unknown>, ok?: string) => void;
 const Row = ({ children, testId }: { children: ReactNode; testId?: string }) => <div className="flex flex-wrap items-center gap-2" data-testid={testId}>{children}</div>;
 const yuan = (n: number) => `¥${n.toFixed(n < 1 ? 3 : 2)}`;
+/** 部门 / 负责人 id → 名称（界面不露内部 id；英文界面仍显示集团里起的名字）。 */
+let NAMES: Record<string, string> = {};
+const who = (id: string, head = '负责人'): string => NAMES[id] ?? (id.endsWith('-head') && NAMES[id.slice(0, -5)] ? `${NAMES[id.slice(0, -5)]} ${head}` : id);
 const pct = (n: number | null) => (n == null ? NO_DATA : `${(n * 100).toFixed(0)}%`);
 
 function useListed(): [ListedState | null, () => void] {
@@ -73,8 +76,8 @@ export function GovernancePage({ sec: initial, go }: { sec?: string; go: (to: st
   useEffect(() => { const k = GOV_SECS.find(([x]) => x === initial)?.[0]; if (k) setSec(k); }, [initial]);
   const [s, reload] = useListed();
   const [toast, show] = useToast();
-  const [groupOn, setGroupOn] = useState<boolean | null>(null);
-  useEffect(() => { void getGroup().then((g) => setGroupOn(g.enabled)); }, [s]);
+  const [groupOn, setGroupOn] = useState<boolean | null>(null); const [, setNamesAt] = useState(0);
+  useEffect(() => { void getGroup().then((g) => { NAMES = deptNamesOf(g); setGroupOn(g.enabled); setNamesAt(Date.now()); }); }, [s]);
   const run: Run = (fn, ok) => { void fn().then((r) => { if (ok) show(t(ok)); else if (typeof r === 'string' && r && !/^[a-z]+-/.test(r)) show(r); reload(); }).catch((e) => show(String((e as Error).message ?? e))); };
   if (!s || groupOn === null) return <Note>{t('ui.loading')}</Note>;
   if (!s.enabled) return <div className="flex flex-col gap-3" data-testid="gov-page">{toast}<EnableCard run={run} groupOn={groupOn} /></div>;
@@ -185,7 +188,7 @@ function OversightSec({ s, run }: { s: ListedState; run: Run }) {
           <div key={a.id} className="card v9-card flex flex-col gap-1" data-testid={`gov-audit-${a.id}`}>
             <Row><strong className="grow">{a.no}</strong><span className="text-[12px] text-muted">{t('ui.v14_to')}：{t('ui.v14_to_chair')} · {t('ui.v14_cc')}：CEO</span></Row>
             <p className="m-0 text-[13px]">{a.summary}</p>
-            {a.findings.map((f) => <div key={f.id} className="text-[13px]" data-testid={`gov-finding-${f.check}`}><strong>[{t(FINDING_LEVEL_TEXT[f.level])}] {f.title}</strong><br />{t('ui.v14_evidence')}：{f.evidence.join('；')}<br />{t('ui.v14_suggestion')}：{f.suggestion}（{f.dept}，{t('ui.v14_due')} {f.due}）</div>)}
+            {a.findings.map((f) => <div key={f.id} className="text-[13px]" data-testid={`gov-finding-${f.check}`}><strong>[{t(FINDING_LEVEL_TEXT[f.level])}] {f.title}</strong><br />{t('ui.v14_evidence')}：{f.evidence.join('；')}<br />{t('ui.v14_suggestion')}：{f.suggestion}（{who(f.dept)}，{t('ui.v14_due')} {f.due}）</div>)}
             {a.carried.length > 0 && <p className="m-0 text-[13px]" data-testid="gov-carried">{t('ui.v14_followup')}：{a.carried.map((f) => `${f.title}（${f.status === 'closed' ? t('ui.v14_closed') : t('ui.v14_open')}）`).join('；')}</p>}
           </div>))}
         {last && last.findings.length > 0 && <Row><input className="min-w-0 grow" value={note} placeholder={t('ui.v14_remed_ph')} aria-label={t('ui.v14_remed_ph')} onChange={(e) => setNote(e.target.value)} data-testid="gov-remed-input" /><button type="button" data-testid="gov-remed" onClick={() => run(async () => { for (const f of last.findings) await noteRemediation(last.id, f.id, note || t('ui.v14_remed_default')); if (s.sim) await simulateRemediation(); }, 'ui.v14_saved')}>{t('ui.v14_remed')}</button></Row>}
@@ -328,7 +331,7 @@ function StrategySec({ s, run }: { s: ListedState; run: Run }) {
         {p && <>
           <Note>{p.year} · {t(`ui.v14_st_${p.status}`)}{p.chosen ? ` · ${t(SCENARIO_TEXT[p.chosen])}` : ''}{p.okrIds.length ? ` · OKR ${p.okrIds.length}` : ''}</Note>
           <ol className="m-0 pl-5 text-[13px]" data-testid="gov-blm">{BLM_STEPS.map((x) => <li key={x.id}><strong>{t(x.title)}</strong>：{p.steps[x.id]}</li>)}</ol>
-          <div className="gov-table-wrap" tabIndex={0} role="region" aria-label={t('ui.v14_table_scroll')}><table className="gov-table" data-testid="gov-map"><thead><tr><th>{t('ui.v14_goal')}</th><th>{t('ui.v14_initiative')}</th><th>{t('ui.v14_dept')}</th><th>{t('ui.v14_metric')}</th><th>{t('ui.v14_budget')}</th></tr></thead><tbody>{p.map.map((r, i) => <tr key={i}><td>{r.goal}</td><td>{r.initiative}</td><td>{r.dept}</td><td>{r.metric} {r.target}{r.unit}</td><td>¥{r.budget}</td></tr>)}</tbody></table></div>
+          <div className="gov-table-wrap" tabIndex={0} role="region" aria-label={t('ui.v14_table_scroll')}><table className="gov-table" data-testid="gov-map"><thead><tr><th>{t('ui.v14_goal')}</th><th>{t('ui.v14_initiative')}</th><th>{t('ui.v14_dept')}</th><th>{t('ui.v14_metric')}</th><th>{t('ui.v14_budget')}</th></tr></thead><tbody>{p.map.map((r, i) => <tr key={i}><td>{r.goal}</td><td>{r.initiative}</td><td>{who(r.dept)}</td><td>{OKR_METRIC_TEXT[r.metric] ?? r.metric} {r.target}{r.unit}</td><td>¥{r.budget}</td></tr>)}</tbody></table></div>
           <div className="gov-grid" data-testid="gov-scenarios">{p.scenarios.map((x) => <div key={x.id} className="card v9-card text-[13px]"><strong>{t(SCENARIO_TEXT[x.id])}</strong>  ×{x.factor}<br />{x.targets.map((g) => `${g.metric} ${g.target}${g.unit}`).join('；')} · ¥{x.budget}<br /><span className="text-muted">{x.assumptions.join('；')}</span></div>)}</div>
           {p.status === 'approved' && <Row><button type="button" data-testid="gov-strategy-review" onClick={() => run(() => reviewStrategy(p.id, [p.scenarios.find((x) => x.id === p.chosen)!.assumptions[0]!]))}>{t('ui.v14_strategy_review')}</button></Row>}
           {p.reviews.length > 0 && <Note>{t('ui.v14_strategy_reviewed')}：{p.reviews.at(-1)!.holds.filter((h) => h.holds === false).map((h) => h.assumption).join('；') || t('ui.v14_all_hold')}</Note>}
@@ -351,7 +354,7 @@ function TalentSec({ s, run }: { s: ListedState; run: Run }) {
       </Section>
       <Section title={t('ui.v14_comp')} actions={<button type="button" data-testid="gov-assess" onClick={() => run(runAssessments)}>{t('ui.v14_assess')}</button>}>
         <pre className="whitespace-pre-wrap text-[12.5px]" data-testid="gov-comp-rules">{COMP_RULES_TEXT}</pre>
-        {s.assessments.slice(-6).map((a) => <p key={a.agentId + a.quarter} className="m-0 text-[13px]">{a.agentId}：{a.score ?? NO_DATA} → ¥{a.nextQuota} · {t(a.nextTier)}</p>)}
+        {s.assessments.slice(-6).map((a) => <p key={a.agentId + a.quarter} className="m-0 text-[13px]">{who(a.agentId, t('ui.v14_head'))}：{a.score ?? NO_DATA} → ¥{a.nextQuota} · {t(a.nextTier)}</p>)}
       </Section>
       <Section title={t('ui.v14_succession')} actions={<button type="button" className="primary" data-testid="gov-shadow-run" onClick={() => run(startSuccession, 'ui.v14_shadow_done')}>{t('ui.v14_shadow_run')}</button>}>
         <Note>{t('ui.v14_succession_desc')}</Note>
@@ -381,7 +384,7 @@ function UniversitySec({ s, run }: { s: ListedState; run: Run }) {
       </Section>
       <Section title={t('ui.v14_training')}>
         <Row><input className="min-w-0 grow" value={agent} onChange={(e) => setAgent(e.target.value)} aria-label={t('ui.v14_agent_id')} data-testid="gov-train-agent" /><button type="button" className="primary" data-testid="gov-train-run" onClick={() => run(() => startTraining(agent))}>{t('ui.v14_train_run')}</button></Row>
-        {tr && <div className="text-[13px]" data-testid="gov-training"><p className="m-0">{tr.agentId}：{tr.score}/5 · {tr.onDuty ? t('ui.v14_on_duty') : t('ui.v14_not_on_duty')}</p>{tr.quiz.map((q, i) => <p key={q.id} className="m-0 text-muted">{i + 1}. {q.q} {tr.answers?.[i] === q.answer ? '✓' : '✗'}</p>)}</div>}
+        {tr && <div className="text-[13px]" data-testid="gov-training"><p className="m-0">{who(tr.agentId, t('ui.v14_head'))}：{tr.score}/5 · {tr.onDuty ? t('ui.v14_on_duty') : t('ui.v14_not_on_duty')}</p>{tr.quiz.map((q, i) => <p key={q.id} className="m-0 text-muted">{i + 1}. {q.q} {tr.answers?.[i] === q.answer ? '✓' : '✗'}</p>)}</div>}
       </Section>
       <Section title={t('ui.v14_best')} actions={<button type="button" data-testid="gov-best-run" onClick={() => run(quarterBestPractice)}>{t('ui.v14_best_run')}</button>}>
         {s.bestPractices.slice(-2).map((b) => <Note key={b.quarter}>{b.quarter}：{b.skillPaths.join('、') || NO_DATA}</Note>)}

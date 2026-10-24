@@ -51,6 +51,8 @@ async function guard(s: ListedState): Promise<void> {
 export const demoAllowed = (): boolean => { try { return localStorage.getItem('ca.govDemo') === '1'; } catch { return false; } };
 
 /* ---------------- 讲者 ---------------- */
+/** 部门 id → 名称（界面与报告不露内部 id）。 */
+export const deptNamesOf = (g: { org: { depts: { id: string; name: string }[] } }): Record<string, string> => Object.fromEntries([...g.org.depts.map((d) => [d.id, d.name]), ['board', '治理（董事会 / 内审等）'], ['unassigned', '未分配']]);
 interface Speakers { ceo: GovSpeaker; forDirector: (model?: ModelRef) => GovSpeaker; analyst: GovSpeaker; mock: boolean }
 async function modelRefs(): Promise<{ ceo: ModelRef | null; available: ModelRef[] }> {
   const v3 = await getModelsV3();
@@ -115,7 +117,7 @@ async function rawRecords(s: ListedState): Promise<RawRecord[]> {
   const spend = [...g.ledger.map((e) => ({ ...e })), ...(s.simData?.spend ?? [])];
   const byDept: Record<string, number> = {}; for (const e of spend) byDept[e.deptId] = +((byDept[e.deptId] ?? 0) + e.yuan).toFixed(4);
   for (const [d, y] of Object.entries(byDept)) out.push({ kind: '花费账', ref: `ledger?dept=${d}`, text: `${d} 累计花费 ¥${y}` });
-  if (s.budget) { const ex = budgetExecution(s.budget, spend, govNow(s.clock)); for (const a of ex.alerts) out.push({ kind: '预算执行', ref: `budget:${ex.quarter}`, text: a }); if (!ex.alerts.length) out.push({ kind: '预算执行', ref: `budget:${ex.quarter}`, text: `执行率 ${(ex.yearRate * 100).toFixed(1)}%，未触发预警` }); }
+  if (s.budget) { const ex = budgetExecution(s.budget, spend, govNow(s.clock), deptNamesOf(g)); for (const a of ex.alerts) out.push({ kind: '预算执行', ref: `budget:${ex.quarter}`, text: a }); if (!ex.alerts.length) out.push({ kind: '预算执行', ref: `budget:${ex.quarter}`, text: `执行率 ${(ex.yearRate * 100).toFixed(1)}%，未触发预警` }); }
   const drafts = await db.all('drafts').catch(() => [] as Record<string, unknown>[]);
   out.push({ kind: '产出', ref: 'drafts', text: `稿件 ${drafts.length + (s.simData?.drafts.length ?? 0)} 篇（含模拟 ${s.simData?.drafts.length ?? 0}）` });
   const last = s.audits.at(-1); if (last) out.push({ kind: '内审', ref: last.no, text: `新发现 ${last.findings.length} 项，未关闭 ${[...last.findings, ...last.carried].filter((f) => f.status === 'open').length} 项` });
@@ -226,6 +228,7 @@ export async function runInternalAudit(): Promise<string> {
   const inp = await auditInput(s0);
   const at = nowIso(s0);
   let r = runAudit(inp, { period: monthKey(govNow(s0.clock)), at, seq: s0.audits.length + 1, sampleRate: st.throttle.auditSampleRate, doa: parseDoa(), prev: s0.audits.at(-1) ?? null, auditor: { model: auditor?.model?.model, independence: INDEPENDENCE_TEXT[auditor ? auditor.independence ?? independenceOf(auditor, ceo) : 'none'] } });
+  { const nm = deptNamesOf(await getGroup()); r = { ...r, findings: r.findings.map((f) => ({ ...f, dept: nm[f.dept] ?? f.dept })) }; }
   const sp = await speakers('audit');
   r = await auditSummary(r, sp.mock ? undefined : sp.forDirector(auditor?.model), auditor?.model?.model);
   const del = deliverAudit(r);
@@ -285,7 +288,7 @@ export async function runMonthlyReview(): Promise<string> {
   const s0 = await getListed(); await guard(s0);
   const g = await getGroup();
   const metrics = await metricsFor(s0);
-  const alerts = s0.budget ? budgetExecution(s0.budget, allSpend(s0, g), govNow(s0.clock)).alerts : [];
+  const alerts = s0.budget ? budgetExecution(s0.budget, allSpend(s0, g), govNow(s0.clock), deptNamesOf(g)).alerts : [];
   const r = monthlyReview({ month: monthKey(govNow(s0.clock)), metrics, at: nowIso(s0), sim: !!s0.simData, budgetAlerts: alerts });
   await updateListed((s) => ({ ...s, reviews: [...s.reviews.filter((x) => x.id !== r.id), r] }));
   await updateGroup((x) => ({ ...x, flow: addContext(x.flow, { kind: 'review', level: 'public', title: `月度经营分析会 ${r.month}`, body: `落后 ${r.rows.filter((y) => y.behind).length} 项、无数据 ${r.rows.filter((y) => !y.verifiable).length} 项；预算预警 ${alerts.length} 条`, refs: [r.id] }).flow })).catch(() => undefined);
@@ -294,7 +297,7 @@ export async function runMonthlyReview(): Promise<string> {
 export async function budgetView(): Promise<{ exec: ReturnType<typeof budgetExecution> | null; roi: ReturnType<typeof roiBoard>; cost: ReturnType<typeof govCostStatus> }> {
   const s = await getListed(); const g = await getGroup();
   const spend = allSpend(s, g);
-  const exec = s.budget ? budgetExecution(s.budget, spend, govNow(s.clock)) : null;
+  const exec = s.budget ? budgetExecution(s.budget, spend, govNow(s.clock), deptNamesOf(g)) : null;
   const drafts = await db.all('drafts').catch(() => [] as Record<string, unknown>[]);
   const depts = [...new Set([...spend.map((e) => e.deptId), ...(s.simData?.drafts.map((d) => d.deptId) ?? [])])];
   const roi = roiBoard(depts.map((d) => ({ key: d, label: g.org.depts.find((x) => x.id === d)?.name ?? (d === 'board' ? '治理（董事会 / 内审等）' : d), spent: +spend.filter((e) => e.deptId === d).reduce((a, e) => a + e.yuan, 0).toFixed(4), outputs: (s.simData?.drafts.filter((x) => x.deptId === d).length ?? 0) + drafts.filter((x) => x.dept === d).length, adopted: s.simData?.drafts.filter((x) => x.deptId === d && (x.status === 'approved' || x.status === 'published')).length ?? 0 })));
@@ -317,7 +320,7 @@ async function reportSources(s: ListedState, kind: 'quarter' | 'annual'): Promis
   const review = s.reviews.at(-1);
   const st = (x: unknown) => (x === 'handed_off' ? 'published' : x === 'approved' ? 'approved' : x === 'rejected' ? 'rejected' : 'pending') as 'pending';
   const last = s.audits.at(-1);
-  const exec = s.budget ? budgetExecution(s.budget, allSpend(s, g), govNow(s.clock)) : null;
+  const exec = s.budget ? budgetExecution(s.budget, allSpend(s, g), govNow(s.clock), deptNamesOf(g)) : null;
   return {
     period: kind === 'annual' ? String(govNow(s.clock).getFullYear()) : quarterKey(govNow(s.clock)), kind, groupName: g.name, at: nowIso(s), sim: !!sim,
     spend: [...g.ledger.map((e) => ({ ref: e.ref, yuan: e.yuan, at: e.at, deptId: e.deptId, vendor: '集团' })), ...s.govLedger.map((e) => ({ ref: e.ref, yuan: e.yuan, at: e.at, deptId: 'board', vendor: e.model?.split('-')[0] ?? '治理', gov: true })), ...(sim?.spend ?? [])],
@@ -331,7 +334,7 @@ async function reportSources(s: ListedState, kind: 'quarter' | 'annual'): Promis
     risks: riskRegisterView(s.risks, govNow(s.clock)).risks.map((r) => ({ title: r.title, level: r.level, response: r.response, owner: r.owner })),
     talent: [...s.trainings.map((t) => ({ text: `${t.agentId} 入职培训 ${t.score ?? '-'} / 5，${t.onDuty ? '已上岗' : '未上岗'}`, ref: `training:${t.id}` })), ...s.successions.map((x) => ({ text: `接班人计划「${x.role}」：${x.history.at(-1)?.event ?? ''}`, ref: `succession:${x.id}` }))],
     outlook: s.strategies.filter((p) => p.status === 'approved').flatMap((p) => p.map.map((r) => `${r.initiative}（${r.dept}，指标 ${r.metric} ${r.target}${r.unit}）`)).slice(0, 5),
-    deptNames: Object.fromEntries([...g.org.depts.map((d) => [d.id, d.name]), ['board', '治理（董事会 / 内审等）'], ['unassigned', '未分配']]),
+    deptNames: deptNamesOf(g),
     revenues: s.revenues,
   };
 }
@@ -383,7 +386,7 @@ export async function holdEarningsCall(reportId: string): Promise<string> {
 }
 export async function computeBrief(): Promise<string> {
   const s = await getListed(); const g = await getGroup();
-  const last = s.audits.at(-1); const exec = s.budget ? budgetExecution(s.budget, allSpend(s, g), govNow(s.clock)) : null;
+  const last = s.audits.at(-1); const exec = s.budget ? budgetExecution(s.budget, allSpend(s, g), govNow(s.clock), deptNamesOf(g)) : null;
   const good = [...s.motions.filter((m) => m.decision === 'approved').slice(-2).map((m) => ({ text: `董事会批准「${m.title}」`, ref: m.id })), ...(last ? last.carried.filter((f) => f.status === 'closed').map((f) => ({ text: `内审整改关闭：${f.title}`, ref: last.id })) : []), ...s.reports.filter((r) => r.status === 'final').slice(-1).map((r) => ({ text: `${r.title}已生成并通过一致性检查`, ref: r.id })), ...s.trainings.filter((t) => t.onDuty).slice(-1).map((t) => ({ text: `${t.agentId} 通过入职培训上岗`, ref: t.id }))];
   const risks = [...(exec?.alerts ?? []).map((a) => ({ text: a })), ...(last ? last.findings.filter((f) => f.level === 'high').map((f) => ({ text: `内审高等级发现：${f.title}`, ref: last.id })) : []), ...s.reports.filter((r) => r.status === 'blocked').slice(-1).map((r) => ({ text: `${r.title}被一致性检查阻止（${r.diffs.length} 处差异）`, ref: r.id }))];
   const pending = [...s.motions.filter((m) => m.status === 'voting').map((m) => ({ text: `议案待你拍板：${m.title}`, ref: m.id })), ...g.docs.filter((d) => d.status === 'pending').map((d) => ({ text: `公文待批：${d.title}`, ref: d.id }))];
@@ -520,7 +523,7 @@ export async function simulateMonth(): Promise<string> {
   for (let d = 1; d <= 28; d += 3) { const ref = `sim-${video}-${d}`; sim.spend.push({ ref, yuan: 1.6, at: at(d), deptId: video, vendor: 'sim', model: 'sim' }); sim.usage.push({ ref, yuan: 1.6, at: at(d) }); const r2 = `sim-${other}-${d}`; sim.spend.push({ ref: r2, yuan: 0.3, at: at(d), deptId: other, vendor: 'sim', model: 'sim' }); sim.usage.push({ ref: r2, yuan: 0.3, at: at(d) }); }
   for (let i = 0; i < 15; i++) sim.drafts.push({ id: `sim-d${i + 1}`, deptId: i % 3 ? video : other, status: i < 6 ? 'published' : i < 10 ? 'approved' : i < 13 ? 'pending' : 'rejected', at: at(1 + i * 2), text: i === 4 ? '本周涨粉 35%，口播开头效果最好' : `选题 ${i + 1}：结论先行的口播脚本（来源：录入数据）`, sources: i === 4 ? [] : ['录入数据'] });
   sim.metrics.push({ key: 'fans', label: '粉丝增长', dim: 'audience', target: 1000, value: 640, unit: '人', ref: 'sim#fans', direction: 'up' }, { key: 'views', label: '播放量', dim: 'outcome', target: 50000, value: null, unit: '次', ref: null, direction: 'up' }, { key: 'first_pass', label: '一次通过率', dim: 'process', target: 0.8, value: 0.73, unit: '', ref: 'sim#review', direction: 'up' }, { key: 'return_rate', label: '退回率', dim: 'process', target: 0.15, value: 0.2, unit: '', ref: 'sim#review', direction: 'down' });
-  sim.actions.push({ id: 'sim-a1', matter: 'spend', role: 'dept_head', actorId: `${video}-head`, amountYuan: 5, summary: `${video} 自行追加 ¥5 视频生成（未走请示）`, approvedBy: null, at: at(12), deptId: video });
+  sim.actions.push({ id: 'sim-a1', matter: 'spend', role: 'dept_head', actorId: `${video}-head`, amountYuan: 5, summary: `${g.org.depts.find((d) => d.id === video)?.name ?? video} 自行追加 ¥5 视频生成（未走请示）`, approvedBy: null, at: at(12), deptId: video });
   for (let i = 0; i < 9; i++) sim.actions.push({ id: `sim-r${i}`, matter: 'routine', role: 'executor', actorId: `${other}-head`, summary: `日常出稿 ${i + 1}`, at: at(2 + i * 3), deptId: other });
   sim.rulings.push({ id: 'sim-v1', kind: 'veto', clause: 'quality#2', by: 'legal', at: at(8) });
   sim.hits.push({ id: 'sim-h1', title: '3 秒钩子口播', metric: '播放 5 万（模拟）', why: '开头先给结论，3 秒内出现钩子', platform: '抖音' });

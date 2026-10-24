@@ -52,7 +52,7 @@ export function makeBudget(o: { year: number; total: number; deptWeights: Record
 export interface SpendLike { deptId: string; yuan: number; at: string; ref?: string; project?: string }
 export interface BudgetLine { key: string; label: string; planned: number; plannedToDate: number; spent: number; rate: number | null; deviation: number | null; alert: boolean }
 /** 执行率（每日更新）：按当日在本季度的进度折算“应花”，偏差 = (实花 − 应花)/应花；超支 >20% 随时预警（季度合计与各部门）；少花 >20% 只看季度合计、且在季度过半后预警（部门少花不报，避免不花钱的职能部门刷屏）；应花 < ¥0.05 时不预警。 */
-export function budgetExecution(b: Budget, ledger: SpendLike[], now: Date): { quarter: string; lines: BudgetLine[]; alerts: string[]; yearSpent: number; yearRate: number } {
+export function budgetExecution(b: Budget, ledger: SpendLike[], now: Date, names: Record<string, string> = {}): { quarter: string; lines: BudgetLine[]; alerts: string[]; yearSpent: number; yearRate: number } {
   const q = Math.floor(now.getMonth() / 3);
   const qStart = new Date(now.getFullYear(), q * 3, 1).getTime(); const qEnd = new Date(now.getFullYear(), q * 3 + 3, 1).getTime();
   const qProg = Math.min(1, Math.max(0.0001, (now.getTime() - qStart) / (qEnd - qStart)));
@@ -67,7 +67,7 @@ export function budgetExecution(b: Budget, ledger: SpendLike[], now: Date): { qu
   };
   const qPlan = b.quarters[q]!;
   const deptQ = (d: string) => +((b.depts[d] ?? 0) * qPlan / b.total).toFixed(4);
-  const lines = [line('quarter', `${quarterKey(now)} 合计`, qPlan, sum(inQ)), ...Object.keys(b.depts).map((d) => line(`dept:${d}`, d, deptQ(d), sum(inQ.filter((e) => e.deptId === d)), false))];
+  const lines = [line('quarter', `${quarterKey(now)} 合计`, qPlan, sum(inQ)), ...Object.keys(b.depts).map((d) => line(`dept:${d}`, names[d] ?? d, deptQ(d), sum(inQ.filter((e) => e.deptId === d)), false))];
   const alerts = lines.filter((l) => l.alert).map((l) => `${l.label} 预算偏差 ${(l.deviation! * 100).toFixed(0)}%（应花 ¥${l.plannedToDate.toFixed(2)}，实花 ¥${l.spent.toFixed(2)}）${l.deviation! > 0 ? '：超支须走请示' : '：明显少花，检查是否停摆'}`);
   const yearSpent = sum(inYear);
   return { quarter: quarterKey(now), lines, alerts, yearSpent, yearRate: +(yearSpent / b.total).toFixed(4) };
