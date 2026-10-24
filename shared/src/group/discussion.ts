@@ -34,7 +34,7 @@ export function expressionScore(text: string): { score: number; issues: string[]
   const t = text.trim(); const issues: string[] = [];
   let s = 100;
   const first = t.split(/[。！？!?\n；;]/)[0] ?? '';
-  if (t.length > 40 && !CONCLUSION.test(first.replace(/^[【\[(（][^】\])）]*[】\])）]\s*/, '').trim())) { s -= 25; issues.push('结论没有先行'); }
+  if (t.length > 40 && !CONCLUSION.test(first.replace(/^[【[(（][^】\])）]*[】\])）]\s*/, '').trim())) { s -= 25; issues.push('结论没有先行'); }
   const buzz = t.match(BUZZ)?.length ?? 0; if (buzz) { s -= 10 * buzz; issues.push(`黑话 ${buzz} 处`); }
   const hype = t.match(HYPE)?.length ?? 0; if (hype) { s -= 10 * hype; issues.push(`包装用语 ${hype} 处`); }
   if (t.length > MAX_SPEECH_CHARS) { s -= 20; issues.push('超过 300 字'); }
@@ -68,7 +68,7 @@ export async function runDiscussion(input: ProtocolInput, speak: Speaker): Promi
     const full: SpeakReq = { ...req, topic: input.topic, doc: input.doc, criticism, chairmanNotes: req.chairmanNotes ?? [] };
     let out = await speak(full); rec.spent = +(rec.spent + out.cost).toFixed(6);
     const flags: string[] = [];
-    let { score, issues } = expressionScore(out.text);
+    const first0 = expressionScore(out.text); let score = first0.score; const issues = first0.issues;
     if (score < LOW_SCORE && !over()) { const again = await speak({ ...full, rewrite: `表达规范得分 ${score}（${issues.join('、')}）：请结论先行、坦诚清晰、不堆砌、不包装，≤300 字重写。` }); rec.spent = +(rec.spent + again.cost).toFixed(6); const s2 = expressionScore(again.text); flags.push('rewritten'); if (s2.score >= score) { out = again; score = s2.score; } }
     let text = out.text.trim();
     if (text.length > MAX_SPEECH_CHARS) { text = text.slice(0, MAX_SPEECH_CHARS); flags.push('truncated'); }

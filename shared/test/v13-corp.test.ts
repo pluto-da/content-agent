@@ -40,9 +40,9 @@ describe('F12 复盘四步与 lesson 沉淀', () => {
     expect(RETRO_STEPS).toEqual(['目标回顾', '结果对比', '原因分析', '经验沉淀']);
     const r = retro({ subject: 'Q4 第一个月', trigger: 'okr_cycle', goal: '粉丝 +2000', result: '待录入', causes: '发布时间不固定', lessons: ['口播前三秒先给结论', '把配音预算提高到 ¥2'] });
     expect(r.lessons.map((l) => [l.risk, l.status])).toEqual([['low', 'adopted'], ['high', 'pending']]);
-    let flow = addContext([], { kind: 'lesson', level: 'public', title: '复盘经验', body: r.lessons.filter((l) => l.status === 'adopted').map((l) => l.text).join('；'), refs: [r.id] }).flow;
+    const flow = addContext([], { kind: 'lesson', level: 'public', title: '复盘经验', body: r.lessons.filter((l) => l.status === 'adopted').map((l) => l.text).join('；'), refs: [r.id] }).flow;
     expect(flow[0]!.body).toMatch(/口播前三秒/);
-    flow = flow.filter(Boolean);
+    expect(flow.filter(Boolean)).toHaveLength(flow.length);
   });
 });
 

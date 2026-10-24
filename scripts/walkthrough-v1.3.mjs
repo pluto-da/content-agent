@@ -40,27 +40,8 @@ const URL0 = `http://127.0.0.1:${srv.address().port}/`;
 const TMP = fs.mkdtempSync('/tmp/wt13-');
 
 
-/* ---------- 1.1 真实格式备份（models v4、画像 user/profile.md、技能为 VFS 文件；主对话模型用模拟服务商） ---------- */
-function backup11() {
-  const mockAcc = { id: 'mk', vendor: 'mock', label: '模拟（不联网）', baseURL: 'mock://local', region: 'test', hasKey: false, secretRef: 'secret:mk', models: [
-    { id: 'm1', accountId: 'mk', model: 'mock-omni', roles: ['chat', 'reason', 'vision'], source: 'manual', status: 'ok', addedAt: 0, updatedAt: 0 },
-  ] };
-  const t = (a, e, m) => ({ accountId: a, modelEntryId: e, model: m });
-  const roles = Object.fromEntries(['chat', 'reason', 'fast', 'vision', 'image', 'imageEdit', 'tts', 'asr', 'video', 'embed', 'rerank'].map((r) => [r, { role: r, enabled: true }]));
-  roles.chat.primary = t('mk', 'm1', 'mock-omni'); roles.reason.primary = t('mk', 'm1', 'mock-omni'); roles.vision.primary = t('mk', 'm1', 'mock-omni');
-  const v3 = { schemaVersion: 3, accounts: [mockAcc], roles, prices: {}, budget: { perCallConfirmYuan: 1, perDayConfirmYuan: 10, videoAlwaysConfirm: true, unknownPriceMediaConfirm: true }, keyPolicy: { scope: 'account' }, advanced: { thinking: 'off', temperature: null } };
-  const v4 = shared.ModelsMigrator.migrate(v3, 4).doc;
-  const extra = {
-    'kv/models_v3.json': JSON.stringify(v4),
-    'kv/prefs.json': JSON.stringify({ platforms: ['xiaohongshu', 'wechat'], onboarded: true, backupHinted: true, hotSources: ['baidu', 'sspai'], schemaVersion: 2, flags: {} }),
-    'data/drafts.json': JSON.stringify([{ id: 1, platform: 'xiaohongshu', title: '1.1 的旧草稿', body: '旧正文', status: 'pending' }]),
-  };
-  const files = [{ path: 'vfs/SOUL.md', content: shared.DEFAULT_FILES['SOUL.md'] }, { path: 'vfs/AGENTS.md', content: shared.DEFAULT_FILES['AGENTS.md'] }, { path: 'vfs/user/profile.md', content: '---\nid: profile\ntype: user\n---\n# 账号画像\n- 定位：1.1.0 的定位：通勤效率\n' }];
-  return shared.buildExport(files, { appVersion: '1.1.0', extra }).zip;
-}
 /* ---------- 1.2 备份：在 1.1 格式上加子 Agent 与控制平面 ---------- */
 function backup12() {
-  const z = shared.parseExport ? null : null;
   const mockAcc = { id: 'mk', vendor: 'mock', label: '模拟（不联网）', baseURL: 'mock://local', region: 'test', hasKey: false, secretRef: 'secret:mk', models: [{ id: 'm1', accountId: 'mk', model: 'mock-omni', roles: ['chat', 'reason', 'vision'], source: 'manual', status: 'ok', addedAt: 0, updatedAt: 0 }] };
   const t = (a, e, m) => ({ accountId: a, modelEntryId: e, model: m });
   const roles = Object.fromEntries(['chat', 'reason', 'fast', 'vision', 'image', 'imageEdit', 'tts', 'asr', 'video', 'embed', 'rerank'].map((r) => [r, { role: r, enabled: true }]));
@@ -110,19 +91,6 @@ const go = async (W, hash) => { await W.page.goto(URL0 + '#' + hash); await W.pa
 const must = (cond, msg) => { if (!cond) throw new Error(msg); };
 const idb = (W, store) => W.page.evaluate((s) => new Promise((res) => { const r = indexedDB.open('content-agent'); r.onsuccess = () => { const db = r.result; if (!db.objectStoreNames.contains(s)) return res([]); const q = db.transaction(s, 'readonly').objectStore(s).getAll(); q.onsuccess = () => res(q.result); }; r.onerror = () => res([]); }), store);
 const drafts = async (W) => (await idb(W, 'drafts')).map((d) => ({ id: d.id, platform: d.platform, title: d.title, body: d.body, status: d.status, parent_id: d.parent_id }));
-async function say(W, text, waitMs = 6000) {
-  await go(W, 'agent');
-  await tid(W, 'agent-input').fill(text);
-  await tid(W, 'send').click();
-  const t0 = Date.now();
-  while (Date.now() - t0 < waitMs) {
-    await W.page.waitForTimeout(400);
-    const allow = W.page.locator('[data-testid="confirm-allow"]');
-    if (await allow.count()) { await allow.first().click(); W.memo.confirmed = (W.memo.confirmed ?? 0) + 1; }
-    if (!(await W.page.locator('[data-testid="send"]').first().isDisabled().catch(() => false)) && Date.now() - t0 > 1500) break;
-  }
-  await W.page.waitForTimeout(600);
-}
 
 
 /** VFS 大文件在 IndexedDB 里分片存（单条 < 64 KB），这里按 db.ts 的 assembleAll 拼回。 */
@@ -137,18 +105,7 @@ const superState = async (W) => JSON.parse((await vfsText(W, 'config/super.json'
 const groupState = async (W) => JSON.parse((await vfsText(W, 'config/group.json')) ?? '{}');
 async function grp(W, tab) { await go(W, `group?tab=${tab}`); await W.page.waitForTimeout(600); }
 const agentsIn = async (W) => (await vfsFiles(W)).filter((f) => /^agents\/[a-z0-9-]+\/AGENT\.md$/.test(f.path));
-async function cmd(W, tab) { await go(W, `command?tab=${tab}`); await W.page.waitForTimeout(500); }
 async function clickTid(W, id, wait = 700) { await tid(W, id).scrollIntoViewIfNeeded().catch(() => {}); await tid(W, id).click(); await W.page.waitForTimeout(wait); }
-async function approveFirst(W, pred, label) {
-  const st = await superState(W);
-  const a = (st.approvals ?? []).filter((x) => x.status === 'pending').reverse().find(pred);
-  must(a, `收件箱里没有：${label}`);
-  await cmd(W, 'inbox');
-  await clickTid(W, `ap-approve-${a.id}`, 1500);
-  const after = (await superState(W)).approvals.find((x) => x.id === a.id);
-  must(after?.status === 'approved', `${label} 状态 ${after?.status}`);
-  return a;
-}
 
 
 const FLOW = [

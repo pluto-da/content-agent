@@ -8,7 +8,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { callRole, findSecrets, redact, defaultOrg, openSession, postMessage, checkOff, runDiscussion, speakPrompt, crossExamCoverage, newRace, runRace, scoreBlind, blindCards, decideRace, leaderboard } from '../shared/dist/index.js';
+import { callRole, findSecrets, redact, openSession, postMessage, checkOff, runDiscussion, speakPrompt, crossExamCoverage, newRace, runRace, scoreBlind, blindCards, decideRace, leaderboard } from '../shared/dist/index.js';
 import { mimoEnv, nodeTransport, mimoState } from './real-common.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -38,7 +38,6 @@ async function main() {
     return { text, cost: r.cost ?? 0 };
   };
   const speak = async (req) => { const p = speakPrompt(req); return call(`${req.party.id}·${req.phase}·r${req.round}`, req.tier, p.system, p.user, p.maxTokens); };
-  const org = defaultOrg('实测集团');
 
   // 1）临时会话：数据中心发现档期冲突，拉两位事业部负责人，4 条消息后 √ 解散
   const t1 = Date.now();
@@ -73,7 +72,7 @@ async function main() {
   for (const reviewer of ['staff-head', 'data-center-head']) {
     const cards = blindCards(race);
     const r = await call(`race-review·${reviewer}`, 'cheap', '你是赛马评审室的盲评人，只看代号与方案。按 1–10 分给每个方案打分，只输出 JSON，如 {"A":7,"B":8}。', cards.map((c) => `方案 ${c.alias}：${c.proposal}`).join('\n\n'), 80);
-    let scores = {}; try { scores = JSON.parse(r.text.replace(/^```(?:json)?\s*|\s*```$/g, '').match(/\{[\s\S]*\}/)?.[0] ?? '{}'); } catch { scores = {}; }
+    let scores; try { scores = JSON.parse(r.text.replace(/^```(?:json)?\s*|\s*```$/g, '').match(/\{[\s\S]*\}/)?.[0] ?? '{}'); } catch { scores = {}; }
     race = scoreBlind(race, reviewer, scores);
   }
   const lb = leaderboard(race);

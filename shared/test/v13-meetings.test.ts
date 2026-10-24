@@ -50,7 +50,8 @@ describe('F7 7 个常设会议室', () => {
   });
   it('公文：7 类、编号集团〔年份〕NNN号、请示只由董事长批准、按编号检索', () => {
     expect(DOC_TYPES).toEqual(['请示', '报告', '通知', '纪要', '提案', '决议', '简报']);
-    let { list, doc } = newDoc([], { type: '请示', title: '追加配音预算', body: '¥1', from: 'ceo', year: 2026 });
+    const made = newDoc([], { type: '请示', title: '追加配音预算', body: '¥1', from: 'ceo', year: 2026 });
+    let list = made.list; const doc = made.doc;
     expect(doc.no).toBe('集团〔2026〕001号');
     expect(doc.status).toBe('pending');
     expect(() => decideDoc(list, doc.id, 'ceo', true)).toThrow(/董事长/);

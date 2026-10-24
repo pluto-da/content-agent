@@ -16,7 +16,6 @@
 import { readFileSync, existsSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'out');
@@ -47,24 +46,11 @@ const file = (p, label = p) => ({ ok: exists(p), text: `${label}${exists(p) ? ' 
 const grep = (p, re, label) => ({ ok: new RegExp(re).test(txt(p)), text: `${label}（${p}）` });
 const docPath = (n) => [join(root, 'docs', n), join(root, '../design', n)].find((p) => existsSync(p));
 const docTxt = (n) => { const p = docPath(n); return p ? readFileSync(p, 'utf8') : ''; };
-const human = (t) => ({ ok: false, human: true, text: `待人工：${t}` });
 const device = (t) => ({ ok: false, device: true, text: `待真机：${t}` });
 const cert = (t) => ({ ok: false, cert: true, text: `待资质：${t}` });
 const needKey = (t) => ({ ok: false, key: true, text: `待 Key：${t}` });
 const soft = (t) => ({ ok: false, soft: true, text: t });
 
-function walk(dir, acc = []) {
-  if (!existsSync(dir)) return acc;
-  for (const n of readdirSync(dir, { withFileTypes: true })) {
-    if (n.name === 'node_modules' || n.name === 'dist') continue;
-    const p = join(dir, n.name);
-    if (n.isDirectory()) walk(p, acc); else acc.push(p);
-  }
-  return acc;
-}
-const webSrc = walk(join(root, 'web/src')).filter((p) => /\.(tsx?|css)$/.test(p) && !/\.test\.tsx?$/.test(p));
-const srcHits = (re) => webSrc.filter((p) => re.test(readFileSync(p, 'utf8'))).map((p) => p.slice(root.length + 1));
-const superSrc = ['governance', 'agents', 'platforms', 'sources', 'workflows', 'mcp', 'a2a'].map((n) => txt(`shared/src/super/${n}.ts`)).join('\n');
 
 // ---- 证据文件
 const g = (n) => txt(`shared/src/group/${n}.ts`);
@@ -72,7 +58,6 @@ const shots = J(join(root, 'docs/shots/shots-v1.3.json'));
 const wt = J(join(root, 'docs/walkthrough/walkthrough-v1.3.json'));
 const proposals = docTxt('proposals-v1.3.md');
 const sr = docTxt('self-review-v1.3.md');
-const refs = txt('docs/refs-v1.3/README.md');
 const ci = txt('.github/workflows/ci.yml');
 const mimo = J(join(root, 'evals/real/mimo-v1.3.json'));
 const reg = (n) => { const j = J(join(out, `accept-${n}.json`)); if (!j) return soft(`先运行 accept-${n}`); const f = j.count?.fail ?? j.counts?.['失败'] ?? 0; return { ok: f === 0, text: `accept-${n}：失败 ${f}` }; };
@@ -82,7 +67,7 @@ const sum = shots?.summary;
 const F = {
   F1: [test('F1 融合组织'), file('shared/src/group/org.ts', '组织模型 shared/src/group/org.ts'), test('F9 / F10 / F11 / F12 / F13 在 App 里', 'F9 / F10 / F11 / F12 / F13 在 App 里 > 赛马')],
   F2: [test('F2 DEPT / COMMITTEE 清单与编制上限'), test('F16 集团模式默认关闭，可启用与退回 > 默认关闭；启用写入')],
-  F3: [test('F3 10 项制度齐全'), { ok: /参照公开报道，非任何公司官方制度/.test(g('regulations')), text: '制度注明“参照公开报道，非任何公司官方制度”' }, { ok: /集团章程/.test(proposals) && /DOA/.test(proposals), text: `proposals-v1.3.md ${proposals ? '含集团章程与 DOA 默认值（高风险文件只进 proposals）' : '缺失'}` }],
+  F3: [test('F3 10 项制度齐全'), { ok: /参照[^。\n]*公开报道[^。\n]*非任何公司官方制度/.test(g('regulations')), text: '制度注明“参照公开报道，非任何公司官方制度”' }, { ok: /集团章程/.test(proposals) && /DOA/.test(proposals), text: `proposals-v1.3.md ${proposals ? '含集团章程与 DOA 默认值（高风险文件只进 proposals）' : '缺失'}` }],
   F4: [test('F4 DOA 引擎执行'), file('shared/src/group/doa.ts', 'DOA 引擎')],
   F5: [test('F5 集团上下文流与 OKR 公开'), test('F5 / F6 目标 → 冲突')],
   F6: [test('F6 临时会话'), test('F5 / F6 目标 → 冲突')],
