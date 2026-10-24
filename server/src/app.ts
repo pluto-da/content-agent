@@ -127,9 +127,9 @@ export async function buildApp(opts: AppOptions): Promise<{ app: FastifyInstance
   };
 
   /* ---------- 基础 ---------- */
-  app.get('/api/health', async () => ({ ok: true, version: '1.3.0' }));
+  app.get('/api/health', async () => ({ ok: true, version: '1.4.0' }));
   // 1.2.0：A2A 服务端（beta，默认关闭；A2A_SERVER=1 + A2A_TOKEN 才开放）
-  registerA2A(app, opts.a2a ?? a2aOptsFromEnv('1.3.0'));
+  registerA2A(app, opts.a2a ?? a2aOptsFromEnv('1.4.0'));
   app.get('/api/boundaries', async () => ({ boundaries: HARD_BOUNDARIES, tools: ALLOWED_TOOLS }));
 
   /* ---------- 设置与密钥 ---------- */
