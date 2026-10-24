@@ -128,6 +128,8 @@ function Sessions({ s, run }: { s: GroupState; run: Run }) {
         <Note>{t('ui.v13_sessions_desc')}</Note>
         <Row>
           <button type="button" data-testid="group-check-conflicts" onClick={() => run(async () => { const r = await checkConflicts(); if (r.sessionId) setSel(r.sessionId); }, 'ui.v13_checked')}>{t('ui.v13_check_conflicts')}</button>
+        </Row>
+        <Row>
           <input className="min-w-0 grow" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={t('ui.v13_pull_ph')} aria-label={t('ui.v13_pull_ph')} data-testid="group-pull-input" />
           <button type="button" disabled={!topic.trim()} data-testid="group-pull" onClick={() => run(async () => { setSel(await pullGroup(topic.trim())); setTopic(''); })}>{t('ui.v13_pull')}</button>
         </Row>
@@ -190,7 +192,7 @@ function Rooms({ s, run }: { s: GroupState; run: Run }) {
         <Section title={`${t(GROUP_ROOMS.find((r) => r.id === cur.roomId)?.name ?? '')} · ${cur.title}`} testId="group-meeting-view">
           <Row>{list.slice(0, 6).map((m) => <button key={m.id} type="button" className={`ghost text-[12px] ${m.id === cur.id ? '!border-accent' : ''}`} data-testid={`meeting-${m.id}`} onClick={() => setSel(m.id)}><span className="max-w-[10em] truncate" title={m.title}>{m.title}</span></button>)}</Row>
           <Note>{t('ui.v13_participants')}：{cur.participants.map(nm).join('、')} · {t(`ui.v13_ms_${cur.status}`)} · {yuan(cur.spent)}</Note>
-          <details data-testid="meeting-predoc"><summary className="cursor-pointer text-[13px]">{t('ui.v13_predoc')}</summary><pre className="whitespace-pre-wrap break-words text-[12px]">{cur.preDoc}</pre></details>
+          <details data-testid="meeting-predoc"><summary className="flex min-h-11 cursor-pointer items-center text-[13px]">{t('ui.v13_predoc')}</summary><pre className="whitespace-pre-wrap break-words text-[12px]">{cur.preDoc}</pre></details>
           {cur.status === 'scheduled' && (
             <>
               <Row><input className="min-w-0 grow" value={say} onChange={(e) => setSay(e.target.value)} placeholder={t('ui.v13_interject_ph')} aria-label={t('ui.v13_interject_ph')} data-testid="group-meeting-say-input" /><button type="button" disabled={!say.trim()} data-testid="group-meeting-say" onClick={() => run(() => meetingIntervene(cur.id, 'speak', say.trim()).then(() => setSay('')), 'ui.v13_noted')}>{t('ui.v13_interject')}</button></Row>
@@ -248,8 +250,10 @@ function Docs({ s, run, go }: { s: GroupState; run: Run; go: (to: string) => voi
   return (
     <Section title={t('ui.v13_docs')} testId="group-docs">
       <Row>
-        <input className="min-w-0 grow" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('ui.v13_doc_search')} aria-label={t('ui.v13_doc_search')} data-testid="group-doc-search" />
         <button type="button" data-testid="group-collab" onClick={() => run(collabDrafts, 'ui.v13_collab_done')}>{t('ui.v13_collab')}</button>
+      </Row>
+      <Row>
+        <input className="min-w-0 grow" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('ui.v13_doc_search')} aria-label={t('ui.v13_doc_search')} data-testid="group-doc-search" />
       </Row>
       {!list.length && <Note>{t('ui.v13_no_docs')}</Note>}
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
@@ -314,7 +318,7 @@ function Regs({ s, run }: { s: GroupState; run: Run }) {
         <ul className="m-0 grid list-none grid-cols-1 gap-1 p-0 sm:grid-cols-2">
           {REGULATIONS.map((r) => <li key={r.id}><button type="button" className={`ghost w-full !justify-start ${sel === r.id ? '!border-accent' : ''}`} data-testid={`reg-${r.id}`} onClick={() => setSel(r.id)}><span className="min-w-0 grow truncate text-left">{r.no}. {t(r.title)}</span><span className="text-[12px] text-muted">v{currentReg(s.regs, r.id)?.version ?? 1}</span></button></li>)}
         </ul>
-        {cur && <details open data-testid="reg-text"><summary className="cursor-pointer text-[13px]">{t(REGULATIONS.find((r) => r.id === sel)!.title)} v{cur.version}</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words text-[12px]">{cur.text}</pre></details>}
+        {cur && <details open data-testid="reg-text"><summary className="flex min-h-11 cursor-pointer items-center text-[13px]">{t(REGULATIONS.find((r) => r.id === sel)!.title)} v{cur.version}</summary><pre tabIndex={0} aria-label={t(REGULATIONS.find((r) => r.id === sel)!.title)} className="max-h-64 overflow-auto whitespace-pre-wrap break-words text-[12px]">{cur.text}</pre></details>}
         <label className="field"><span>{t('ui.v13_reg_add')}</span><textarea rows={2} value={add} onChange={(e) => setAdd(e.target.value)} placeholder={t('ui.v13_reg_add_ph')} data-testid="group-reg-add" /></label>
         <Row>
           <button type="button" disabled={!add.trim()} data-testid="group-reg-propose" onClick={() => run(() => proposeRegulation(sel, add).then(() => setAdd('')), 'ui.v13_proposed')}>{t('ui.v13_reg_propose')}</button>

@@ -84,7 +84,7 @@ export function CommandPage({ tab: initial, go }: { tab?: string; go: (to: strin
           <button type="button" className="primary" data-testid="resume-all" onClick={() => void run(resumeAll, 'ui.v12_resumed')}>{t('ui.v12_resume')}</button>
         </div>
       )}
-      <button type="button" className="card v9-card flex !min-h-11 items-center gap-2 text-left" data-testid="open-group" onClick={() => go('group')}><strong className="grow">{t('ui.v13_group_entry')}</strong><span className="text-[13px] text-muted">{t('ui.v13_group_entry_desc')}</span></button>
+      <button type="button" className="card v9-card flex !min-h-11 flex-wrap items-center gap-x-2 gap-y-0 text-left" data-testid="open-group" onClick={() => go('group')}><strong className="min-w-0 grow whitespace-normal break-words">{t('ui.v13_group_entry')}</strong><span className="min-w-0 whitespace-normal text-[13px] text-muted">{t('ui.v13_group_entry_desc')}</span></button>
       <div className="v12-tabs"><SegTabs value={tab} options={COMMAND_TABS.map(([k, l]) => [k, k === 'inbox' && pending ? `${t(l)} ${pending}` : l])} onChange={(v) => { setTab(v); go(`command?tab=${v}`); }} label={t('ui.v12_command')} /></div>
       {!d ? <Note>{t('ui.loading')}</Note>
         : tab === 'team' ? <Team d={d} run={run} />

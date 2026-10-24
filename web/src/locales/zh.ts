@@ -1652,7 +1652,7 @@ export const ZH_UI: Record<string, string> = {
   'ui.v13_iv_agenda': '改议题',
   'ui.v13_iv_stop': '叫停',
   'ui.v13_iv_rule': '裁决',
-  'ui.v13_round': '第',
+  'ui.v13_round': '轮次',
   'ui.v13_coverage': '质询覆盖',
   'ui.v13_blocked': '拦截重复',
   'ui.v13_stop_max_rounds': '到达轮次上限',
