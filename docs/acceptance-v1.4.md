@@ -1,6 +1,6 @@
 # 1.4.0 逐项验收（acceptance-v1.4）
 
-由 `node scripts/accept-v1.4.mjs --strict` 生成（证据：本地现场生成的单测结果 out/vitest-{shared,server,web,evals}.json、i18n-audit、walkthrough-v1.4、截图矩阵 docs/shots/shots-v1.4.json、self-review-v1.4、MiMo 实测 evals/real/mimo-v1.4.json、refs-v1.4、proposals-v1.4、回归验收 accept-v9 / v10 / v11 / v1 / v1.1 / v1.2 / v1.3、源码与文档）。结论只有：通过 / 部分 / 待 Key / 待资质 / 待人工 / 待真机 / 失败；待真机、待资质、待 Key、待人工项按事实标注，不写成“通过”。
+由 `node scripts/accept-v1.4.mjs --strict` 生成（定版最终运行：accept v9 → v1.4 依次 --strict，全部退出码 0、失败 0）（证据：本地现场生成的单测结果 out/vitest-{shared,server,web,evals}.json、i18n-audit、walkthrough-v1.4、截图矩阵 docs/shots/shots-v1.4.json、self-review-v1.4、MiMo 实测 evals/real/mimo-v1.4.json、refs-v1.4、proposals-v1.4、回归验收 accept-v9 / v10 / v11 / v1 / v1.1 / v1.2 / v1.3、源码与文档）。结论只有：通过 / 部分 / 待 Key / 待资质 / 待人工 / 待真机 / 失败；待真机、待资质、待 Key、待人工项按事实标注，不写成“通过”。
 
 ## 统计
 
