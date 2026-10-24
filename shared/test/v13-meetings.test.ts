@@ -118,3 +118,13 @@ describe('F11 否决须引用条款', () => {
     expect(finalizeResolution({ kind: 'vote', text: '决议：每天自动发布三条', vetoes: [] }).rejected).toMatch(/硬边界/);
   });
 });
+
+describe('1.3 MiMo 实测回归：综合解析', () => {
+  it('来源引用里的“sp25、sp30”不会被当成编号拆开；真正的编号列表照常拆', async () => {
+    const { parseSynthesis } = await import('../src/group/discussion.js');
+    const s = parseSynthesis('共识：主推位暂空缺；先补近 30 天基线（来源：sp25、sp30、sp32、sp33）。\n分歧：1. 优先级未定 2. B 顺延方案\n待验证：近 30 天数据（待录入）');
+    expect(s.consensus).toEqual(['主推位暂空缺', '先补近 30 天基线（来源：sp25、sp30、sp32、sp33）。']);
+    expect(s.disagreements).toEqual(['优先级未定', 'B 顺延方案']);
+    expect(s.toVerify).toEqual(['近 30 天数据（待录入）']);
+  });
+});

@@ -129,7 +129,7 @@ export async function runDiscussion(input: ProtocolInput, speak: Speaker): Promi
   return rec;
 }
 export function parseSynthesis(text: string): Synthesis {
-  const grab = (k: RegExp) => { const m = k.exec(text); return m ? m[1]!.split(/[；;\n]|(?:\d+[.、)])/).map((x) => x.replace(/^[-•·\s]+/, '').trim()).filter((x) => x.length > 1).slice(0, 6) : []; };
+  const grab = (k: RegExp) => { const m = k.exec(text); return m ? m[1]!.split(/[；;\n]|(?<![A-Za-z0-9])\d+[.、)](?!\d)/).map((x) => x.replace(/^[-•·\s]+/, '').trim()).filter((x) => x.length > 1).slice(0, 6) : []; };
   return { consensus: grab(/共识[:：]\s*([^\n]*(?:\n(?![^\n]*(分歧|待验证)[:：])[^\n]+)*)/), disagreements: grab(/分歧[:：]\s*([^\n]*(?:\n(?![^\n]*(共识|待验证)[:：])[^\n]+)*)/), toVerify: grab(/待验证[:：]\s*([^\n]*(?:\n(?![^\n]*(共识|分歧)[:：])[^\n]+)*)/), text: text.slice(0, 1200) };
 }
 /** 否决必须引用条款；决议触碰硬边界由引擎直接拒绝。 */
