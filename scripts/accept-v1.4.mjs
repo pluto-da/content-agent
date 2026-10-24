@@ -43,8 +43,6 @@ function test(label, re = esc(label)) {
   const bad = hit.filter((x) => x.status !== 'passed');
   return { ok: !bad.length, text: `${label}：${hit.length} 项，通过 ${hit.length - bad.length}${bad.length ? `，未通过 ${bad.length}` : ''}（${[...new Set(hit.map((h) => h.file))].join('、')}）` };
 }
-const exists = (p) => existsSync(join(root, p));
-const file = (p, label = p) => ({ ok: exists(p), text: `${label}${exists(p) ? ' 存在' : ' 缺失'}` });
 const grep = (p, re, label) => ({ ok: new RegExp(re).test(txt(p)), text: `${label}（${p}）` });
 const docPath = (n) => [join(root, 'docs', n), join(root, '../design', n)].find((p) => existsSync(p));
 const docTxt = (n) => { const p = docPath(n); return p ? readFileSync(p, 'utf8') : ''; };

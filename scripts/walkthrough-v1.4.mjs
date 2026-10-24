@@ -95,10 +95,7 @@ function assemble(rows) {
 }
 const vfsFiles = async (W) => assemble(await idb(W, 'vfs_files')).filter((f) => !f.deleted);
 const vfsText = async (W, p) => (await vfsFiles(W)).find((f) => f.path === p)?.content;
-const superState = async (W) => JSON.parse((await vfsText(W, 'config/super.json')) ?? '{}');
 const groupState = async (W) => JSON.parse((await vfsText(W, 'config/group.json')) ?? '{}');
-async function grp(W, tab) { await go(W, `group?tab=${tab}`); await W.page.waitForTimeout(600); }
-const agentsIn = async (W) => (await vfsFiles(W)).filter((f) => /^agents\/[a-z0-9-]+\/AGENT\.md$/.test(f.path));
 async function clickTid(W, id, wait = 700) { await tid(W, id).scrollIntoViewIfNeeded().catch(() => {}); await tid(W, id).click(); await W.page.waitForTimeout(wait); }
 
 
