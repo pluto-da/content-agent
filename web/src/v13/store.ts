@@ -8,7 +8,7 @@ import {
   addContext, decomposeYearGoal, detectOkrConflicts, alignRequest, retrieveContext, contextHitRate, openSession, postMessage, checkOff, escalateToMeeting, todosToTickets, recommendMembers, parseChairmanPull, tickSession, promoteQueued,
   newMeeting, runMeeting, intervene, preDocument, newDoc, decideDoc, mockSpeaker, speakPrompt, canStartRace, newRace, runRace, scoreBlind, decideRace, archivedAssets, leaderboard, newGray, observe, evaluateGray,
   veto, appeal, retro, review360, commissarObserve, appointment, applyOrgChange, meetingShare, spendByDept, parseDoa, doaCheck, proposeRegChange, applyRegChange, rollbackReg, currentReg, checkResolution, parseGroupCommand,
-  findSecrets, GROUP_HONESTY, raceEffect, okrProgress, ROOMS,
+  findSecrets, okrPlatformText, GROUP_HONESTY, raceEffect, okrProgress, ROOMS,
   type GroupState, type Speaker, type SpendEntry, type SpendKind, type TempSession, type Meeting, type Race, type Dept, type ContextItem, type DocType, type BoardTask, type GrayRelease,
 } from '@content-agent/shared';
 import { getVfs } from '../v9/vfsBackend';
@@ -81,7 +81,7 @@ export async function setYearGoal(goal: { title: string; metric: string; target:
     guard(s);
     const okrs = decomposeYearGoal(goal, s.org, s.okrCycle);
     // 事业部各自申请所在主平台的黄金档（独占资源），数据中心据此发现冲突
-    for (const o of okrs) { const d = s.org.depts.find((x) => x.id === o.owner && x.kind === 'bu'); if (d?.platforms[0]) o.krs.push({ id: `kr-${d.id}-slot`, title: `${d.platforms[0]} 黄金档固定发布`, metric: `slot-${d.id}`, platform: d.platforms[0], direction: 'up', target: 1, unit: '档', current: null, resource: `slot:${d.platforms[0]}-prime` }); }
+    for (const o of okrs) { const d = s.org.depts.find((x) => x.id === o.owner && x.kind === 'bu'); if (d?.platforms[0]) o.krs.push({ id: `kr-${d.id}-slot`, title: `${okrPlatformText(d.platforms[0])} 黄金档固定发布`, metric: `slot-${d.id}`, platform: d.platforms[0], direction: 'up', target: 1, unit: '档', current: null, resource: `slot:${d.platforms[0]}-prime` }); }
     let n = flow({ ...s, yearGoal: goal, okrs }, { kind: 'goal', level: 'public', title: '董事长年度目标', body: `${goal.title}（${goal.metric} ${goal.target}${goal.unit}）` });
     n = flow(n, { kind: 'okr', level: 'public', title: '经管会拆解 OKR（公开）', body: okrs.filter((o) => o.level === 'dept').map((o) => o.title).join('；') });
     return n;
@@ -262,7 +262,7 @@ export async function collabDrafts(): Promise<{ vetoed: string; passed: string; 
   let askId = '';
   await updateGroup((s) => {
     const v1 = veto({ by: 'legal', target: `draft:${d1}`, clause: 'charter#5', reason: '稿件要求“自动私信领券”，属自动互动', hardBoundary: true });
-    let appealed = '申诉被拒：涉及硬边界的否决不可申诉';
+    let appealed: string;
     try { appeal(v1, 'bu-ecom-head', '只是引导用户私信'); appealed = '申诉已受理'; } catch (e) { appealed = (e as Error).message; }
     const q = veto({ by: 'quality', target: `draft:${d2}`, clause: 'quality#2', reason: '标题“全网最好用”属广告法极限用语，退回一轮' });
     let n: GroupState = { ...s, vetoes: [...s.vetoes, v1, q] };

@@ -1,5 +1,5 @@
 {
- "at": "2026-10-24T00:13:11.914Z",
+ "at": "2026-10-24T00:49:18.344Z",
  "viewports": [
   "phone 360×800",
   "tablet 834×1194",
@@ -844,11 +844,13 @@
      "spill": [],
      "squeezed": [],
      "cjk": [
-      "followers 贡献 6250followers",
+      "抖音 粉丝 贡献 6250followers",
       "发布稿件一次通过率 ≥ 80%",
-      "douyin 黄金档固定发布",
-      "xiaohongshu 黄金档固定发布",
-      "youtube 黄金档固定发布",
+      "抖音 黄金档固定发布",
+      "小红书 粉丝 贡献 6250followers",
+      "小红书 黄金档固定发布",
+      "YouTube 粉丝 贡献 6250followers",
+      "YouTube 黄金档固定发布",
       "战略按时交付率 ≥ 90%",
       "编制按时交付率 ≥ 90%",
       "预算按时交付率 ≥ 90%",
@@ -1154,11 +1156,13 @@
      "spill": [],
      "squeezed": [],
      "cjk": [
-      "followers 贡献 6250followers",
+      "抖音 粉丝 贡献 6250followers",
       "发布稿件一次通过率 ≥ 80%",
-      "douyin 黄金档固定发布",
-      "xiaohongshu 黄金档固定发布",
-      "youtube 黄金档固定发布",
+      "抖音 黄金档固定发布",
+      "小红书 粉丝 贡献 6250followers",
+      "小红书 黄金档固定发布",
+      "YouTube 粉丝 贡献 6250followers",
+      "YouTube 黄金档固定发布",
       "战略按时交付率 ≥ 90%",
       "编制按时交付率 ≥ 90%",
       "预算按时交付率 ≥ 90%",
@@ -1464,10 +1468,11 @@
      "spill": [],
      "squeezed": [],
      "cjk": [
-      "followers 贡献 6250followers",
+      "抖音 粉丝 贡献 6250followers",
       "发布稿件一次通过率 ≥ 80%",
-      "douyin 黄金档固定发布",
-      "xiaohongshu 黄金档固定发布"
+      "抖音 黄金档固定发布",
+      "小红书 粉丝 贡献 6250followers",
+      "小红书 黄金档固定发布"
      ],
      "overflow": false,
      "truncated": [],
@@ -1769,10 +1774,11 @@
      "spill": [],
      "squeezed": [],
      "cjk": [
-      "followers 贡献 6250followers",
+      "抖音 粉丝 贡献 6250followers",
       "发布稿件一次通过率 ≥ 80%",
-      "douyin 黄金档固定发布",
-      "xiaohongshu 黄金档固定发布"
+      "抖音 黄金档固定发布",
+      "小红书 粉丝 贡献 6250followers",
+      "小红书 黄金档固定发布"
      ],
      "overflow": false,
      "truncated": [],
@@ -1829,7 +1835,7 @@
   "shots": 108,
   "spill": 0,
   "squeezed": 0,
-  "cjkInEnReportOnly": 104,
+  "cjkInEnReportOnly": 110,
   "overflow": 0,
   "overlap": 0,
   "truncated": 0,

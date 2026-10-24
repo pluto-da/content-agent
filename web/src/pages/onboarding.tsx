@@ -38,7 +38,7 @@ export function Onboarding({ go }: { go: (to: string) => void }) {
       <div className="onb-inner">
         <div className="flex items-center gap-3">
           <span aria-hidden="true" className="grid h-9 w-9 place-items-center rounded-[10px] bg-ink text-ink-fg"><Icon name="topics" size={18} /></span>
-          <span className="grow text-[15px] font-semibold text-fg">{t('ui.content_agent')}</span>
+          <span className="grow text-[15px] font-semibold text-fg">{t('ui.super_workbench')}</span>
           <button type="button" className="ghost" onClick={() => void finish()} data-testid="onb-skip-all">{t('ui.skip_setup')}</button>
         </div>
         <div className="steps" aria-label={`${t('ui.x')} ${step} / 3 ${t('ui.steps_2')}`}>{[1, 2, 3].map((i) => <span key={i} data-on={i <= step} />)}</div>

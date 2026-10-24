@@ -47,3 +47,15 @@ describe('F5 集团上下文流与 OKR 公开', () => {
     expect(req.status).toBe('open');
   });
 });
+
+describe('1.3 截图复核回归：KR 标题不露内部 id', () => {
+  it('followers / douyin 显示为 粉丝 / 抖音', async () => {
+    const { decomposeYearGoal, defaultOrg, okrPlatformText } = await import('../src/index.js');
+    const okrs = decomposeYearGoal({ title: '年内 10 万粉', metric: 'followers', target: 100000, unit: '粉' }, defaultOrg('测试'));
+    const titles = okrs.flatMap((o) => o.krs.map((k) => k.title)).join('\n');
+    expect(titles).not.toMatch(/followers|douyin|xiaohongshu/);
+    expect(okrs[0]!.krs[0]!.title).toBe('粉丝 达到 100000粉');
+    expect(titles).toMatch(/抖音 粉丝 贡献/);
+    expect(okrPlatformText('unknown-x')).toBe('unknown-x');
+  });
+});

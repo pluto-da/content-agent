@@ -106,7 +106,7 @@ function Org({ s, run }: { s: GroupState; run: Run }) {
       </Section>
       <Section title={t('ui.v13_org_adjust')} testId="group-org-adjust">
         <Note>{t('ui.v13_org_adjust_desc')}</Note>
-        <Row><input className="min-w-0 grow" value={nm} onChange={(e) => setNm(e.target.value)} placeholder={t('ui.v13_new_dept_ph')} aria-label={t('ui.v13_new_dept_ph')} data-testid="group-dept-name" /><button type="button" disabled={!nm.trim()} data-testid="group-propose-dept" onClick={() => run(() => proposeDept(nm.trim()).then(() => setNm('')), 'ui.v13_proposed')}>{t('ui.v13_propose_dept')}</button></Row>
+        <Row><input className="min-w-0 grow basis-[15rem]" value={nm} onChange={(e) => setNm(e.target.value)} placeholder={t('ui.v13_new_dept_ph')} aria-label={t('ui.v13_new_dept_ph')} data-testid="group-dept-name" /><button type="button" disabled={!nm.trim()} data-testid="group-propose-dept" onClick={() => run(() => proposeDept(nm.trim()).then(() => setNm('')), 'ui.v13_proposed')}>{t('ui.v13_propose_dept')}</button></Row>
         <Row><button type="button" className="ghost" data-testid="group-disable" onClick={() => run(disableGroup, 'ui.v13_disabled')}>{t('ui.v13_back_to_12')}</button></Row>
       </Section>
     </>
@@ -130,7 +130,7 @@ function Sessions({ s, run }: { s: GroupState; run: Run }) {
           <button type="button" data-testid="group-check-conflicts" onClick={() => run(async () => { const r = await checkConflicts(); if (r.sessionId) setSel(r.sessionId); }, 'ui.v13_checked')}>{t('ui.v13_check_conflicts')}</button>
         </Row>
         <Row>
-          <input className="min-w-0 grow" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={t('ui.v13_pull_ph')} aria-label={t('ui.v13_pull_ph')} data-testid="group-pull-input" />
+          <input className="min-w-0 grow basis-[15rem]" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={t('ui.v13_pull_ph')} aria-label={t('ui.v13_pull_ph')} data-testid="group-pull-input" />
           <button type="button" disabled={!topic.trim()} data-testid="group-pull" onClick={() => run(async () => { setSel(await pullGroup(topic.trim())); setTopic(''); })}>{t('ui.v13_pull')}</button>
         </Row>
         {!list.length && <Note>{t('ui.v13_no_sessions')}</Note>}
@@ -151,7 +151,7 @@ function Sessions({ s, run }: { s: GroupState; run: Run }) {
                 <button type="button" className="primary" data-testid="group-session-dissolve" onClick={() => run(() => dissolveSession(cur.id), 'ui.v13_dissolved')}>{t('ui.v13_check_dissolve')}</button>
                 <button type="button" className="ghost" data-testid="group-session-escalate" onClick={() => run(() => sessionToMeeting(cur.id), 'ui.v13_escalated')}>{t('ui.v13_escalate')}</button>
               </Row>
-              <Row><input className="min-w-0 grow" value={say} onChange={(e) => setSay(e.target.value)} placeholder={t('ui.v13_interject_ph')} aria-label={t('ui.v13_interject_ph')} data-testid="group-session-say-input" /><button type="button" disabled={!say.trim()} data-testid="group-session-say" onClick={() => run(() => sessionSay(cur.id, say.trim()).then(() => setSay('')))}>{t('ui.v13_interject')}</button></Row>
+              <Row><input className="min-w-0 grow basis-[15rem]" value={say} onChange={(e) => setSay(e.target.value)} placeholder={t('ui.v13_interject_ph')} aria-label={t('ui.v13_interject_ph')} data-testid="group-session-say-input" /><button type="button" disabled={!say.trim()} data-testid="group-session-say" onClick={() => run(() => sessionSay(cur.id, say.trim()).then(() => setSay('')))}>{t('ui.v13_interject')}</button></Row>
             </>
           )}
           {cur.outcome && (
@@ -186,7 +186,7 @@ function Rooms({ s, run }: { s: GroupState; run: Run }) {
         <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2 xl:grid-cols-4">
           {GROUP_ROOMS.map((r) => <li key={r.id} className={`card v9-card flex flex-col gap-1 ${room === r.id ? '!border-accent' : ''}`} data-testid={`room-${r.id}`}><button type="button" className="ghost !justify-start !p-0 !border-0 text-left" onClick={() => setRoom(r.id)}><strong className="truncate">{t(r.name)}</strong></button><span className="line-clamp-2 text-[12px] text-muted" title={r.procedure.map((x) => t(x)).join(' → ')}>{r.procedure.map((x) => t(x)).join(' → ')}</span></li>)}
         </ul>
-        <Row><input className="min-w-0 grow" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('ui.v13_meeting_ph')} aria-label={t('ui.v13_meeting_ph')} data-testid="group-meeting-title" /><button type="button" disabled={!title.trim()} data-testid="group-meeting-create" onClick={() => run(async () => { setSel(await createMeeting({ roomId: room, title: title.trim() })); setTitle(''); }, 'ui.v13_scheduled')}>{t('ui.v13_book')}</button></Row>
+        <Row><input className="min-w-0 grow basis-[15rem]" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('ui.v13_meeting_ph')} aria-label={t('ui.v13_meeting_ph')} data-testid="group-meeting-title" /><button type="button" disabled={!title.trim()} data-testid="group-meeting-create" onClick={() => run(async () => { setSel(await createMeeting({ roomId: room, title: title.trim() })); setTitle(''); }, 'ui.v13_scheduled')}>{t('ui.v13_book')}</button></Row>
       </Section>
       {cur && (
         <Section title={`${t(GROUP_ROOMS.find((r) => r.id === cur.roomId)?.name ?? '')} · ${cur.title}`} testId="group-meeting-view">
@@ -195,8 +195,8 @@ function Rooms({ s, run }: { s: GroupState; run: Run }) {
           <details data-testid="meeting-predoc"><summary className="flex min-h-11 cursor-pointer items-center text-[13px]">{t('ui.v13_predoc')}</summary><pre className="whitespace-pre-wrap break-words text-[12px]">{cur.preDoc}</pre></details>
           {cur.status === 'scheduled' && (
             <>
-              <Row><input className="min-w-0 grow" value={say} onChange={(e) => setSay(e.target.value)} placeholder={t('ui.v13_interject_ph')} aria-label={t('ui.v13_interject_ph')} data-testid="group-meeting-say-input" /><button type="button" disabled={!say.trim()} data-testid="group-meeting-say" onClick={() => run(() => meetingIntervene(cur.id, 'speak', say.trim()).then(() => setSay('')), 'ui.v13_noted')}>{t('ui.v13_interject')}</button></Row>
-              <Row><input className="min-w-0 grow" value={rule} onChange={(e) => setRule(e.target.value)} placeholder={t('ui.v13_rule_ph')} aria-label={t('ui.v13_rule_ph')} data-testid="group-meeting-rule-input" /><button type="button" disabled={!rule.trim()} data-testid="group-meeting-rule" onClick={() => run(() => meetingIntervene(cur.id, 'rule', rule.trim()).then(() => setRule('')), 'ui.v13_noted')}>{t('ui.v13_rule')}</button></Row>
+              <Row><input className="min-w-0 grow basis-[15rem]" value={say} onChange={(e) => setSay(e.target.value)} placeholder={t('ui.v13_interject_ph')} aria-label={t('ui.v13_interject_ph')} data-testid="group-meeting-say-input" /><button type="button" disabled={!say.trim()} data-testid="group-meeting-say" onClick={() => run(() => meetingIntervene(cur.id, 'speak', say.trim()).then(() => setSay('')), 'ui.v13_noted')}>{t('ui.v13_interject')}</button></Row>
+              <Row><input className="min-w-0 grow basis-[15rem]" value={rule} onChange={(e) => setRule(e.target.value)} placeholder={t('ui.v13_rule_ph')} aria-label={t('ui.v13_rule_ph')} data-testid="group-meeting-rule-input" /><button type="button" disabled={!rule.trim()} data-testid="group-meeting-rule" onClick={() => run(() => meetingIntervene(cur.id, 'rule', rule.trim()).then(() => setRule('')), 'ui.v13_noted')}>{t('ui.v13_rule')}</button></Row>
               <Row><button type="button" className="primary" data-testid="group-meeting-run" onClick={() => run(() => runMeetingNow(cur.id), 'ui.v13_meeting_done')}>{t('ui.v13_hold')}</button><button type="button" className="ghost" data-testid="group-meeting-stop" onClick={() => run(() => meetingIntervene(cur.id, 'stop', '董事长叫停'))}>{t('ui.v13_stop')}</button></Row>
             </>
           )}
@@ -224,7 +224,7 @@ function Rooms({ s, run }: { s: GroupState; run: Run }) {
       )}
       <Section title={t('ui.v13_race')} testId="group-race">
         <Note>{t('ui.v13_race_desc')}</Note>
-        <Row><input className="min-w-0 grow" value={raceTopic} onChange={(e) => setRaceTopic(e.target.value)} placeholder={t('ui.v13_race_ph')} aria-label={t('ui.v13_race_ph')} data-testid="group-race-topic" /><button type="button" disabled={!raceTopic.trim()} data-testid="group-race-start" onClick={() => run(() => startRace(raceTopic.trim(), 3).then(() => setRaceTopic('')), 'ui.v13_race_started')}>{t('ui.v13_race_start')}</button></Row>
+        <Row><input className="min-w-0 grow basis-[15rem]" value={raceTopic} onChange={(e) => setRaceTopic(e.target.value)} placeholder={t('ui.v13_race_ph')} aria-label={t('ui.v13_race_ph')} data-testid="group-race-topic" /><button type="button" disabled={!raceTopic.trim()} data-testid="group-race-start" onClick={() => run(() => startRace(raceTopic.trim(), 3).then(() => setRaceTopic('')), 'ui.v13_race_started')}>{t('ui.v13_race_start')}</button></Row>
         {[...s.races].reverse().slice(0, 3).map((r: Race) => (
           <div key={r.id} className="flex flex-col gap-1 border-t border-line pt-2" data-testid={`race-${r.id}`}>
             <strong className="truncate text-[13px]" title={r.topic}>{r.topic} · {yuan(r.spent)}/{yuan(r.budgetYuan)}</strong>
@@ -253,7 +253,7 @@ function Docs({ s, run, go }: { s: GroupState; run: Run; go: (to: string) => voi
         <button type="button" data-testid="group-collab" onClick={() => run(collabDrafts, 'ui.v13_collab_done')}>{t('ui.v13_collab')}</button>
       </Row>
       <Row>
-        <input className="min-w-0 grow" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('ui.v13_doc_search')} aria-label={t('ui.v13_doc_search')} data-testid="group-doc-search" />
+        <input className="min-w-0 grow basis-[15rem]" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('ui.v13_doc_search')} aria-label={t('ui.v13_doc_search')} data-testid="group-doc-search" />
       </Row>
       {!list.length && <Note>{t('ui.v13_no_docs')}</Note>}
       <ul className="m-0 flex list-none flex-col gap-2 p-0">

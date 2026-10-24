@@ -47,6 +47,11 @@ export function contextHitRate(tasks: { usedContextRefs: number }[]): number | n
 }
 
 /* ---------------- OKR ---------------- */
+/** KR 标题里给人看的叫法（指标与平台 id 不直接露出）。 */
+export const OKR_METRIC_TEXT: Record<string, string> = { followers: '粉丝', views: '播放', likes: '点赞', first_pass_rate: '一次通过率', on_time_rate: '按时交付率' };
+export const OKR_PLATFORM_TEXT: Record<string, string> = { douyin: '抖音', xiaohongshu: '小红书', bilibili: 'B 站', weixin_channels: '视频号', wechat_mp: '公众号', youtube: 'YouTube', kuaishou: '快手', weibo: '微博', zhihu: '知乎', toutiao: '头条' };
+export const okrMetricText = (m: string): string => OKR_METRIC_TEXT[m] ?? m;
+export const okrPlatformText = (p: string): string => OKR_PLATFORM_TEXT[p] ?? p;
 export type OkrCycle = 'quarter' | 'bimonth';
 export interface KeyResult { id: string; title: string; metric: string; platform?: string; direction: 'up' | 'down'; target: number; unit: string; current: number | null; resource?: string }
 export interface Objective { id: string; level: 'year' | 'dept' | 'agent'; owner: string; title: string; krs: KeyResult[]; parent?: string; cycle: OkrCycle; period: string; public: true }
@@ -55,12 +60,12 @@ export function cycleLabel(c: OkrCycle, at = new Date()): string { const m = at.
 /** 经管会拆解：年度目标 → 每个事业部一个部门 O（按平台给 KR），共享中心与总部各给支撑 KR。只拆结构，数值来自你的目标，进度只用录入数据（current=null 即待录入）。 */
 export function decomposeYearGoal(goal: { title: string; metric: string; target: number; unit: string }, org: Org, cycle: OkrCycle = 'quarter', at = new Date()): Objective[] {
   const period = cycleLabel(cycle, at);
-  const year: Objective = { id: 'okr-year', level: 'year', owner: 'chairman', title: goal.title, krs: [{ id: 'kr-year-1', title: `${goal.metric} 达到 ${goal.target}${goal.unit}`, metric: goal.metric, direction: 'up', target: goal.target, unit: goal.unit, current: null }], cycle, period: String(at.getFullYear()), public: true };
+  const year: Objective = { id: 'okr-year', level: 'year', owner: 'chairman', title: goal.title, krs: [{ id: 'kr-year-1', title: `${okrMetricText(goal.metric)} 达到 ${goal.target}${goal.unit}`, metric: goal.metric, direction: 'up', target: goal.target, unit: goal.unit, current: null }], cycle, period: String(at.getFullYear()), public: true };
   const bus = org.depts.filter((x) => x.kind === 'bu' && x.status === 'active');
   const share = bus.length ? +(goal.target / bus.length / (cycle === 'quarter' ? 4 : 6)).toFixed(2) : 0;
   const out: Objective[] = [year];
   for (const b of bus) out.push({ id: `okr-${b.id}`, level: 'dept', owner: b.id, parent: year.id, title: `${b.name}：支撑“${goal.title}”`, cycle, period, public: true, krs: [
-    { id: `kr-${b.id}-1`, title: `${goal.metric} 贡献 ${share}${goal.unit}`, metric: goal.metric, platform: b.platforms[0], direction: 'up', target: share, unit: goal.unit, current: null },
+    { id: `kr-${b.id}-1`, title: `${okrPlatformText(b.platforms[0] ?? '')}${b.platforms[0] ? ' ' : ''}${okrMetricText(goal.metric)} 贡献 ${share}${goal.unit}`, metric: goal.metric, platform: b.platforms[0], direction: 'up', target: share, unit: goal.unit, current: null },
     { id: `kr-${b.id}-2`, title: '发布稿件一次通过率 ≥ 80%', metric: 'first_pass_rate', direction: 'up', target: 80, unit: '%', current: null },
   ] });
   for (const s of org.depts.filter((x) => x.kind === 'shared' || x.kind === 'hq')) out.push({ id: `okr-${s.id}`, level: 'dept', owner: s.id, parent: year.id, title: `${s.name}：为事业部提供${s.duties[0] ?? '支撑'}`, cycle, period, public: true, krs: [{ id: `kr-${s.id}-1`, title: `${s.duties[0] ?? '支撑'}按时交付率 ≥ 90%`, metric: 'on_time_rate', direction: 'up', target: 90, unit: '%', current: null }] });
