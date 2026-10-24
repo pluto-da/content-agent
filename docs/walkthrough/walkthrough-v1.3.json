@@ -1,6 +1,6 @@
 {
  "version": "1.3.0",
- "at": "2026-10-24T00:47:54.170Z",
+ "at": "2026-10-24T01:00:43.574Z",
  "viewport": "360×800",
  "server": "none（/api 404，本机模式）",
  "provider": "本地模拟服务商（mock://local，不联网、无 Key）",
@@ -13,7 +13,7 @@
      "label": "首次打开 → 首启引导",
      "ok": true,
      "note": "首启引导",
-     "ms": 482,
+     "ms": 469,
      "shot": "walkthrough/fresh/01-first-open.png"
     },
     {
@@ -21,7 +21,7 @@
      "label": "接入模型（本地模拟服务商）",
      "ok": true,
      "note": "选服务商 → 选模型 → 首页出现指挥条",
-     "ms": 4214,
+     "ms": 4208,
      "shot": "walkthrough/fresh/02-connect-first.png"
     },
     {
@@ -37,7 +37,7 @@
      "label": "设年度目标 → 经管会拆为部门 OKR（全部公开）",
      "ok": true,
      "note": "部门 OKR 12 个，进度“待录入”（不编数据）",
-     "ms": 3352,
+     "ms": 3351,
      "shot": "walkthrough/fresh/04-goal-okr.png"
     },
     {
@@ -45,7 +45,7 @@
      "label": "数据中心发现两个事业部 KR 冲突 → 自动建临时会话",
      "ok": true,
      "note": "冲突：争用同一资源（slot:douyin-prime）；会话成员 3 个（≤5）",
-     "ms": 3270,
+     "ms": 3287,
      "shot": "walkthrough/fresh/05-conflict-session.png"
     },
     {
@@ -53,7 +53,7 @@
      "label": "4 条消息达成一致 → √ 解散 → 小结与工单",
      "ok": true,
      "note": "结论：视频保留黄金档、另一方次黄金档，下个 OKR 周期复盘再看。；工单 1",
-     "ms": 3722,
+     "ms": 3704,
      "shot": "walkthrough/fresh/06-session-4.png"
     },
     {
@@ -61,7 +61,7 @@
      "label": "战略室三方三轮（董事长中途插话）→ 纪要",
      "ok": true,
      "note": "集团〔2026〕001号；3 轮，停因 max_rounds；发言 26；拦截重复 2",
-     "ms": 6609,
+     "ms": 6645,
      "shot": "walkthrough/fresh/07-strategy-3x3.png"
     },
     {
@@ -69,7 +69,7 @@
      "label": "赛马：3 匹 → 盲评 → 董事长选定 → 落选方案入库",
      "ok": true,
      "note": "花费 ¥0.0012（专项 ¥0.3）；落选 2 个入素材库",
-     "ms": 5706,
+     "ms": 5710,
      "shot": "walkthrough/fresh/08-race.png"
     },
     {
@@ -77,7 +77,7 @@
      "label": "协作出稿：法务合规部否决一篇（硬边界，申诉被拒）；另一篇质量委员会退回一轮后通过 → 请示",
      "ok": true,
      "note": "否决依据：互动（依据：《集团章程》第五条）；请示 集团〔2026〕002号",
-     "ms": 4597,
+     "ms": 4592,
      "shot": "walkthrough/fresh/09-collab-veto.png"
     },
     {
@@ -85,7 +85,7 @@
      "label": "董事长批准请示 → 复制去发布（由你本人发布）",
      "ok": true,
      "note": "草稿 #2 进入待发布；发布由你本人点击",
-     "ms": 3339,
+     "ms": 3343,
      "shot": "walkthrough/fresh/10-approve-publish.png"
     },
     {
@@ -93,7 +93,7 @@
      "label": "作战室 15 分钟响应热点",
      "ok": true,
      "note": "集团〔2026〕003号；3 轮 ≤3；花费 ¥0.0110",
-     "ms": 5607,
+     "ms": 5769,
      "shot": "walkthrough/fresh/11-war-room.png"
     },
     {
@@ -101,7 +101,7 @@
      "label": "红蓝对抗室评“是否新开 B 站”",
      "ok": true,
      "note": "蓝军质询 5 次；决议：决议：是否新开 B 站——先按共识试行两周，由董事长确认后执",
-     "ms": 4112,
+     "ms": 4193,
      "shot": "walkthrough/fresh/12-redblue.png"
     },
     {
@@ -109,7 +109,7 @@
      "label": "人资委提议新设“直播策划组” → 董事长批准生效",
      "ok": true,
      "note": "提案 集团〔2026〕005号 批准；DEPT.md 已写入",
-     "ms": 6223,
+     "ms": 6375,
      "shot": "walkthrough/fresh/13-hr-new-dept.png"
     },
     {
@@ -117,7 +117,7 @@
      "label": "季度复盘 + 360 评议 + 政委建议（只建议不指挥）",
      "ok": true,
      "note": "政委建议 5 条（非约束）；lesson 已入上下文流；开会占比 97%",
-     "ms": 3605,
+     "ms": 3590,
      "shot": "walkthrough/fresh/14-quarterly.png"
     },
     {
@@ -125,7 +125,7 @@
      "label": "一键暂停（<1 秒）→ 恢复（需手动）",
      "ok": true,
      "note": "暂停对子 Agent、会话、会议、赛马同时生效",
-     "ms": 3955,
+     "ms": 4023,
      "shot": "walkthrough/fresh/15-pause-resume.png"
     },
     {
@@ -133,7 +133,7 @@
      "label": "修订《预算管理办法》（L3：提案 → 批准）→ 回滚",
      "ok": true,
      "note": "《预算管理办法》v2 → 回滚到 v1",
-     "ms": 9548,
+     "ms": 9597,
      "shot": "walkthrough/fresh/16-reg-change.png"
     },
     {
@@ -141,7 +141,7 @@
      "label": "灰度试行抖音写法新版（20% 任务）→ 指标下降 → 自动回滚",
      "ok": true,
      "note": "指标“一次通过率”下降 25.0%（灰度 0.6 vs 对照 0.8），已自动回滚到 v1",
-     "ms": 5805,
+     "ms": 5808,
      "shot": "walkthrough/fresh/17-gray-rollback.png"
     }
    ],
