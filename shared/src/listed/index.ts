@@ -5,3 +5,4 @@ export * from './oversight.js';
 export * from './operations.js';
 export * from './disclosure.js';
 export * from './strategy.js';
+export * from './talent.js';
