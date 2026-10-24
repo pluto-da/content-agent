@@ -9,7 +9,7 @@ export interface Route { space: Space; sub: string; id: string | null; query?: R
 export const SPACES: Space[] = ['agent', 'p', 'me', 'onboarding', 'command', 'group'];
 /** 1.3.0：统领（集团模式）的标签（#group?tab=…）。 */
 export const GROUP_TABS_ROUTE = ['org', 'sessions', 'rooms', 'docs', 'okr', 'regs', 'cockpit', 'gov'] as const;
-export const GOV_SECS_ROUTE = ['board', 'oversight', 'ops', 'disclosure', 'strategy', 'talent', 'university', 'academy'] as const;
+export const GOV_SECS_ROUTE = ['board', 'oversight', 'ops', 'disclosure', 'strategy', 'talent', 'university', 'academy', 'revenue'] as const;
 /** 1.2.0：指挥台的标签（#command?tab=…）。 */
 export const COMMAND_TABS = ['team', 'board', 'workflows', 'inbox', 'goals', 'connect'] as const;
 /** 1.1.0：“我的”12 个入口对应的子页（status 只保留 #me/status/cards 卡片样例页）。 */

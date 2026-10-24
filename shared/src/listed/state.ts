@@ -9,6 +9,7 @@ import type { StrategyPlan } from './strategy.js';
 import type { Nomination, Assessment, Succession } from './talent.js';
 import type { CaseCard, Training } from './university.js';
 import type { WeeklyLesson } from './academy.js';
+import type { RevenueEntry, OpportunityCard } from './revenue.js';
 import type { PeriodicReport, EarningsCall, ChairmanBrief } from './disclosure.js';
 import { defaultRisks, type Risk, type AuditReport, type ControlResult } from './oversight.js';
 
@@ -31,11 +32,12 @@ export interface ListedState {
   reports: PeriodicReport[]; calls: EarningsCall[]; brief: ChairmanBrief | null; briefPeriod: 'daily' | 'weekly';
   strategies: StrategyPlan[]; nominations: Nomination[]; assessments: Assessment[]; successions: Succession[];
   academy: { read: string[]; weeklyOff: boolean; lessons: WeeklyLesson[] };
+  revenues: RevenueEntry[]; opportunities: OpportunityCard[];
   cases: CaseCard[]; trainings: Training[]; bestPractices: { quarter: string; caseIds: string[]; skillPaths: string[] }[];
   risks: Risk[]; audits: AuditReport[]; controls: { at: string; results: ControlResult[]; text: string } | null;
 }
 export function emptyListedState(): ListedState {
-  return { version: 1, enabled: false, enabledAt: null, onboarded: false, clock: null, sim: false, board: defaultBoard(), motions: [], boardMeetings: [], agms: [], govLedger: [], govCapShare: 0.15, monthBudgetYuan: null, usageLog: [], simData: null, deliveries: [], strategies: [], nominations: [], assessments: [], successions: [], academy: { read: [], weeklyOff: false, lessons: [] }, cases: [], trainings: [], bestPractices: [], budget: null, reviews: [], reports: [], calls: [], brief: null, briefPeriod: 'weekly', risks: defaultRisks('2026-01-01T00:00:00.000Z'), audits: [], controls: null };
+  return { version: 1, enabled: false, enabledAt: null, onboarded: false, clock: null, sim: false, board: defaultBoard(), motions: [], boardMeetings: [], agms: [], govLedger: [], govCapShare: 0.15, monthBudgetYuan: null, usageLog: [], simData: null, deliveries: [], strategies: [], nominations: [], assessments: [], successions: [], academy: { read: [], weeklyOff: false, lessons: [] }, revenues: [], opportunities: [], cases: [], trainings: [], bestPractices: [], budget: null, reviews: [], reports: [], calls: [], brief: null, briefPeriod: 'weekly', risks: defaultRisks('2026-01-01T00:00:00.000Z'), audits: [], controls: null };
 }
 export function readListedState(raw: string | null | undefined): ListedState {
   const base = emptyListedState();

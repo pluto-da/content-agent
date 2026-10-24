@@ -7,6 +7,7 @@
 import { zip } from '../vfs/archive.js';
 import { LISTED_HONESTY, PEN_NAME, NO_DATA, scrubPrivate, privacyLeaks, clip, seq, checkGovResolution, type GovSpeaker } from './gov.js';
 import type { GapRow } from './operations.js';
+import { pnl, REVENUE_HONESTY, type RevenueEntry } from './revenue.js';
 
 /* ---------------- 董事长简报 ---------------- */
 export interface BriefItem { text: string; ref?: string }
@@ -34,6 +35,7 @@ export interface ReportSources {
   audit: { no: string; findings: { title: string; level: string; status: string }[] } | null; controlsText: string | null;
   risks: { title: string; level: string; response: string; owner: string }[];
   talent: { text: string; ref: string }[]; outlook: string[]; deptNames: Record<string, string>;
+  /** 1.4 第十九部分：收入账（只来自你录入或导出的结算数据） */ revenues?: RevenueEntry[];
 }
 export type ReportStatus = 'draft' | 'blocked' | 'final';
 export interface PeriodicReport { id: string; no: string; kind: 'quarter' | 'annual'; period: string; title: string; groupName: string; author: string; chapters: Chapter[]; figures: Figure[]; status: ReportStatus; diffs: string[]; at: string; sim: boolean; ceoLetter: string; directorOpinion: string; cost: number }
@@ -55,6 +57,11 @@ export function computeFigures(src: ReportSources): Figure[] {
     f(`dept:${dept}:outputs`, `${src.deptNames[dept] ?? dept} 产出`, d.filter((x) => x.deptId === dept).length, '篇', `drafts:${src.period}?dept=${dept}`, 4);
   }
   for (const v of [...new Set(src.spend.map((e) => e.vendor ?? '未标注'))].sort()) f(`vendor:${v}`, `服务商 ${v}`, sum(src.spend.filter((e) => (e.vendor ?? '未标注') === v)), '元', `ledger:${src.period}?vendor=${v}`, 5);
+  // 损益：收入只来自你录入 / 导出的结算数据；没有就是“无数据”（贡献利润也随之无数据）
+  const P = pnl(src.revenues ?? [], src.spend, src.period, src.deptNames);
+  f('revenue', '收入（你录入 / 导出的结算）', P.total.revenue, '元', `revenue:${src.period}`, 5);
+  f('profit', '贡献利润（收入 − 花费）', P.total.profit, '元', `pnl:${src.period}`, 5);
+  for (const r of P.rows.filter((x) => x.revenue != null)) { f(`dept:${r.deptId}:revenue`, `${r.label} 收入`, r.revenue, '元', `revenue:${src.period}?dept=${r.deptId}`, 4); f(`dept:${r.deptId}:profit`, `${r.label} 贡献利润`, r.profit, '元', `pnl:${src.period}?dept=${r.deptId}`, 4); }
   f('audit_findings', '内审新发现', src.audit ? src.audit.findings.length : null, '项', src.audit ? `audit:${src.audit.no}` : null, 7);
   f('audit_open', '内审未关闭', src.audit ? src.audit.findings.filter((x) => x.status === 'open').length : null, '项', src.audit ? `audit:${src.audit.no}?status=open` : null, 7);
   return F;
@@ -70,8 +77,8 @@ export function buildReport(src: ReportSources, o: { seq: number; ceoLetter?: st
     ch(1, [o.ceoLetter || `董事长：本期集团产出 ${showFig(fig('outputs')!)}，采纳 ${showFig(fig('adopted')!)}，总花费 ${showFig(fig('spend')!)}。没有数据的地方我们写了“无数据”，没有编造。——CEO`]),
     ch(2, [`本期（${src.period}）集团共产出 ${showFig(fig('outputs')!)}，其中采纳 ${showFig(fig('adopted')!)}、由你本人发布 ${showFig(fig('published')!)}。发布始终由你本人点击。${src.sim ? '（本期含模拟数据，仅用于演示与自检。）' : ''}`]),
     ch(3, ['平衡计分卡四维度（成果 / 受众 / 流程 / 成长）的目标与实际如下；实际值没有出处的写“无数据”。'], src.gaps.length ? { head: ['维度', '指标', '目标', '实际', '差距', '原因', '动作'], rows: src.gaps.map((r) => [{ outcome: '成果', audience: '受众', process: '流程', growth: '成长' }[r.dim], r.label, r.target, r.actual, r.gap, r.cause, r.action]) } : undefined),
-    ch(4, Object.entries(src.deptNames).filter(([id]) => fig(`dept:${id}:spend`)).map(([id, nm]) => `${nm}：产出 ${showFig(fig(`dept:${id}:outputs`)!)}，花费 ${showFig(fig(`dept:${id}:spend`)!)}。`)),
-    ch(5, [`总花费 ${showFig(fig('spend')!)}（其中治理成本 ${showFig(fig('gov_spend')!)}），预算执行率 ${showFig(fig('budget_rate')!)}。`, ...(src.budgetAlerts.length ? [`预算预警：${src.budgetAlerts.join('；')}`] : ['本期无预算偏差预警。'])]),
+    ch(4, Object.entries(src.deptNames).filter(([id]) => fig(`dept:${id}:spend`)).map(([id, nm]) => `${nm}：产出 ${showFig(fig(`dept:${id}:outputs`)!)}，花费 ${showFig(fig(`dept:${id}:spend`)!)}${fig(`dept:${id}:revenue`) ? `，收入 ${showFig(fig(`dept:${id}:revenue`)!)}，贡献利润 ${showFig(fig(`dept:${id}:profit`)!)}` : '，收入无数据'}。`)),
+    ch(5, [`总花费 ${showFig(fig('spend')!)}（其中治理成本 ${showFig(fig('gov_spend')!)}），预算执行率 ${showFig(fig('budget_rate')!)}。`, `损益：收入 ${showFig(fig('revenue')!)} − 花费 ${showFig(fig('spend')!)} = 贡献利润 ${showFig(fig('profit')!)}。${REVENUE_HONESTY}`, ...(src.budgetAlerts.length ? [`预算预警：${src.budgetAlerts.join('；')}`] : ['本期无预算偏差预警。'])]),
     ch(6, src.cases.length ? src.cases.map((c) => `${c.kind === 'hit' ? '爆款' : '失败'}｜${c.title}：${c.lesson}（出处：${c.ref}）`) : [`${NO_DATA}：本期没有沉淀爆款或失败案例。`]),
     ch(7, [src.controlsText ?? `内控自动测试：${NO_DATA}`, src.audit ? `内审 ${src.audit.no}：新发现 ${src.audit.findings.length} 项。${src.audit.findings.map((x) => `[${x.level}] ${x.title}（${x.status === 'open' ? '整改中' : '已关闭'}）`).join('；')}` : `内审：${NO_DATA}`]),
     ch(8, src.risks.length ? src.risks.slice(0, 6).map((r) => `[${r.level}] ${r.title}——应对：${r.response}（负责：${r.owner}）`) : ['本期未登记风险。']),
@@ -121,7 +128,7 @@ function barSvg(items: { label: string; value: number }[], unit: string): string
 export function renderReportHtml(r: PeriodicReport, o: { penName?: string } = {}): string {
   const pen = o.penName ?? PEN_NAME;
   const fig = (id: string) => r.figures.find((x) => x.id === id);
-  const keys = ['outputs', 'adopted', 'spend', 'budget_rate'].map((id) => fig(id)).filter((x): x is Figure => !!x);
+  const keys = ['outputs', 'adopted', 'spend', 'budget_rate', 'revenue', 'profit'].map((id) => fig(id)).filter((x): x is Figure => !!x);
   const chart = (n: number) => (n === 5 ? barSvg(r.figures.filter((x) => x.id.startsWith('vendor:') && x.value != null).map((x) => ({ label: x.label, value: x.value! })), '元') : n === 4 ? barSvg(r.figures.filter((x) => /^dept:.*:spend$/.test(x.id) && x.value != null).map((x) => ({ label: x.label.replace(/ 花费$/, ''), value: x.value! })), '元') : '');
   const figTable = (c: Chapter) => (c.figures.length ? `<table class="figs"><thead><tr><th>数字</th><th>值</th><th>出处（可追溯）</th></tr></thead><tbody>${c.figures.map((id) => fig(id)!).map((x) => `<tr><td>${esc(x.label)}</td><td class="num">${esc(showFig(x))}</td><td class="ref">${esc(x.ref ?? NO_DATA)}</td></tr>`).join('')}</tbody></table>` : '');
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>${esc(r.title)}</title><style>

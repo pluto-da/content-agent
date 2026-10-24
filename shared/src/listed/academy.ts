@@ -26,6 +26,7 @@ export const ACADEMY_CARDS: AcademyCard[] = [
   C('commissar', '政委', 'Commissar (culture partner)', '只观察、只提建议，不指挥干活的“文化伙伴”。', 'A culture partner who only observes and suggests, never commands.', '看退回率、硬边界触碰、空转等信号，给培训或调整建议；下指令会被拒绝并记录。', 'Watches return rates, boundary hits and idling, and suggests training or changes; any command is refused and logged.', 'talent'),
   C('retro', '复盘', 'Retrospective', '做完一件事，回头看：目标、结果、原因、经验。', 'After a piece of work: goal, result, cause, lesson.', '复盘的结论会自动变成集团大学的案例卡，下次同类任务会被提醒。', 'Retro conclusions become case cards in the group university and are surfaced next time.', 'university'),
   C('succession', '接班人计划', 'Succession plan', '换模型前先“影子上岗”比一比，比不过就不换。', 'Before swapping models, shadow-run and compare; if it isn’t better, no swap.', '新模型和老模型并跑 10 个任务（≤¥0.5），独立董事盲评再看花费；达标才交接，交接后还能回滚。', 'The new model shadows the old on 10 tasks (≤¥0.5); independent directors judge blind, then costs; handover only if it passes, with rollback kept.', 'talent', ['影子上岗']),
+  C('pnl', '损益表与商机卡', 'P&L and opportunity cards', '每个事业部挣了多少、花了多少、净赚多少；以及哪里还有公开、合规的赚钱机会。', 'What each unit earned, spent and kept — and where public, compliant ways to earn are.', '收入只来自你录入或导出的平台结算，收入 − Token / 工具花费 = 贡献利润；没有数据写“无数据”。商机卡来自官方公开页面并标核对日期，收入只写“估计”区间；经管会评审、CEO 提案、你批准后变成工单。投稿、发布、收款都由你本人点击，Agent 不碰钱、不签约、不报税。', 'Revenue only comes from what you enter or export from platform settlements; revenue minus token/tool cost is contribution profit; no data means “no data”. Opportunity cards cite official public pages with a check date and show estimates only; the management committee reviews, the CEO proposes, you approve, and it becomes a ticket. You submit, publish and get paid yourself; agents never touch money, sign or file taxes.', 'revenue', ['损益表', '贡献利润', '商机卡', '商机雷达']),
   C('equity', '股权激励', 'Equity incentives', '上市公司用股票奖励员工；这里没有真实股权。', 'Listed companies reward staff with shares; there is no real equity here.', '本系统里 Agent 的“薪酬”是预算配额、模型档位和并发优先级，规则公开。不涉及任何真实股权、证券或融资。', 'Here an agent’s “pay” is budget quota, model tier and priority, under public rules. No real equity, securities or financing.', 'talent', ['薪酬', '资源激励']),
 ];
 export const MIN_CARDS = 20;
@@ -38,7 +39,7 @@ export function findTerms(text: string): { term: string; id: string; index: numb
   for (const k of keys) { let i = text.indexOf(k); while (i >= 0) { if (!taken.some(([a, b]) => i < b && i + k.length > a)) { out.push({ term: k, id: GLOSSARY[k]!, index: i }); taken.push([i, i + k.length]); } i = text.indexOf(k, i + k.length); } }
   return out.sort((a, b) => a.index - b.index);
 }
-export const PAGE_PLAIN: Record<string, string> = { board: 'board', oversight: 'three_lines', ops: 'ops_review', disclosure: 'reports', strategy: 'strategy_map', talent: 'succession', university: 'retro', academy: 'independent' };
+export const PAGE_PLAIN: Record<string, string> = { board: 'board', oversight: 'three_lines', ops: 'ops_review', disclosure: 'reports', strategy: 'strategy_map', talent: 'succession', university: 'retro', academy: 'independent', revenue: 'pnl' };
 
 /* ---------------- 每周一课 ---------------- */
 export interface WeekEvent { kind: 'audit_finding' | 'budget_alert' | 'board_oppose' | 'override' | 'call_todo' | 'shadow' | 'training' | 'report_blocked' | 'race' | 'gray_rollback' | 'retro'; text: string }

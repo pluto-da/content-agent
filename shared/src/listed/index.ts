@@ -8,3 +8,4 @@ export * from './strategy.js';
 export * from './talent.js';
 export * from './university.js';
 export * from './academy.js';
+export * from './revenue.js';

@@ -1,6 +1,6 @@
 {
  "version": "1.4.0",
- "at": "2026-10-24T06:16:56.570Z",
+ "at": "2026-10-24T06:32:46.256Z",
  "viewport": "360×800",
  "server": "none（/api 404，本机模式）",
  "provider": "本地模拟服务商（mock://local，不联网、无 Key）",
@@ -13,7 +13,7 @@
      "label": "首次打开 → 首启引导",
      "ok": true,
      "note": "首启引导",
-     "ms": 491,
+     "ms": 489,
      "shot": "walkthrough/fresh/01-first-open.png"
     },
     {
@@ -21,7 +21,7 @@
      "label": "接入模型（本地模拟服务商）",
      "ok": true,
      "note": "选服务商 → 选模型 → 首页",
-     "ms": 4230,
+     "ms": 4186,
      "shot": "walkthrough/fresh/02-connect-first.png"
     },
     {
@@ -29,7 +29,7 @@
      "label": "启用集团模式（上市公司模式的前提）",
      "ok": true,
      "note": "我的集团",
-     "ms": 4018,
+     "ms": 3996,
      "shot": "walkthrough/fresh/03-enable-group.png"
     },
     {
@@ -37,7 +37,7 @@
      "label": "启用上市公司模式 → 3 屏引导（是什么 / 谁在帮你挑毛病 / 你平时要做什么）",
      "ok": true,
      "note": "董事会：董事长、CEO、独立董事 A、独立董事 B、董事会秘书；独立董事 2 名",
-     "ms": 6090,
+     "ms": 6120,
      "shot": "walkthrough/fresh/04-enable-listed.png"
     },
     {
@@ -45,7 +45,7 @@
      "label": "首次董事会：战略 + 预算；独立董事对预算投反对票写理由；董事长批准（留痕）",
      "ok": true,
      "note": "反对理由：[R1] 显示预算执行已有偏差，议案仍要求追加投入；风险应对没有写负责人与期限，…；战略拆成 OKR 4 个",
-     "ms": 6818,
+     "ms": 6784,
      "shot": "walkthrough/fresh/05-board-first.png"
     },
     {
@@ -53,15 +53,15 @@
      "label": "模拟一个月（mock 时钟 + 种子数据，演示开关下）",
      "ok": true,
      "note": "mock 时钟 → 2026-11-23；模拟稿件 15 篇",
-     "ms": 3600,
+     "ms": 3680,
      "shot": "walkthrough/fresh/06-sim-month.png"
     },
     {
      "id": "review",
      "label": "月度经营分析会：平衡计分卡五列表 + 预算偏差预警",
      "ok": true,
-     "note": "7 项指标，落后 5、无数据 1；预警：bu-video 预算偏差 678%（应花 ¥2.06，实花…",
-     "ms": 2087,
+     "note": "8 项指标，落后 5、无数据 2；预警：bu-video 预算偏差 678%（应花 ¥2.06，实花…",
+     "ms": 2056,
      "shot": "walkthrough/fresh/07-review.png"
     },
     {
@@ -69,7 +69,7 @@
      "label": "内审抽查：发现一次越权 + 一处无出处数据；直送董事长与审计委员会，CEO 抄送",
      "ok": true,
      "note": "内审〔2026〕001号：越权：bu-video 自行追加 ¥5 视频生成（未走请示）（需董事长批准，未见批准记录）；数据无出处：本周涨粉 35%，口播开头效果最好",
-     "ms": 3876,
+     "ms": 3880,
      "shot": "walkthrough/fresh/08-audit-1.png"
     },
     {
@@ -77,7 +77,7 @@
      "label": "提交整改 → 下期内审复查关闭",
      "ok": true,
      "note": "内审〔2026〕002号：上期 2 项全部关闭",
-     "ms": 3368,
+     "ms": 3352,
      "shot": "walkthrough/fresh/09-audit-2.png"
     },
     {
@@ -92,16 +92,16 @@
      "id": "report-q",
      "label": "生成季报：11 章、数字可追溯（点开关键数字看出处）",
      "ok": true,
-     "note": "我的集团 2026Q4 季度报告；数字 17 个，无数据 1 个",
-     "ms": 4961,
+     "note": "我的集团 2026Q4 季度报告；数字 20 个，无数据 4 个",
+     "ms": 4955,
      "shot": "walkthrough/fresh/11-report-q.png"
     },
     {
      "id": "export-q",
      "label": "导出季报 PDF 与 docx（封面笔名、每页诚实声明）",
      "ok": true,
-     "note": "PDF 565749 字节、docx 55259 字节",
-     "ms": 1940,
+     "note": "PDF 577096 字节、docx 61049 字节",
+     "ms": 1931,
      "shot": "walkthrough/fresh/12-export-q.png"
     },
     {
@@ -109,7 +109,7 @@
      "label": "人为改一个数字 → 一致性检查阻止并列出差异 → 按记录重新生成",
      "ok": true,
      "note": "产出（稿件数）：报告写 999篇，记录重算为 15篇（出处 drafts:2026Q4）",
-     "ms": 3751,
+     "ms": 3590,
      "shot": "walkthrough/fresh/14-tamper.png"
     },
     {
@@ -117,7 +117,7 @@
      "label": "业绩发布会：分析师 ×2 + 独立董事追问；答不上来记入待办",
      "ok": true,
      "note": "待办：发布会待办：“播放量”为什么无数据？没有数据时如何证明本期判断是对的？",
-     "ms": 2632,
+     "ms": 2592,
      "shot": "walkthrough/fresh/15-call.png"
     },
     {
@@ -125,7 +125,7 @@
      "label": "影子上岗 10 个任务 → 独立董事盲评 → 董事会批准交接 → 回滚",
      "ok": true,
      "note": "盲评质量 8 ≥ 在任 7，花费 ¥0.04 ≤ 在任 ×1.2（¥0.0480）",
-     "ms": 11410,
+     "ms": 11423,
      "shot": "walkthrough/fresh/16-succession.png"
     },
     {
@@ -133,7 +133,7 @@
      "label": "新 Agent 入职培训（读制度与案例 Top-K → 5 题测验）→ 上岗；最佳实践",
      "ok": true,
      "note": "测验 5/5 上岗；案例 1 张，引用 1 张",
-     "ms": 5475,
+     "ms": 5463,
      "shot": "walkthrough/fresh/17-training.png"
     },
     {
@@ -141,15 +141,15 @@
      "label": "董事长学堂：每周一课（结合本周事件）→ 已读；徽章",
      "ok": true,
      "note": "本周独立董事对「接班人交接：短视频脚本（候选 本机模拟（新提示词））」投了反对票，这就是“独立董事”在起作用：专门不听 ",
-     "ms": 3823,
+     "ms": 3860,
      "shot": "walkthrough/fresh/18-academy.png"
     },
     {
      "id": "agm",
      "label": "年度大会（审议年报 → 使命愿景目标 → 预算总额 → 章程修改）→ 年报导出 PDF",
      "ok": true,
-     "note": "年报 PDF 571211 字节；年度大会四步完成",
-     "ms": 10790,
+     "note": "年报 PDF 582469 字节；年度大会四步完成",
+     "ms": 10805,
      "shot": "walkthrough/fresh/19-agm.png"
     },
     {
@@ -157,16 +157,24 @@
      "label": "首页“董事长简报”卡片 → 待你拍板 → 进披露页",
      "ok": true,
      "note": "三件好事 1. 董事会批准「2026 年度预算 ¥120（Q4 追加视频生成 ¥10）」",
-     "ms": 5234,
+     "ms": 5233,
      "shot": "walkthrough/fresh/20-brief.png"
+    },
+    {
+     "id": "revenue",
+     "label": "经营收入与全球商机：损益表（无数据）→ 录入收入 → 商机卡（≥3 渠道带来源）→ 经管会评审 → CEO 提案 → 董事长批准 → 工单；越界请求被拒",
+     "ok": true,
+     "note": "收入 ¥36.5 → 季报收入 36.5；商机卡 5（有来源 3）；YouTube 合作伙伴计划（YPP） → 工单 6 步（你本人 2 步）；越界：Agent 不持有资金、不收款付款",
+     "ms": 10980,
+     "shot": "walkthrough/fresh/21-revenue.png"
     },
     {
      "id": "disable",
      "label": "退回集团模式（数据保留）",
      "ok": true,
-     "note": "议案 3、报告 2、案例 1 保留",
-     "ms": 3364,
-     "shot": "walkthrough/fresh/21-disable.png"
+     "note": "议案 3、报告 3、案例 1 保留",
+     "ms": 3365,
+     "shot": "walkthrough/fresh/22-disable.png"
     }
    ],
    "consoleErrors": 0,
@@ -182,7 +190,7 @@
      "label": "打开 → 跳过引导",
      "ok": true,
      "note": "agent",
-     "ms": 1439,
+     "ms": 1438,
      "shot": "walkthrough/legacy/01-open-skip.png"
     },
     {
@@ -190,7 +198,7 @@
      "label": "用 1.3 备份恢复 → 自动迁移（上市公司模式默认关闭；1.3 复盘转为案例卡；OKR 保留）",
      "ok": true,
      "note": "恢复 42696 字节；集团「长鱼集团」保留；案例卡 1",
-     "ms": 4998,
+     "ms": 4981,
      "shot": "walkthrough/legacy/02-restore-1.3.png"
     },
     {
@@ -198,7 +206,7 @@
      "label": "启用上市公司模式 → 3 屏引导（是什么 / 谁在帮你挑毛病 / 你平时要做什么）",
      "ok": true,
      "note": "董事会：董事长、CEO、独立董事 A、独立董事 B、董事会秘书；独立董事 2 名",
-     "ms": 6067,
+     "ms": 6104,
      "shot": "walkthrough/legacy/03-enable-listed.png"
     },
     {
@@ -206,7 +214,7 @@
      "label": "首次董事会：战略 + 预算；独立董事对预算投反对票写理由；董事长批准（留痕）",
      "ok": true,
      "note": "反对理由：[R1] 显示预算执行已有偏差，议案仍要求追加投入；风险应对没有写负责人与期限，…；战略拆成 OKR 4 个",
-     "ms": 6756,
+     "ms": 6734,
      "shot": "walkthrough/legacy/04-board-first.png"
     },
     {
@@ -214,15 +222,15 @@
      "label": "模拟一个月（mock 时钟 + 种子数据，演示开关下）",
      "ok": true,
      "note": "mock 时钟 → 2026-11-23；模拟稿件 15 篇",
-     "ms": 3585,
+     "ms": 3570,
      "shot": "walkthrough/legacy/05-sim-month.png"
     },
     {
      "id": "review",
      "label": "月度经营分析会：平衡计分卡五列表 + 预算偏差预警",
      "ok": true,
-     "note": "7 项指标，落后 5、无数据 1；预警：bu-video 预算偏差 678%（应花 ¥2.06，实花…",
-     "ms": 2083,
+     "note": "8 项指标，落后 5、无数据 2；预警：bu-video 预算偏差 678%（应花 ¥2.06，实花…",
+     "ms": 2070,
      "shot": "walkthrough/legacy/06-review.png"
     },
     {
@@ -230,7 +238,7 @@
      "label": "内审抽查：发现一次越权 + 一处无出处数据；直送董事长与审计委员会，CEO 抄送",
      "ok": true,
      "note": "内审〔2026〕001号：越权：bu-video 自行追加 ¥5 视频生成（未走请示）（需董事长批准，未见批准记录）；数据无出处：本周涨粉 35%，口播开头效果最好",
-     "ms": 3862,
+     "ms": 3873,
      "shot": "walkthrough/legacy/07-audit-1.png"
     },
     {
@@ -238,7 +246,7 @@
      "label": "提交整改 → 下期内审复查关闭",
      "ok": true,
      "note": "内审〔2026〕002号：上期 2 项全部关闭",
-     "ms": 3354,
+     "ms": 3352,
      "shot": "walkthrough/legacy/08-audit-2.png"
     },
     {
@@ -246,23 +254,23 @@
      "label": "风险登记册本月复核 → 内控矩阵自动测试（COSO 五要素）",
      "ok": true,
      "note": "内控自动测试 12/12 通过（控制环境 2/2；风险评估 2/2；控制活动 3/3；信息与沟通 2/2；监督 3/3）。说明：只测本机可验证的控制，不构成内控",
-     "ms": 2647,
+     "ms": 2667,
      "shot": "walkthrough/legacy/09-controls.png"
     },
     {
      "id": "report-q",
      "label": "生成季报：11 章、数字可追溯（点开关键数字看出处）",
      "ok": true,
-     "note": "长鱼集团 2026Q4 季度报告；数字 19 个，无数据 1 个",
-     "ms": 4985,
+     "note": "长鱼集团 2026Q4 季度报告；数字 22 个，无数据 4 个",
+     "ms": 5069,
      "shot": "walkthrough/legacy/10-report-q.png"
     },
     {
      "id": "export-q",
      "label": "导出季报 PDF 与 docx（封面笔名、每页诚实声明）",
      "ok": true,
-     "note": "PDF 565102 字节、docx 57468 字节",
-     "ms": 1932,
+     "note": "PDF 580140 字节、docx 63276 字节",
+     "ms": 1946,
      "shot": "walkthrough/legacy/11-export-q.png"
     },
     {
@@ -270,7 +278,7 @@
      "label": "人为改一个数字 → 一致性检查阻止并列出差异 → 按记录重新生成",
      "ok": true,
      "note": "产出（稿件数）：报告写 999篇，记录重算为 16篇（出处 drafts:2026Q4）",
-     "ms": 3567,
+     "ms": 3604,
      "shot": "walkthrough/legacy/13-tamper.png"
     },
     {
@@ -278,7 +286,7 @@
      "label": "业绩发布会：分析师 ×2 + 独立董事追问；答不上来记入待办",
      "ok": true,
      "note": "待办：发布会待办：“播放量”为什么无数据？没有数据时如何证明本期判断是对的？",
-     "ms": 2600,
+     "ms": 2611,
      "shot": "walkthrough/legacy/14-call.png"
     },
     {
@@ -286,7 +294,7 @@
      "label": "影子上岗 10 个任务 → 独立董事盲评 → 董事会批准交接 → 回滚",
      "ok": true,
      "note": "盲评质量 8 ≥ 在任 7，花费 ¥0.04 ≤ 在任 ×1.2（¥0.0480）",
-     "ms": 11397,
+     "ms": 11375,
      "shot": "walkthrough/legacy/15-succession.png"
     },
     {
@@ -294,7 +302,7 @@
      "label": "新 Agent 入职培训（读制度与案例 Top-K → 5 题测验）→ 上岗；最佳实践",
      "ok": true,
      "note": "测验 5/5 上岗；案例 2 张，引用 2 张",
-     "ms": 5468,
+     "ms": 5478,
      "shot": "walkthrough/legacy/16-training.png"
     },
     {
@@ -302,15 +310,15 @@
      "label": "董事长学堂：每周一课（结合本周事件）→ 已读；徽章",
      "ok": true,
      "note": "本周独立董事对「接班人交接：短视频脚本（候选 本机模拟（新提示词））」投了反对票，这就是“独立董事”在起作用：专门不听 ",
-     "ms": 3843,
+     "ms": 3841,
      "shot": "walkthrough/legacy/17-academy.png"
     },
     {
      "id": "agm",
      "label": "年度大会（审议年报 → 使命愿景目标 → 预算总额 → 章程修改）→ 年报导出 PDF",
      "ok": true,
-     "note": "年报 PDF 570553 字节；年度大会四步完成",
-     "ms": 10805,
+     "note": "年报 PDF 585795 字节；年度大会四步完成",
+     "ms": 10806,
      "shot": "walkthrough/legacy/18-agm.png"
     },
     {
@@ -318,16 +326,24 @@
      "label": "首页“董事长简报”卡片 → 待你拍板 → 进披露页",
      "ok": true,
      "note": "三件好事 1. 董事会批准「2026 年度预算 ¥120（Q4 追加视频生成 ¥10）」",
-     "ms": 5250,
+     "ms": 5251,
      "shot": "walkthrough/legacy/19-brief.png"
+    },
+    {
+     "id": "revenue",
+     "label": "经营收入与全球商机：损益表（无数据）→ 录入收入 → 商机卡（≥3 渠道带来源）→ 经管会评审 → CEO 提案 → 董事长批准 → 工单；越界请求被拒",
+     "ok": true,
+     "note": "收入 ¥36.5 → 季报收入 36.5；商机卡 5（有来源 3）；YouTube 合作伙伴计划（YPP） → 工单 6 步（你本人 2 步）；越界：Agent 不持有资金、不收款付款",
+     "ms": 10980,
+     "shot": "walkthrough/legacy/20-revenue.png"
     },
     {
      "id": "disable",
      "label": "退回集团模式（数据保留）",
      "ok": true,
-     "note": "议案 3、报告 2、案例 2 保留",
-     "ms": 3363,
-     "shot": "walkthrough/legacy/20-disable.png"
+     "note": "议案 3、报告 3、案例 2 保留",
+     "ms": 3388,
+     "shot": "walkthrough/legacy/21-disable.png"
     }
    ],
    "consoleErrors": 0,

@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   ACADEMY_CARDS, cardById, findTerms, PAGE_PLAIN, LISTED_HONESTY, BOARD_MATTER_TEXT, VOTE_TEXT, DIRECTOR_KIND_TEXT, INDEPENDENCE_TEXT, AUDIT_CHECK_TEXT, FINDING_LEVEL_TEXT, COSO, BSC_TEXT, BSC_DIMS, REPORT_CHAPTERS,
-  BLM_STEPS, SCENARIO_TEXT, COMP_RULES_TEXT, CASE_KIND_TEXT, AGM_STEPS, NO_DATA, independenceOf, isWeak, riskRegisterView, govNow, showFig, type ListedState, type Motion, type AcademyCard, type WeeklyLesson,
+  BLM_STEPS, SCENARIO_TEXT, CHANNEL_TEXT, estimateText, REVENUE_HONESTY, COMP_RULES_TEXT, CASE_KIND_TEXT, AGM_STEPS, NO_DATA, independenceOf, isWeak, riskRegisterView, govNow, showFig, type ListedState, type Motion, type AcademyCard, type WeeklyLesson,
 } from '@content-agent/shared';
 import { useT } from '../i18n';
 import { Section, Note, SegTabs, download } from '../pages/me/v9/common';
@@ -13,12 +13,13 @@ import { useToast } from '../ui';
 import { getGroup } from '../v13/store';
 import {
   getListed, onListedChange, enableListed, finishOnboarding, disableListed, refreshBoardModels, setMonthBudget, conveneBoard, decideMotion, runVotes, refreshMinutes, startAgm, agmNext, runInternalAudit, noteRemediation, runControls,
+  addRevenueEntry, importSettlement, revenueView, scanRadar, reviewOpp, proposeOpp, approveOpp,
   reviewAllRisks, runMonthlyReview, budgetView, requestBudgetAdjust, generateReport, editReportFigure, recheckReport, reportHtml, reportDocx, holdEarningsCall, computeBrief, startStrategy, reviewStrategy, nominateAgent,
   decideNomination, runAssessments, startSuccession, rollbackHandover, syncCases, startTraining, quarterBestPractice, universityHealth, markCardRead, setWeeklyOff, thisWeekLesson, badges, simulateMonth, simulateRemediation, demoAllowed,
 } from './store';
 
-export type GovSec = 'board' | 'oversight' | 'ops' | 'disclosure' | 'strategy' | 'talent' | 'university' | 'academy';
-export const GOV_SECS: [GovSec, string][] = [['board', 'ui.v14_sec_board'], ['oversight', 'ui.v14_sec_oversight'], ['ops', 'ui.v14_sec_ops'], ['disclosure', 'ui.v14_sec_disclosure'], ['strategy', 'ui.v14_sec_strategy'], ['talent', 'ui.v14_sec_talent'], ['university', 'ui.v14_sec_university'], ['academy', 'ui.v14_sec_academy']];
+export type GovSec = 'board' | 'oversight' | 'ops' | 'revenue' | 'disclosure' | 'strategy' | 'talent' | 'university' | 'academy';
+export const GOV_SECS: [GovSec, string][] = [['board', 'ui.v14_sec_board'], ['oversight', 'ui.v14_sec_oversight'], ['ops', 'ui.v14_sec_ops'], ['revenue', 'ui.v14_sec_revenue'], ['disclosure', 'ui.v14_sec_disclosure'], ['strategy', 'ui.v14_sec_strategy'], ['talent', 'ui.v14_sec_talent'], ['university', 'ui.v14_sec_university'], ['academy', 'ui.v14_sec_academy']];
 type Run = (fn: () => Promise<unknown>, ok?: string) => void;
 const Row = ({ children, testId }: { children: ReactNode; testId?: string }) => <div className="flex flex-wrap items-center gap-2" data-testid={testId}>{children}</div>;
 const yuan = (n: number) => `¥${n.toFixed(n < 1 ? 3 : 2)}`;
@@ -88,6 +89,7 @@ export function GovernancePage({ sec: initial, go }: { sec?: string; go: (to: st
       {sec === 'board' ? <BoardSec s={s} run={run} />
         : sec === 'oversight' ? <OversightSec s={s} run={run} />
         : sec === 'ops' ? <OpsSec s={s} run={run} />
+        : sec === 'revenue' ? <RevenueSec s={s} run={run} />
         : sec === 'disclosure' ? <DisclosureSec s={s} run={run} />
         : sec === 'strategy' ? <StrategySec s={s} run={run} />
         : sec === 'talent' ? <TalentSec s={s} run={run} />
@@ -232,6 +234,55 @@ function OpsSec({ s, run }: { s: ListedState; run: Run }) {
   );
 }
 
+/* ---------------- 经营收入与全球商机（第十九部分） ---------------- */
+function RevenueSec({ s, run }: { s: ListedState; run: Run }) {
+  const { t } = useT();
+  const [v, setV] = useState<Awaited<ReturnType<typeof revenueView>> | null>(null);
+  const [dept, setDept] = useState(''); const [platform, setPlatform] = useState(''); const [amount, setAmount] = useState(''); const [period, setPeriod] = useState(govNow(s.clock).toISOString().slice(0, 7));
+  useEffect(() => { void revenueView().then((x) => { setV(x); if (!dept) setDept(x.pnl.rows.find((r) => r.deptId !== 'board')?.deptId ?? 'bu-video'); }); }, [s, dept]);
+  const money = (n: number | null) => (n == null ? NO_DATA : `¥${n.toFixed(2)}`);
+  const onFile = (f: File | undefined) => { if (f) run(async () => { const r = await importSettlement(await f.text(), f.name, dept || 'bu-video'); return `${t('ui.v14_rev_imported')} ${r.added}${r.errors.length ? ` · ${r.errors.join('；')}` : ''}`; }); };
+  return (
+    <div className="flex flex-col gap-3" data-testid="gov-revenue">
+      <Note tone="warn"><span data-testid="gov-rev-honesty">{t(REVENUE_HONESTY)}</span></Note>
+      <Section title={t('ui.v14_pnl')} testId="gov-pnl">
+        {v && <><Note>{v.pnl.text}</Note>
+          <div className="gov-table-wrap"><table className="gov-table" data-testid="gov-pnl-table"><thead><tr><th>{t('ui.v14_dept')}</th><th>{t('ui.v14_revenue')}</th><th>{t('ui.v14_spent')}</th><th>{t('ui.v14_profit')}</th></tr></thead><tbody>{[...v.pnl.rows, v.pnl.total].map((r) => <tr key={r.deptId}><td>{r.label}</td><td>{money(r.revenue)}</td><td>{money(r.cost)}</td><td className={r.profit != null && r.profit < 0 ? 'text-warn' : ''}>{money(r.profit)}</td></tr>)}</tbody></table></div>
+          <Note>{v.evolution.text}</Note></>}
+      </Section>
+      <Section title={t('ui.v14_rev_entry')}>
+        <Note>{t('ui.v14_rev_entry_desc')}</Note>
+        <div className="gov-grid">
+          <label className="field"><span>{t('ui.v14_dept')}</span><input value={dept} onChange={(e) => setDept(e.target.value)} data-testid="gov-rev-dept" /></label>
+          <label className="field"><span>{t('ui.v14_platform')}</span><input value={platform} onChange={(e) => setPlatform(e.target.value)} data-testid="gov-rev-platform" /></label>
+          <label className="field"><span>{t('ui.v14_amount')}</span><input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} data-testid="gov-rev-amount" /></label>
+          <label className="field"><span>{t('ui.v14_period')}</span><input value={period} onChange={(e) => setPeriod(e.target.value)} data-testid="gov-rev-period" /></label>
+        </div>
+        <Row><button type="button" className="primary" data-testid="gov-rev-add" onClick={() => run(() => addRevenueEntry({ deptId: dept, platform: platform || t('ui.v14_platform_none'), amount: Number(amount), period }), 'ui.v14_saved')}>{t('ui.v14_rev_add')}</button>
+          <label className="button-like !min-h-11 cursor-pointer">{t('ui.v14_rev_import')}<input type="file" accept=".csv,text/csv" className="sr-only" data-testid="gov-rev-import" onChange={(e) => onFile(e.target.files?.[0])} /></label></Row>
+      </Section>
+      <Section title={t('ui.v14_radar')} testId="gov-radar" actions={<button type="button" data-testid="gov-radar-scan" onClick={() => run(scanRadar)}>{t('ui.v14_radar_scan')}</button>}>
+        <Note>{t('ui.v14_radar_desc')}</Note>
+        {s.opportunities.map((c) => (
+          <div key={c.id} className="card v9-card flex flex-col gap-1 text-[13px]" data-testid={`gov-opp-${c.id}`}>
+            <Row><strong className="min-w-0 grow break-words">{c.title}</strong><span className="gov-chip">{t(CHANNEL_TEXT[c.kind])}</span></Row>
+            <p className="m-0">{c.summary}</p>
+            <p className="m-0" data-testid="gov-opp-estimate"><strong>{estimateText(c)}</strong></p>
+            <p className="m-0 text-muted">{t('ui.v14_input')}：{c.input}  {t('ui.v14_thresholds')}：{t('ui.v14_realname')} {c.thresholds.realName == null ? '?' : c.thresholds.realName ? '✓' : '✗'} · {c.thresholds.qualification} · {c.thresholds.tax} · {c.thresholds.payoutAccount} · {c.thresholds.countries}</p>
+            <p className="m-0 text-muted">{t('ui.v14_risk')}：{c.risks.join('；')}{c.deadline ? ` · ${t('ui.v14_deadline')} ${c.deadline}` : ''}</p>
+            <p className="m-0">{c.source ? <a href={c.source.url} target="_blank" rel="noreferrer" data-testid="gov-opp-source">{c.source.title}</a> : <span className="text-warn">{t('ui.v14_no_source')}</span>}{c.source ? `（${t('ui.v14_checked')} ${c.source.checkedAt}）` : ''}</p>
+            {c.review && <Note>{c.review}</Note>}{c.proposal && <Note>{c.proposal}</Note>}
+            {c.status === 'radar' && <Row><button type="button" data-testid={`gov-opp-review-${c.id}`} disabled={!c.source} onClick={() => run(() => reviewOpp(c.id, true))}>{t('ui.v14_opp_review')}</button><button type="button" className="ghost" onClick={() => run(() => reviewOpp(c.id, false))}>{t('ui.v14_opp_skip')}</button></Row>}
+            {c.status === 'reviewed' && <Row><button type="button" data-testid={`gov-opp-propose-${c.id}`} onClick={() => run(() => proposeOpp(c.id))}>{t('ui.v14_opp_propose')}</button></Row>}
+            {c.status === 'proposed' && <Row><button type="button" className="primary" data-testid={`gov-opp-approve-${c.id}`} onClick={() => run(() => approveOpp(c.id, true))}>{t('ui.v14_approve')}</button><button type="button" onClick={() => run(() => approveOpp(c.id, false))}>{t('ui.v14_reject')}</button></Row>}
+            {c.ticket && <ol className="m-0 pl-5" data-testid={`gov-ticket-${c.id}`}>{c.ticket.steps.map((x, i) => <li key={i}><strong>{t(x.actor === 'user' ? 'ui.v14_you' : 'ui.v14_agent')}</strong>：{x.text}</li>)}</ol>}
+            <span className="text-[12px] text-muted">{t(`ui.v14_opp_${c.status}`)}</span>
+          </div>))}
+      </Section>
+    </div>
+  );
+}
+
 /* ---------------- 披露 ---------------- */
 function DisclosureSec({ s, run }: { s: ListedState; run: Run }) {
   const { t } = useT();
@@ -248,7 +299,7 @@ function DisclosureSec({ s, run }: { s: ListedState; run: Run }) {
         {!r && <Note>{t('ui.v14_reports_none')}</Note>}
         {r && <div className="gov-report" data-testid={`gov-report-${r.status}`}>
           <div className="gov-cover"><span className="text-[12px] tracking-widest text-muted">{r.kind === 'annual' ? 'ANNUAL REPORT' : 'QUARTERLY REPORT'}</span><strong className="text-[20px] leading-tight break-words">{r.title}</strong><span className="text-[12px] text-muted">{r.no} · {t('ui.v14_signed')} {r.author}{r.sim ? ` · ${t('ui.v14_has_sim')}` : ''}</span>
-            <div className="gov-keys">{['outputs', 'adopted', 'spend', 'budget_rate'].map((id) => r.figures.find((f) => f.id === id)).filter((f) => !!f).map((f) => <button key={f!.id} type="button" className="gov-key" data-testid={`gov-fig-${f!.id}`} onClick={() => setTrace(`${f!.label}：${showFig(f!)} ← ${f!.ref ?? NO_DATA}`)}><b>{showFig(f!)}</b><span>{f!.label}</span></button>)}</div></div>
+            <div className="gov-keys">{['outputs', 'adopted', 'spend', 'budget_rate', 'revenue', 'profit'].map((id) => r.figures.find((f) => f.id === id)).filter((f) => !!f).map((f) => <button key={f!.id} type="button" className="gov-key" data-testid={`gov-fig-${f!.id}`} onClick={() => setTrace(`${f!.label}：${showFig(f!)} ← ${f!.ref ?? NO_DATA}`)}><b>{showFig(f!)}</b><span>{f!.label}</span></button>)}</div></div>
           {trace && <Note tone="ok"><span data-testid="gov-trace">{t('ui.v14_trace')}：{trace}</span></Note>}
           {r.status === 'blocked' ? <div data-testid="gov-report-diffs"><Note tone="warn">{t('ui.v14_blocked')}</Note>{r.diffs.map((d) => <Note key={d} tone="warn">· {d}</Note>)}<Row><button type="button" data-testid="gov-report-recheck" onClick={() => run(() => recheckReport(r.id))}>{t('ui.v14_recheck')}</button></Row></div>
             : <Row><button type="button" data-testid="gov-export-pdf" onClick={() => run(() => exportPdf(r.id))}>{t('ui.v14_export_pdf')}</button><button type="button" data-testid="gov-export-docx" onClick={() => run(async () => download(`${r.title}.docx`, await reportDocx(r.id), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'))}>{t('ui.v14_export_docx')}</button><button type="button" className="primary" data-testid="gov-call-run" onClick={() => run(() => holdEarningsCall(r.id), 'ui.v14_call_done')}>{t('ui.v14_call_run')}</button></Row>}

@@ -12,6 +12,7 @@ import {
   buildReport, finalizeReport, editFigure, renderReportHtml, buildDocx, runEarningsCall, chairmanBrief, newStrategy, draftBlm, toCommittee, toBoard, boardDecision, strategyToOkrs, strategyReview,
   nominate, approveNomination, assess, newSuccession, runShadow, blindReview, handover, rollbackSuccession, mockShadowGen, mockBlindJudge, judgeWith, fromRetro, fromVeto, fromHit, addCase, injectCases,
   newTraining, gradeQuiz, mockStudent, parseAnswers, pickBestPractices, knowledgeHealth, weeklyLesson, badgesOf, governanceGrants, parseDoa, checkResolution, privacyLeaks, addContext,
+  addRevenue, parseSettlementCsv, pnl, seedOpportunities, newOpportunity, reviewOpportunity, proposeOpportunity, approveOpportunity, checkRevenueAction, evolutionObjective, REVENUE_HONESTY,
   type ListedState, type GovSpeaker, type GovKind, type ModelRef, type Motion, type BoardMatter, type RawRecord, type ReportSources, type MapRow, type Metric, type WeekEvent, type SimData, type AgmStep, type Variant,
 } from '@content-agent/shared';
 import { getVfs } from '../v9/vfsBackend';
@@ -271,6 +272,9 @@ async function metricsFor(s: ListedState): Promise<Metric[]> {
   out.push({ key: 'adopt_rate', label: '采纳率', dim: 'outcome', direction: 'up', target: 0.6, actual: outputs ? +(adopted / outputs).toFixed(2) : null, unit: '', source: outputs ? { kind: 'drafts', ref: `${month}?adopted` } : null });
   for (const m of sim?.metrics ?? []) out.push({ key: m.key, label: m.label, dim: m.dim, direction: m.direction, target: m.target, actual: m.value, unit: m.unit, source: m.ref ? { kind: 'metrics', ref: m.ref } : null });
   if (!out.some((m) => m.dim === 'audience')) out.push({ key: 'audience', label: '受众反馈（录入）', dim: 'audience', direction: 'up', target: null, actual: null, unit: '', source: null });
+  const g0 = await getGroup();
+  const P = pnl(s.revenues, allSpend(s, g0), month);
+  out.push({ key: 'profit', label: '贡献利润（收入 − 花费）', dim: 'outcome', direction: 'up', target: 0, actual: P.total.profit, unit: '元', source: P.total.profit == null ? null : { kind: 'pnl', ref: month } });
   const cases = s.cases.length;
   out.push({ key: 'cases', label: '集团大学案例数', dim: 'growth', direction: 'up', target: 5, actual: cases, unit: '个', source: { kind: 'cases', ref: month } });
   if (!out.some((m) => m.dim === 'process')) out.push({ key: 'first_pass', label: '一次通过率', dim: 'process', direction: 'up', target: 0.8, actual: null, unit: '', source: null });
@@ -328,6 +332,7 @@ async function reportSources(s: ListedState, kind: 'quarter' | 'annual'): Promis
     talent: [...s.trainings.map((t) => ({ text: `${t.agentId} 入职培训 ${t.score ?? '-'} / 5，${t.onDuty ? '已上岗' : '未上岗'}`, ref: `training:${t.id}` })), ...s.successions.map((x) => ({ text: `接班人计划「${x.role}」：${x.history.at(-1)?.event ?? ''}`, ref: `succession:${x.id}` }))],
     outlook: s.strategies.filter((p) => p.status === 'approved').flatMap((p) => p.map.map((r) => `${r.initiative}（${r.dept}，指标 ${r.metric} ${r.target}${r.unit}）`)).slice(0, 5),
     deptNames: Object.fromEntries([...g.org.depts.map((d) => [d.id, d.name]), ['board', '治理（董事会 / 内审等）'], ['unassigned', '未分配']]),
+    revenues: s.revenues,
   };
 }
 export async function generateReport(kind: 'quarter' | 'annual' = 'quarter'): Promise<string> {
@@ -428,7 +433,7 @@ export async function decideNomination(id: string, approve: boolean): Promise<vo
 export async function runAssessments(): Promise<number> {
   const s0 = await getListed(); const g = await getGroup();
   const q = quarterKey(govNow(s0.clock));
-  const list = g.org.depts.filter((d) => d.status === 'active' && d.kind === 'bu').map((d) => { const outs = s0.simData?.drafts.filter((x) => x.deptId === d.id) ?? []; const kpi = outs.length ? Math.round(100 * outs.filter((x) => x.status !== 'rejected').length / outs.length) : null; const peer = g.peer.filter((p) => p.to === d.id); return assess({ agentId: d.head, quarter: q, kpi, peer: peer.length ? +(peer.reduce((a, p) => a + p.score, 0) / peer.length * 20).toFixed(0) : null, quota: 5, tier: '标准档', prevScore: s0.assessments.filter((a) => a.agentId === d.head).at(-1)?.score ?? null }); });
+  const list = g.org.depts.filter((d) => d.status === 'active' && d.kind === 'bu').map((d) => { const outs = s0.simData?.drafts.filter((x) => x.deptId === d.id) ?? []; const kpi = outs.length ? Math.round(100 * outs.filter((x) => x.status !== 'rejected').length / outs.length) : null; const peer = g.peer.filter((p) => p.to === d.id); const pr = pnl(s0.revenues, allSpend(s0, g), q).rows.find((r) => r.deptId === d.id)?.profit ?? null; return assess({ agentId: d.head, quarter: q, kpi, profit: pr, peer: peer.length ? +(peer.reduce((a, p) => a + p.score, 0) / peer.length * 20).toFixed(0) : null, quota: 5, tier: '标准档', prevScore: s0.assessments.filter((a) => a.agentId === d.head).at(-1)?.score ?? null }); });
   await updateListed((s) => ({ ...s, assessments: [...s.assessments.filter((a) => a.quarter !== q), ...list] }));
   return list.length;
 }
@@ -530,4 +535,47 @@ export async function simulateRemediation(): Promise<void> {
   await updateListed((s) => ({ ...s, simData: sim, clock: new Date(govNow(s.clock).getTime() + 30 * 86400000).toISOString() }));
 }
 export async function clearSim(): Promise<void> { await updateListed((s) => ({ ...s, sim: false, simData: null, clock: null })); }
+/* ---------------- 第十九部分：经营收入与全球商机 ---------------- */
+export { REVENUE_HONESTY };
+export async function addRevenueEntry(e: { deptId: string; platform: string; amount: number; period: string; note?: string }): Promise<string> {
+  let id = '';
+  await updateListed(async (s) => { await guard(s); const l = addRevenue(s.revenues, { ...e, source: 'user_entry', ref: '你在“经营收入”录入', at: nowIso(s) }); id = l.at(-1)!.id; return { ...s, revenues: l }; });
+  await audit({ kind: 'setting_change', actor: 'user', summary: `录入收入：${e.deptId} ${e.platform} ¥${e.amount}（${e.period}）`, outcome: 'ok' });
+  return id;
+}
+/** 你导出的平台结算 CSV：只解析你给的文件，不联网抓取、不登录平台。 */
+export async function importSettlement(csv: string, fileName: string, defaultDept: string): Promise<{ added: number; errors: string[] }> {
+  let res = { added: 0, errors: [] as string[] };
+  await updateListed(async (s) => { await guard(s); const p = parseSettlementCsv(csv, { defaultDept, ref: fileName, at: nowIso(s) }); let l = s.revenues; for (const e of p.entries) l = addRevenue(l, e); res = { added: p.entries.length, errors: p.errors }; return { ...s, revenues: l }; });
+  return res;
+}
+export async function revenueView(period?: string) {
+  const s = await getListed(); const g = await getGroup();
+  const per = period ?? quarterKey(govNow(s.clock));
+  const names = Object.fromEntries([...g.org.depts.map((d) => [d.id, d.name]), ['board', '治理（董事会 / 内审等）']]);
+  const P = pnl(s.revenues, allSpend(s, g), per, names);
+  const adopted = (s.simData?.drafts.filter((d) => d.status === 'approved' || d.status === 'published').length ?? 0);
+  return { pnl: P, evolution: evolutionObjective(P.total.revenue == null ? null : P.total, adopted) };
+}
+/** 商机雷达：只收录已核对的公开来源（官方页面 / RSS / 文档）；种子卡三张来自官方页面（2026-10-24 核对），比赛 / 知识付费为待补来源的模板。 */
+export async function scanRadar(): Promise<number> {
+  let n = 0;
+  await updateListed(async (s) => { await guard(s); const g = await getGroup(); const bu = g.org.depts.filter((d) => d.kind === 'bu'); const intl = bu.find((d) => /国际|海外|intl/i.test(`${d.id}${d.name}`)) ?? bu[0]; const seeds = seedOpportunities(nowIso(s), (k) => (k === 'platform_incentive' ? intl?.id ?? 'bu-video' : bu[1]?.id ?? bu[0]?.id ?? 'bu-video')).filter((c) => !s.opportunities.some((o) => o.title === c.title)); n = seeds.length; return { ...s, opportunities: [...s.opportunities, ...seeds.map((c, i) => ({ ...c, id: `opp-${s.opportunities.length + i + 1}` }))] }; });
+  return n;
+}
+export async function addOpportunityCard(c: Parameters<typeof newOpportunity>[1]): Promise<string> { let id = ''; await updateListed(async (s) => { await guard(s); const l = newOpportunity(s.opportunities, c); id = l.at(-1)!.id; return { ...s, opportunities: l }; }); return id; }
+export async function reviewOpp(id: string, pass: boolean, note = ''): Promise<void> { await updateListed(async (s) => { await guard(s); return { ...s, opportunities: s.opportunities.map((c) => (c.id === id ? reviewOpportunity(c, note, pass) : c)) }; }); }
+export async function proposeOpp(id: string, note = ''): Promise<void> { await updateListed(async (s) => { await guard(s); return { ...s, opportunities: s.opportunities.map((c) => (c.id === id ? proposeOpportunity(c, note) : c)) }; }); }
+export async function approveOpp(id: string, approve: boolean): Promise<void> {
+  let card: ListedState['opportunities'][number] | undefined;
+  await updateListed(async (s) => { await guard(s); return { ...s, opportunities: s.opportunities.map((c) => { if (c.id !== id) return c; card = approveOpportunity(c, approve, nowIso(s)); return card; }) }; });
+  if (card?.ticket) await updateGroup((g) => ({ ...g, flow: addContext(g.flow, { kind: 'resolution', level: 'public', title: `工单：${card!.title}`, body: card!.ticket!.steps.map((x) => `${x.actor === 'user' ? '【你本人】' : '【Agent】'}${x.text}`).join('；'), refs: [card!.ticket!.id] }).flow })).catch(() => undefined);
+  await audit({ kind: 'approval', actor: 'user', summary: `董事长${approve ? '批准' : '驳回'}商机「${card?.title ?? id}」${approve ? '，已生成工单（提交 / 收款由你本人完成）' : ''}`, outcome: 'ok' });
+}
+/** 收入相关的越界请求（例如“自动收款”“自动投稿”）：引擎拒绝并审计。 */
+export async function requestRevenueAction(text: string): Promise<{ ok: boolean; reason: string }> {
+  const r = checkRevenueAction(text);
+  await audit({ kind: 'approval', actor: 'user', summary: r.ok ? `收入相关请求通过边界检查：${text.slice(0, 40)}` : `收入相关请求被拒（${r.hit}：${r.rule}）`, outcome: r.ok ? 'ok' : 'denied' });
+  return { ok: r.ok, reason: r.ok ? '可以做：Agent 只准备草稿与资料，提交与收款由你本人点击' : `已拒绝：${r.rule}` };
+}
 export { CONTROLS };

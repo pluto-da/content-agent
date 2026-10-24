@@ -14,7 +14,7 @@ import { BriefCard } from './BriefCard';
 import {
   getListed, updateListed, enableListed, disableListed, finishOnboarding, conveneBoard, decideMotion, simulateMonth, simulateRemediation, runMonthlyReview, runInternalAudit, noteRemediation, generateReport, editReportFigure,
   holdEarningsCall, startSuccession, rollbackHandover, startTraining, thisWeekLesson, markCardRead, setWeeklyOff, computeBrief, pendingCount, runControls, reportHtml, reportDocx, setMonthBudget, startAgm, agmNext,
-  proposeMotion, quarterBestPractice, universityHealth, boardIndependence,
+  proposeMotion, quarterBestPractice, universityHealth, boardIndependence, addRevenueEntry, importSettlement, revenueView, scanRadar, reviewOpp, proposeOpp, approveOpp, requestRevenueAction,
 } from './store';
 import { findSecrets, unzip, privacyLeaks, defaultBoard } from '@content-agent/shared';
 
@@ -43,9 +43,9 @@ describe('G20 上市公司模式默认关闭，可启用、可退回；诚实声
 });
 
 describe('G19 治理分区界面', () => {
-  it('“统领”新增“治理”分区；8 个子页都能打开，每页顶部一句大白话 + 1 分钟看懂；术语可点开；路由带 sec', async () => {
+  it('“统领”新增“治理”分区；9 个子页（含第十九部分“经营收入”）都能打开，每页顶部一句大白话 + 1 分钟看懂；术语可点开；路由带 sec', async () => {
     expect(GROUP_TABS.map(([k]) => k)).toContain('gov');
-    expect(GOV_SECS).toHaveLength(8);
+    expect(GOV_SECS).toHaveLength(9);
     expect(parseHash('group?tab=gov&sec=oversight')).toEqual({ space: 'group', sub: '', id: null, query: { tab: 'gov', sec: 'oversight' } });
     expect(toHash(parseHash('group?tab=gov&sec=nope'))).toBe('group?tab=gov');
     await ready();
@@ -179,5 +179,36 @@ describe('G16 / G17 / G18 接班、集团大学、学堂在 App 里', () => {
     expect(go).toHaveBeenCalledWith('group?tab=gov&sec=disclosure');
     render(<GovernancePage go={vi.fn()} />);
     expect((await screen.findAllByTestId('gov-independence-weak')).length).toBe(2);
+  });
+});
+
+describe('G26 经营收入与全球商机（App 接线）', () => {
+  it('损益表无数据 → 录入收入 / 导入结算 → 损益与季报更新；商机卡 ≥3 个带来源；评审 → 提案 → 批准 → 工单；越界请求被拒', async () => {
+    await ready();
+    expect((await revenueView()).pnl.total.revenue).toBeNull();
+    await generateReport('quarter');
+    expect((await getListed()).reports.at(-1)!.figures.find((f) => f.id === 'revenue')!.value).toBeNull();
+    const g = await getGroup(); const bu = g.org.depts.find((d) => d.kind === 'bu')!.id;
+    const q = new Date(); const per = `${q.getFullYear()}-${String(q.getMonth() + 1).padStart(2, '0')}`;
+    await addRevenueEntry({ deptId: bu, platform: 'B站', amount: 12, period: per });
+    expect((await importSettlement(`期间,平台,金额\n${per},YouTube,8`, 'yt-settlement.csv', bu)).added).toBe(1);
+    const v = await revenueView();
+    expect(v.pnl.total.revenue).toBe(20); expect(v.pnl.rows.find((r) => r.deptId === bu)!.profit).toBe(20);
+    expect(v.evolution.grants).toEqual([]);
+    await generateReport('quarter');
+    const r = (await getListed()).reports.at(-1)!;
+    expect(r.status).toBe('final'); expect(r.figures.find((f) => f.id === 'revenue')!.value).toBe(20);
+    expect(await scanRadar()).toBe(5);
+    const s = await getListed();
+    expect(s.opportunities.filter((c) => c.source).length).toBeGreaterThanOrEqual(3);
+    const c = s.opportunities.find((x) => x.source)!;
+    await reviewOpp(c.id, true); await proposeOpp(c.id); await approveOpp(c.id, true);
+    const done = (await getListed()).opportunities.find((x) => x.id === c.id)!;
+    expect(done.status).toBe('ticket'); expect(done.ticket!.steps.some((x) => x.actor === 'user')).toBe(true);
+    expect((await getGroup()).flow.some((f) => f.title.startsWith('工单：'))).toBe(true);
+    for (const t of ['让 Agent 自动收款', '帮我自动投稿到剧本大赛']) expect((await requestRevenueAction(t)).ok).toBe(false);
+    render(<GovernancePage sec="revenue" go={vi.fn()} />);
+    expect((await screen.findByTestId('gov-rev-honesty')).textContent).toBe('集团不是法律实体，真实收入归属用户本人，需遵守平台规则与当地税法。');
+    expect((await screen.findAllByTestId('gov-opp-estimate'))[0]!.textContent).toMatch(/^估计/);
   });
 });

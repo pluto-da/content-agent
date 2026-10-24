@@ -34,14 +34,16 @@ export const COMP_RULES = [
   { min: 50, quotaFactor: 0.8, tierStep: 0, priority: 'normal' as const, text: '50–69 分：配额 ×0.8，政委给改进建议' },
   { min: 0, quotaFactor: 0.6, tierStep: -1, priority: 'low' as const, text: '<50 分：配额 ×0.6、降一档；连续两季 <50 由提名与薪酬委员会提议停用（只提议，不删除）' },
 ] as const;
-export const COMP_RULES_TEXT = `资源激励规则（公开）：考核分 = KPI（只用可验证数据）× 70% + 360 评议（只由协作过的部门互评）× 30%。\n${COMP_RULES.map((r) => `· ${r.text}`).join('\n')}\n· 配额上限：单个 Agent 每月 ¥20；任何档位变化不改变权限。`;
+export const COMP_RULES_TEXT = `资源激励规则（公开）：考核分 = KPI（只用可验证数据）× 70% + 360 评议（只由协作过的部门互评）× 30%；有收入数据时，本季贡献利润为正 +5 分、为负 −5 分（收入只来自你录入或导出的结算，没有数据不加减）。\n${COMP_RULES.map((r) => `· ${r.text}`).join('\n')}\n· 配额上限：单个 Agent 每月 ¥20；任何档位变化不改变权限。`;
 export interface Assessment { agentId: string; quarter: string; kpi: number | null; peer: number | null; score: number | null; quota: number; nextQuota: number; tier: Tier; nextTier: Tier; priority: 'high' | 'normal' | 'low'; rule: string; proposeDisable: boolean }
-export function assess(o: { agentId: string; quarter: string; kpi: number | null; peer: number | null; quota: number; tier: Tier; prevScore?: number | null }): Assessment {
-  const score = o.kpi == null ? null : +(o.kpi * (o.peer == null ? 1 : 0.7) + (o.peer ?? 0) * (o.peer == null ? 0 : 0.3)).toFixed(1);
-  if (score == null) return { ...o, score, nextQuota: o.quota, nextTier: o.tier, priority: 'normal', rule: '没有可验证的 KPI 数据：配额不变（不按猜测奖惩）', proposeDisable: false };
+export function assess(o: { agentId: string; quarter: string; kpi: number | null; peer: number | null; quota: number; tier: Tier; prevScore?: number | null; profit?: number | null }): Assessment {
+  const base = o.kpi == null ? null : o.kpi * (o.peer == null ? 1 : 0.7) + (o.peer ?? 0) * (o.peer == null ? 0 : 0.3);
+  const score = base == null ? null : +Math.max(0, Math.min(100, base + (o.profit == null ? 0 : o.profit > 0 ? 5 : o.profit < 0 ? -5 : 0))).toFixed(1);
+  const { profit: _p, ...oo } = o; void _p;
+  if (score == null) return { ...oo, score, nextQuota: o.quota, nextTier: o.tier, priority: 'normal', rule: '没有可验证的 KPI 数据：配额不变（不按猜测奖惩）', proposeDisable: false };
   const r = COMP_RULES.find((x) => score >= x.min)!;
   const ti = Math.min(TIERS.length - 1, Math.max(0, TIERS.indexOf(o.tier) + r.tierStep));
-  return { ...o, score, nextQuota: Math.min(20, +(o.quota * r.quotaFactor).toFixed(2)), nextTier: TIERS[ti]!, priority: r.priority, rule: r.text, proposeDisable: score < 50 && (o.prevScore ?? 100) < 50 };
+  return { ...oo, score, nextQuota: Math.min(20, +(o.quota * r.quotaFactor).toFixed(2)), nextTier: TIERS[ti]!, priority: r.priority, rule: r.text, proposeDisable: score < 50 && (o.prevScore ?? 100) < 50 };
 }
 
 /* ---------------- 接班人计划（影子上岗） ---------------- */

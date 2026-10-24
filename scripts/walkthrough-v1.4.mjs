@@ -245,6 +245,25 @@ const FLOW = [
     await clickTid(W, 'open-brief', 900); must(W.page.url().includes('sec=disclosure'), W.page.url());
     return (await listed(W)).brief.text.split('\n').slice(0, 2).join(' ');
   }],
+  ['revenue', '经营收入与全球商机：损益表（无数据）→ 录入收入 → 商机卡（≥3 渠道带来源）→ 经管会评审 → CEO 提案 → 董事长批准 → 工单；越界请求被拒', async (W) => {
+    await gov(W, 'revenue');
+    must(/集团不是法律实体，真实收入归属用户本人/.test(await tid(W, 'gov-rev-honesty').innerText()), '没有收入诚实声明');
+    let s = await listed(W); must(!s.revenues?.length, '应从无收入开始');
+    const g = await groupState(W); const bu = g.org.depts.find((d) => d.kind === 'bu').id;
+    await tid(W, 'gov-rev-dept').fill(bu); await tid(W, 'gov-rev-platform').fill('B站'); await tid(W, 'gov-rev-amount').fill('36.5'); await clickTid(W, 'gov-rev-add', 1000);
+    s = await listed(W); must(s.revenues.length === 1 && s.revenues[0].source === 'user_entry', '收入没记上');
+    must(/¥36\.50/.test(await tid(W, 'gov-pnl-table').innerText()), '损益表没更新');
+    await clickTid(W, 'gov-radar-scan', 1000);
+    s = await listed(W); const sourced = s.opportunities.filter((c) => c.source); must(sourced.length >= 3, `有来源的商机卡 ${sourced.length}`);
+    const c = sourced[0];
+    await clickTid(W, `gov-opp-review-${c.id}`, 700); await clickTid(W, `gov-opp-propose-${c.id}`, 700); await clickTid(W, `gov-opp-approve-${c.id}`, 1000);
+    const done = (await listed(W)).opportunities.find((x) => x.id === c.id); must(done.status === 'ticket', `商机 ${done.status}`);
+    must(await tid(W, `gov-ticket-${c.id}`).count() === 1, '工单没显示');
+    await gov(W, 'disclosure'); await clickTid(W, 'gov-report-quarter', 1800);
+    const rep = (await listed(W)).reports.at(-1); must(rep.status === 'final' && rep.figures.find((f) => f.id === 'revenue').value === 36.5, '季报收入没更新');
+    const chk = shared.checkRevenueAction('让 Agent 自动收款并帮我自动投稿'); must(!chk.ok, '越界请求没被拒');
+    return `收入 ¥36.5 → 季报收入 ${rep.figures.find((f) => f.id === 'revenue').value}；商机卡 ${s.opportunities.length}（有来源 ${sourced.length}）；${done.title} → 工单 ${done.ticket.steps.length} 步（你本人 ${done.ticket.steps.filter((x) => x.actor === 'user').length} 步）；越界：${chk.rule}`;
+  }],
   ['disable', '退回集团模式（数据保留）', async (W) => {
     await gov(W, 'board'); await clickTid(W, 'gov-disable', 1000);
     const s = await listed(W); must(!s.enabled && s.motions.length > 0, '退回失败或数据丢失');
