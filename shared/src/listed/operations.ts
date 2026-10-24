@@ -51,7 +51,7 @@ export function makeBudget(o: { year: number; total: number; deptWeights: Record
 }
 export interface SpendLike { deptId: string; yuan: number; at: string; ref?: string; project?: string }
 export interface BudgetLine { key: string; label: string; planned: number; plannedToDate: number; spent: number; rate: number | null; deviation: number | null; alert: boolean }
-/** 执行率（每日更新）：按当日在本季度的进度折算“应花”，偏差 = (实花 − 应花)/应花；超支 >20% 随时预警，少花 >20% 在季度过半后预警（应花 < ¥0.05 时不预警）。 */
+/** 执行率（每日更新）：按当日在本季度的进度折算“应花”，偏差 = (实花 − 应花)/应花；超支 >20% 随时预警（季度合计与各部门）；少花 >20% 只看季度合计、且在季度过半后预警（部门少花不报，避免不花钱的职能部门刷屏）；应花 < ¥0.05 时不预警。 */
 export function budgetExecution(b: Budget, ledger: SpendLike[], now: Date): { quarter: string; lines: BudgetLine[]; alerts: string[]; yearSpent: number; yearRate: number } {
   const q = Math.floor(now.getMonth() / 3);
   const qStart = new Date(now.getFullYear(), q * 3, 1).getTime(); const qEnd = new Date(now.getFullYear(), q * 3 + 3, 1).getTime();
@@ -59,15 +59,15 @@ export function budgetExecution(b: Budget, ledger: SpendLike[], now: Date): { qu
   const inYear = ledger.filter((e) => new Date(e.at).getFullYear() === b.year && new Date(e.at).getTime() <= now.getTime());
   const inQ = inYear.filter((e) => { const t = new Date(e.at).getTime(); return t >= qStart && t < qEnd; });
   const sum = (xs: SpendLike[]) => +xs.reduce((a, e) => a + e.yuan, 0).toFixed(4);
-  const line = (key: string, label: string, planned: number, spent: number): BudgetLine => {
+  const line = (key: string, label: string, planned: number, spent: number, underAlert = true): BudgetLine => {
     const ptd = +(planned * qProg).toFixed(4);
     const deviation = ptd >= 0.05 ? +((spent - ptd) / ptd).toFixed(4) : null;
     // 少花只在季度过半后才预警（避免预算刚批、季度初的噪音）；超支随时预警。
-    return { key, label, planned, plannedToDate: ptd, spent, rate: planned > 0 ? +(spent / planned).toFixed(4) : null, deviation, alert: deviation != null && (deviation > DEVIATION_ALERT || (deviation < -DEVIATION_ALERT && qProg >= 0.5)) };
+    return { key, label, planned, plannedToDate: ptd, spent, rate: planned > 0 ? +(spent / planned).toFixed(4) : null, deviation, alert: deviation != null && (deviation > DEVIATION_ALERT || (underAlert && deviation < -DEVIATION_ALERT && qProg >= 0.5)) };
   };
   const qPlan = b.quarters[q]!;
   const deptQ = (d: string) => +((b.depts[d] ?? 0) * qPlan / b.total).toFixed(4);
-  const lines = [line('quarter', `${quarterKey(now)} 合计`, qPlan, sum(inQ)), ...Object.keys(b.depts).map((d) => line(`dept:${d}`, d, deptQ(d), sum(inQ.filter((e) => e.deptId === d))))];
+  const lines = [line('quarter', `${quarterKey(now)} 合计`, qPlan, sum(inQ)), ...Object.keys(b.depts).map((d) => line(`dept:${d}`, d, deptQ(d), sum(inQ.filter((e) => e.deptId === d)), false))];
   const alerts = lines.filter((l) => l.alert).map((l) => `${l.label} 预算偏差 ${(l.deviation! * 100).toFixed(0)}%（应花 ¥${l.plannedToDate.toFixed(2)}，实花 ¥${l.spent.toFixed(2)}）${l.deviation! > 0 ? '：超支须走请示' : '：明显少花，检查是否停摆'}`);
   const yearSpent = sum(inYear);
   return { quarter: quarterKey(now), lines, alerts, yearSpent, yearRate: +(yearSpent / b.total).toFixed(4) };

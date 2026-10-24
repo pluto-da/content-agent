@@ -65,7 +65,9 @@ let pendingSpend: { kind: GovKind; yuan: number; ref: string; model?: string }[]
 async function speakers(kind: GovKind): Promise<Speakers> {
   const m = await getModels();
   const cfg = resolveProvider(m);
-  if (!cfg || /^mock:/.test(cfg.baseURL)) return { ceo: mockDisclosureSpeaker, forDirector: () => mockDirector, analyst: mockDisclosureSpeaker, mock: true };
+  // 本机模拟：独立董事表决用 mockDirector，其余（发布会提问、报告意见、培训）用 mockDisclosureSpeaker
+  const mockId: GovSpeaker = (r) => (/第一句只能是/.test(r.system) ? mockDirector(r) : mockDisclosureSpeaker(r));
+  if (!cfg || /^mock:/.test(cfg.baseURL)) return { ceo: mockDisclosureSpeaker, forDirector: () => mockId, analyst: mockDisclosureSpeaker, mock: true };
   const mk = (accountId?: string, model?: string): GovSpeaker => async (r) => {
     const base = (accountId ? m.providers.find((p) => p.id === accountId) : undefined) ?? cfg;
     const c = { ...base, model: model ?? r.model ?? base.model };
@@ -91,7 +93,9 @@ export async function enableListed(): Promise<ListedState> {
   await audit({ kind: 'setting_change', actor: 'user', summary: `启用上市公司模式（${LISTED_HONESTY}）`, outcome: 'ok' });
   return updateListed((s) => {
     const board = s.board.directors.some((d) => d.model) ? s.board : defaultBoard({ ceo: refs.ceo, available: refs.available });
-    return { ...s, enabled: true, enabledAt: s.enabledAt ?? new Date().toISOString(), board };
+    // 首次启用：风险登记册的默认条目以启用时间为“最近复核”
+    const risks = s.enabledAt ? s.risks : s.risks.map((r) => ({ ...r, updatedAt: nowIso(s) }));
+    return { ...s, enabled: true, enabledAt: s.enabledAt ?? new Date().toISOString(), board, risks };
   });
 }
 export async function finishOnboarding(): Promise<void> { await updateListed((s) => ({ ...s, onboarded: true })); }

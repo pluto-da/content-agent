@@ -46,7 +46,7 @@ export function Glossed({ text }: { text: string }) {
   for (const h of hits) {
     if (h.index > i) parts.push(text.slice(i, h.index));
     const c = cardById(h.id)!;
-    parts.push(<span key={`${h.index}`} className="relative inline"><button type="button" className="gov-term" aria-expanded={open === `${h.index}`} data-testid={`term-${h.id}`} title={lang === 'en' ? c.plainEn : c.plain} onClick={() => setOpen(open === `${h.index}` ? null : `${h.index}`)}>{h.term}</button>{open === `${h.index}` && <span role="note" className="gov-term-pop" data-testid="term-pop"><CardText c={c} /> <button type="button" className="ghost" onClick={() => setOpen(null)}>{t('ui.v14_close')}</button></span>}</span>);
+    parts.push(<span key={`${h.index}`} className="relative inline"><span role="button" tabIndex={0} className="gov-term" aria-expanded={open === `${h.index}`} data-testid={`term-${h.id}`} title={lang === 'en' ? c.plainEn : c.plain} onClick={() => setOpen(open === `${h.index}` ? null : `${h.index}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(open === `${h.index}` ? null : `${h.index}`); } }}>{h.term}</span>{open === `${h.index}` && <span role="note" className="gov-term-pop" data-testid="term-pop"><CardText c={c} /> <button type="button" className="ghost" onClick={() => setOpen(null)}>{t('ui.v14_close')}</button></span>}</span>);
     i = h.index + h.term.length;
   }
   if (i < text.length) parts.push(text.slice(i));

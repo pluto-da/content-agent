@@ -125,7 +125,7 @@ export function renderReportHtml(r: PeriodicReport, o: { penName?: string } = {}
   const chart = (n: number) => (n === 5 ? barSvg(r.figures.filter((x) => x.id.startsWith('vendor:') && x.value != null).map((x) => ({ label: x.label, value: x.value! })), '元') : n === 4 ? barSvg(r.figures.filter((x) => /^dept:.*:spend$/.test(x.id) && x.value != null).map((x) => ({ label: x.label.replace(/ 花费$/, ''), value: x.value! })), '元') : '');
   const figTable = (c: Chapter) => (c.figures.length ? `<table class="figs"><thead><tr><th>数字</th><th>值</th><th>出处（可追溯）</th></tr></thead><tbody>${c.figures.map((id) => fig(id)!).map((x) => `<tr><td>${esc(x.label)}</td><td class="num">${esc(showFig(x))}</td><td class="ref">${esc(x.ref ?? NO_DATA)}</td></tr>`).join('')}</tbody></table>` : '');
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>${esc(r.title)}</title><style>
-@page{size:A4;margin:18mm 16mm 22mm}
+@page{size:A4;margin:18mm 16mm 22mm;@bottom-center{content:"${LISTED_HONESTY.replace(/"/g, '')}";font-size:8.5pt;color:#777;font-family:"Noto Sans CJK SC",sans-serif}}
 body{font-family:"Noto Sans CJK SC","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;color:#1d1d2b;font-size:12.5px;line-height:1.7;margin:0}
 .cover{height:250mm;display:flex;flex-direction:column;justify-content:center;padding:0 10mm;background:linear-gradient(160deg,#eef0ff,#fff 60%);border-radius:18px;page-break-after:always}
 .cover .kicker{letter-spacing:.3em;color:#5b6cff;font-size:13px}.cover h1{font-size:34px;margin:12px 0 6px;line-height:1.25}.cover .meta{color:#555;font-size:14px;margin-top:20px}
@@ -134,7 +134,7 @@ body{font-family:"Noto Sans CJK SC","Noto Sans SC","PingFang SC","Microsoft YaHe
 .ch{page-break-inside:auto;margin-bottom:10px}.ch p{margin:6px 0;overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;margin:8px 0;font-size:11.5px;table-layout:fixed}th,td{border:1px solid #dcdcea;padding:4px 6px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#f2f3ff}td.num{white-space:nowrap}td.ref{color:#555;font-family:monospace;font-size:10.5px}
 .chart{width:100%;max-width:520px;margin:6px 0}.sim{color:#b45309}
-.foot{position:fixed;bottom:-14mm;left:0;right:0;font-size:9.5px;color:#777;text-align:center}
+.foot{margin-top:16px;padding-top:8px;border-top:1px solid #dcdcea;font-size:10px;color:#777;text-align:center}
 </style></head><body>
 <section class="cover"><div class="kicker">${esc(r.kind === 'annual' ? 'ANNUAL REPORT' : 'QUARTERLY REPORT')}</div><h1>${esc(r.title)}</h1><div>${esc(r.no)}</div><div class="meta">编制：董事会秘书 · 署名：${esc(pen)}<br>编制日期：${esc(r.at.slice(0, 10))}${r.sim ? '<br><span class="sim">本期含模拟数据（演示 / 自检）</span>' : ''}</div><div class="keys">${keys.map((x) => `<div class="key"><b>${esc(showFig(x))}</b><span>${esc(x.label)}</span></div>`).join('')}</div></section>
 <section class="toc"><h2>目录</h2><ol>${r.chapters.map((c) => `<li>${esc(c.title)}</li>`).join('')}</ol></section>

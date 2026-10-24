@@ -16,7 +16,16 @@ export interface V14Report { created: string[]; skipped: boolean; enabled: boole
 export async function migrateV14(): Promise<V14Report> {
   const done = await db.getKV<{ at?: string } | null>(DONE);
   const v = await getVfs();
-  if (done?.at) return { created: [], skipped: true, enabled: readListedState((await v.read(STATE))?.content).enabled, casesFromRetros: 0 };
+  if (done?.at) {
+    // 已迁移过（例如 App 启动时）之后又恢复了旧备份：不再拍快照，但仍补齐状态文件、把新出现的 1.3 复盘转成案例卡（幂等，按来源去重）
+    const cur = (await v.read(STATE))?.content ?? null;
+    let st = cur === null ? emptyListedState() : readListedState(cur);
+    const gg = readGroupState((await v.read('config/group.json'))?.content);
+    const n0 = st.cases.length;
+    for (const r of gg.retros) st = { ...st, cases: addCase(st.cases, fromRetro({ id: r.id, subject: r.subject, steps: r.steps, lessons: r.lessons }, new Date().toISOString())) };
+    if (cur === null || st.cases.length !== n0) await v.write(STATE, writeListedState(st), { author: 'system', note: '1.4.0：补齐上市公司状态 / 1.3 复盘转为案例卡', allowLarge: true });
+    return { created: cur === null ? [STATE] : [], skipped: true, enabled: st.enabled, casesFromRetros: st.cases.length - n0 };
+  }
   const prev = (await v.read(STATE))?.content ?? null;
   const skills = (await v.list('skills')).map((f) => f.path).filter(isBp);
   await db.setKV(SNAP, { at: new Date().toISOString(), state: prev, skills });
