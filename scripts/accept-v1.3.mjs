@@ -95,16 +95,17 @@ const apk = J(join(root, 'docs/release/apk-manifest-v1.3.json'));
 const desk = J(join(root, 'docs/release/desktop-manifest-v1.3.json'));
 const arts = J(join(root, 'docs/release/artifacts-v1.3.json'));
 const pkgs = ['.', 'shared', 'server', 'web', 'desktop', 'mobile'];
+const semverGte = (a, b) => { const x = String(a ?? '0').split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0); } return true; };
 F.F22 = [
-  ...pkgs.map((w) => { const v = J(join(root, w, 'package.json'))?.version; return { ok: v === '1.3.0', text: `${w === '.' ? '' : `${w}/`}package.json ${v}` }; }),
-  ...['server', 'web'].map((w) => { const d = J(join(root, w, 'package.json'))?.dependencies?.['@content-agent/shared']; return { ok: d === '1.3.0', text: `${w} 依赖 @content-agent/shared ${d}` }; }),
-  { ok: Object.entries(J(join(root, 'package-lock.json'))?.packages ?? {}).filter(([k]) => ['', 'shared', 'server', 'web', 'desktop', 'mobile'].includes(k)).every(([, v]) => v.version === '1.3.0'), text: 'package-lock 工作区版本 1.3.0' },
-  grep('server/src/app.ts', "version: '1\\.3\\.0'", 'server /api/health 1.3.0'),
-  grep('server/src/app.ts', "a2aOptsFromEnv\\('1\\.3\\.0'\\)", 'A2A Agent Card 版本 1.3.0'),
-  grep('web/src/local/router.ts', "version: '1\\.3\\.0'", '本机 /api/health 1.3.0'),
+  ...pkgs.map((w) => { const v = J(join(root, w, 'package.json'))?.version; return { ok: semverGte(v, '1.3.0'), text: `${w === '.' ? '' : `${w}/`}package.json ${v}（1.4.0 起作回归：≥ 1.3.0）` }; }),
+  ...['server', 'web'].map((w) => { const d = J(join(root, w, 'package.json'))?.dependencies?.['@content-agent/shared']; return { ok: semverGte(d, '1.3.0'), text: `${w} 依赖 @content-agent/shared ${d}（≥ 1.3.0）` }; }),
+  { ok: Object.entries(J(join(root, 'package-lock.json'))?.packages ?? {}).filter(([k]) => ['', 'shared', 'server', 'web', 'desktop', 'mobile'].includes(k)).every(([, v]) => semverGte(v.version, '1.3.0')), text: 'package-lock 工作区版本 ≥ 1.3.0' },
+  grep('server/src/app.ts', "version: '1\\.(?:[3-9]|\\d{2,})\\.\\d+'", 'server /api/health ≥ 1.3.0'),
+  grep('server/src/app.ts', "a2aOptsFromEnv\\('1\\.(?:[3-9]|\\d{2,})\\.\\d+'\\)", 'A2A Agent Card 版本 ≥ 1.3.0'),
+  grep('web/src/local/router.ts', "version: '1\\.(?:[3-9]|\\d{2,})\\.\\d+'", '本机 /api/health ≥ 1.3.0'),
   grep('mobile/scripts/apply-native.mjs', 'Number\\(mv\\[1\\]\\) \\* 10000', 'versionCode = x*10000+y*100+z（1.3.0 → 10300）'),
   grep('.github/workflows/ci.yml', 'accept-v1\\.3\\.mjs --strict', 'CI 跑 accept-v1.3 --strict'),
-  grep('.github/workflows/ci.yml', 'name: reports-1\\.3\\.0', 'CI 报告产物 reports-1.3.0'),
+  grep('.github/workflows/ci.yml', 'name: reports-1\\.(?:[3-9]|\\d{2,})\\.\\d+', 'CI 报告产物 reports-1.x（1.4.0 起作回归：≥ reports-1.3.0）'),
   { ok: !/uses:\s*android-actions\/setup-android/.test(ci), text: '未使用 android-actions/setup-android' },
   { ok: !/154\.8\.183\.93/.test(ci), text: 'CI 不部署 154.8.183.93' },
   reg('v9'), reg('v10'), reg('v11'), reg('v1'), reg('v1.1'), reg('v1.2'),
