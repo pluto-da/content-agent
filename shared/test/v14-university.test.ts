@@ -38,7 +38,7 @@ describe('G17 集团大学：案例库、入职培训测验、最佳实践、知
     expect(wrong).toMatchObject({ score: 3, passed: false, onDuty: false });
     expect(() => gradeQuiz(t, [0])).toThrow(/全部 5 题/);
     expect(parseAnswers('1=B 2：a 3.C 4、D 5=x', 5)).toEqual([1, 0, 2, 3, -1]);
-    expect(makeQuiz([], [{ id: 'a#1', title: 'A', rule: 'r1' }]).length).toBe(1);
+    expect(makeQuiz([], [{ id: 'a#1', title: 'A', rule: 'r1' }]).length).toBe(5);
   });
   it('最佳实践每季度评选进入技能模板（先灰度）；知识健康度：引用率、>180 天未引用提示复核', () => {
     let lib = injectCases(lib0(), '口播 钩子', 'x', '2026-10-20T00:00:00Z').lib;

@@ -2,6 +2,7 @@
  * 1.2.0 指挥台（#command）：我的团队、任务板、工作流、审批收件箱、目标与进度、连接（自定义平台 / 数据源 / 外部工具 MCP / A2A）。
  * 延续 Hark 式卡片：一屏一件事、动词按钮；“我的”不增加入口（冲突审计 A13）。
  */
+import { BriefCard } from '../v14/BriefCard';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   AGENT_TEMPLATES, BOARD_COLUMNS, BOARD_TEXT, APPROVAL_KIND_TEXT, PERM_TEXT, WORKFLOW_TEMPLATES, PLATFORM_TEMPLATES, PLATFORM_NOTICE, SPEC_KEYS, DATA_SOURCE_TEXT, WF_EVENT_TEXT,
@@ -85,6 +86,7 @@ export function CommandPage({ tab: initial, go }: { tab?: string; go: (to: strin
         </div>
       )}
       <button type="button" className="card v9-card flex !min-h-11 flex-wrap items-center gap-x-2 gap-y-0 text-left" data-testid="open-group" onClick={() => go('group')}><strong className="min-w-0 grow whitespace-normal break-words">{t('ui.v13_group_entry')}</strong><span className="min-w-0 whitespace-normal text-[13px] text-muted">{t('ui.v13_group_entry_desc')}</span></button>
+      <BriefCard go={go} />
       <div className="v12-tabs"><SegTabs value={tab} options={COMMAND_TABS.map(([k, l]) => [k, k === 'inbox' && pending ? `${t(l)} ${pending}` : l])} onChange={(v) => { setTab(v); go(`command?tab=${v}`); }} label={t('ui.v12_command')} /></div>
       {!d ? <Note>{t('ui.loading')}</Note>
         : tab === 'team' ? <Team d={d} run={run} />

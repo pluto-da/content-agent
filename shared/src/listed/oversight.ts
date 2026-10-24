@@ -164,7 +164,7 @@ export const CONTROLS: Control[] = [
 export type ControlTests = Record<string, () => boolean | { ok: boolean; note: string }>;
 export interface ControlResult { id: string; component: CosoComponent; ok: boolean; note: string }
 export function testControls(tests: ControlTests): { results: ControlResult[]; byComponent: Record<CosoComponent, { pass: number; total: number }>; pass: number; total: number; text: string } {
-  const results = CONTROLS.map((c) => { let r: boolean | { ok: boolean; note: string } = false; try { r = tests[c.test] ? tests[c.test]!() : { ok: false, note: '未实现测试' }; } catch (e) { r = { ok: false, note: String((e as Error).message) }; } const ok = typeof r === 'boolean' ? r : r.ok; return { id: c.id, component: c.component, ok, note: typeof r === 'boolean' ? (ok ? '通过' : '未通过') : r.note }; });
+  const results = CONTROLS.map((c) => { let r: boolean | { ok: boolean; note: string }; try { r = tests[c.test] ? tests[c.test]!() : { ok: false, note: '未实现测试' }; } catch (e) { r = { ok: false, note: String((e as Error).message) }; } const ok = typeof r === 'boolean' ? r : r.ok; return { id: c.id, component: c.component, ok, note: typeof r === 'boolean' ? (ok ? '通过' : '未通过') : r.note }; });
   const byComponent = Object.fromEntries(COSO.map((k) => [k, { pass: results.filter((r) => r.component === k && r.ok).length, total: results.filter((r) => r.component === k).length }])) as Record<CosoComponent, { pass: number; total: number }>;
   const pass = results.filter((r) => r.ok).length;
   return { results, byComponent, pass, total: results.length, text: `内控自动测试 ${pass}/${results.length} 通过（${COSO.map((k) => `${k} ${byComponent[k].pass}/${byComponent[k].total}`).join('；')}）。说明：只测本机可验证的控制，不构成内控有效的法律意见。` };

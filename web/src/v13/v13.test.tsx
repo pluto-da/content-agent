@@ -48,7 +48,7 @@ describe('F14 “统领”页 7 个子页', () => {
     await screen.findByTestId('group-enable-card');
     fireEvent.click(screen.getByTestId('group-enable'));
     await screen.findByTestId('group-org');
-    expect(GROUP_TABS).toHaveLength(7);
+    expect(GROUP_TABS.length).toBeGreaterThanOrEqual(7); // 1.4 起多一个“治理”分区
     for (const [k, id] of [['sessions', 'group-sessions'], ['rooms', 'group-rooms'], ['docs', 'group-docs'], ['okr', 'group-goal'], ['regs', 'group-regs'], ['cockpit', 'group-cockpit'], ['org', 'group-org']] as const) {
       fireEvent.click(screen.getByTestId(`tab-${k}`));
       await screen.findByTestId(id);

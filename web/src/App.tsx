@@ -245,7 +245,7 @@ export function App() {
       <main id="main" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto pb-[calc(24px+var(--sa-bottom))] outline-none">
         <ErrorBoundary key="group">
           <Suspense fallback={<div className="page"><Loading show lines={5} /></div>}>
-            <div className="anim-page"><GroupPage tab={route.query?.tab} go={go} /></div>
+            <div className="anim-page"><GroupPage tab={route.query?.tab} sec={route.query?.sec} go={go} /></div>
           </Suspense>
         </ErrorBoundary>
       </main>

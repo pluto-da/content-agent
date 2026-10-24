@@ -765,3 +765,23 @@ textarea[data-testid="agent-input"]::placeholder { white-space: nowrap; overflow
 
 /* 1.2.0 指挥台：6 个标签在手机上换行显示，不裁切 */
 .v12-tabs .tabs { flex-wrap: wrap; width: auto; }
+
+/* ---------------- 1.4.0 治理分区（上市公司模式） ---------------- */
+.gov-plain { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 10px 14px; border-radius: var(--r-lg, 18px); background: color-mix(in srgb, var(--accent, #5b6cff) 9%, var(--surface-2)); }
+.gov-plain > p { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.gov-term { display: inline; min-height: 0; padding: 0 2px; border: 0; border-bottom: 1px dashed currentColor; border-radius: 0; background: transparent; color: inherit; font: inherit; cursor: help; }
+.gov-term-pop { position: absolute; z-index: 30; left: 0; top: 1.6em; width: min(280px, 80vw); padding: 10px 12px; border-radius: var(--r-md, 14px); background: var(--surface); color: var(--text); box-shadow: 0 8px 28px rgba(0, 0, 0, .18); font-size: 13px; line-height: 1.55; white-space: normal; }
+.gov-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 10px; border-radius: 999px; font-size: 12px; background: color-mix(in srgb, var(--ok, #16a34a) 14%, transparent); color: var(--text); white-space: normal; }
+.gov-chip.warn { background: color-mix(in srgb, var(--warn, #d97706) 18%, transparent); }
+.gov-table-wrap { width: 100%; overflow-x: auto; border-radius: var(--r-md, 14px); }
+.gov-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.gov-table th, .gov-table td { padding: 6px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; min-width: 64px; }
+.gov-table th { font-weight: 600; color: var(--muted); white-space: nowrap; }
+.gov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 10px; }
+.gov-report { display: flex; flex-direction: column; gap: 10px; }
+.gov-cover { display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: var(--r-lg, 18px); background: linear-gradient(160deg, color-mix(in srgb, var(--accent, #5b6cff) 16%, var(--surface)), var(--surface) 70%); }
+.gov-keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr)); gap: 8px; margin-top: 8px; }
+.gov-key { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 64px; padding: 10px 12px; border-radius: var(--r-md, 14px); background: var(--surface); text-align: left; }
+.gov-key b { font-size: 22px; line-height: 1.15; color: var(--accent, #5b6cff); overflow-wrap: anywhere; }
+.gov-key span { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.gov-card-btn { justify-content: flex-start; min-height: 44px; padding: 6px 0; border: 0; background: transparent; text-align: left; }

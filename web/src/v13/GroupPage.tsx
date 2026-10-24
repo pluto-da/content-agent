@@ -2,7 +2,7 @@
  * 1.3.0 “统领”页（#group）：组织图、会话、会议室、文档与公文、目标、制度库、驾驶舱。
  * 延续 Hark 式卡片与动词按钮，不做成 OA 后台；“我的”不增加入口，集团功能全部在这里。
  */
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { REGULATIONS, MECHANISMS, MECHANISM_TEXT, DEPT_KIND_TEXT, PHASE_TEXT, TRIGGER_TEXT, parseDoa, MATTER_TEXT, currentReg, blindCards, okrProgress, GROUP_HONESTY, type GroupState, type DeptKind, type Meeting, type TempSession, type Race } from '@content-agent/shared';
 import { useT } from '../i18n';
 import { Section, Note, SegTabs } from '../pages/me/v9/common';
@@ -12,8 +12,9 @@ import {
   decide, startRace, pickWinner, collabDrafts, proposeDept, startGray, grayObserve, grayEvaluate, quarterlyReview, proposeRegulation, rollbackRegulation, pauseGroup, resumeGroup, toggleMechanism, groupOverview, leaderboardOf, GROUP_ROOMS, type GroupOverview,
 } from './store';
 
-export type GroupTab = 'org' | 'sessions' | 'rooms' | 'docs' | 'okr' | 'regs' | 'cockpit';
-export const GROUP_TABS: [GroupTab, string][] = [['org', 'ui.v13_tab_org'], ['sessions', 'ui.v13_tab_sessions'], ['rooms', 'ui.v13_tab_rooms'], ['docs', 'ui.v13_tab_docs'], ['okr', 'ui.v13_tab_okr'], ['regs', 'ui.v13_tab_regs'], ['cockpit', 'ui.v13_tab_cockpit']];
+const GovernancePage = lazy(() => import('../v14/GovernancePage').then((m) => ({ default: m.GovernancePage })));
+export type GroupTab = 'org' | 'sessions' | 'rooms' | 'docs' | 'okr' | 'regs' | 'cockpit' | 'gov';
+export const GROUP_TABS: [GroupTab, string][] = [['org', 'ui.v13_tab_org'], ['sessions', 'ui.v13_tab_sessions'], ['rooms', 'ui.v13_tab_rooms'], ['docs', 'ui.v13_tab_docs'], ['okr', 'ui.v13_tab_okr'], ['regs', 'ui.v13_tab_regs'], ['cockpit', 'ui.v13_tab_cockpit'], ['gov', 'ui.v14_tab_gov']];
 type Run = (fn: () => Promise<unknown>, ok?: string) => void;
 const Row = ({ children, testId }: { children: ReactNode; testId?: string }) => <div className="flex flex-wrap items-center gap-2" data-testid={testId}>{children}</div>;
 const yuan = (n: number) => `¥${n.toFixed(n < 1 ? 3 : 2)}`;
@@ -26,7 +27,7 @@ function useGroup(): [GroupState | null, GroupOverview | null, () => void] {
   return [s, o, load];
 }
 
-export function GroupPage({ tab: initial, go }: { tab?: string; go: (to: string) => void }) {
+export function GroupPage({ tab: initial, sec, go }: { tab?: string; sec?: string; go: (to: string) => void }) {
   const { t } = useT();
   const [tab, setTab] = useState<GroupTab>(GROUP_TABS.find(([k]) => k === initial)?.[0] ?? 'org');
   useEffect(() => { const k = GROUP_TABS.find(([x]) => x === initial)?.[0]; if (k) setTab(k); }, [initial]);
@@ -52,6 +53,7 @@ export function GroupPage({ tab: initial, go }: { tab?: string; go: (to: string)
         : tab === 'docs' ? <Docs s={s} run={run} go={go} />
         : tab === 'okr' ? <Okr s={s} run={run} />
         : tab === 'regs' ? <Regs s={s} run={run} />
+        : tab === 'gov' ? <Suspense fallback={<Note>{t('ui.loading')}</Note>}><GovernancePage sec={sec} go={go} /></Suspense>
         : <Cockpit s={s} o={o} run={run} />}
     </div>
   );

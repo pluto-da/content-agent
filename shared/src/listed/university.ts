@@ -44,7 +44,15 @@ export interface QuizQ { id: string; q: string; options: string[]; answer: numbe
 export interface Training { id: string; agentId: string; reason: 'new' | 'upgrade'; read: { regs: string[]; cases: string[] }; quiz: QuizQ[]; answers: number[] | null; score: number | null; passed: boolean; onDuty: boolean; cost: number; at: string }
 export const QUIZ_N = 5; export const PASS_SCORE = 4;
 /** 题目由案例自动生成：题干 = 情境，正确项 = 该案例的教训，干扰项 = 其他案例的教训（确定性打乱）。案例不足 5 个时用制度条款补足。 */
+export const BASE_RULES: { id: string; title: string; rule: string }[] = [
+  { id: 'charter#2', title: '集团章程', rule: '发布由董事长本人点击，回复只出草稿' },
+  { id: 'quality#3', title: '质量管理办法', rule: '数据必须写出处，没有就标“推测”' },
+  { id: 'information#1', title: '信息与保密办法', rule: 'Key 和隐私不进报告、不进日志' },
+  { id: 'doa#3', title: '决策权限表（DOA）', rule: '超出部门额度的花钱要走请示' },
+  { id: 'collaboration#1', title: '协作管理办法', rule: '能派单不拉群，能拉群不开会' },
+];
 export function makeQuiz(cases: CaseCard[], regs: { id: string; title: string; rule: string }[], seed = 1): QuizQ[] {
+  regs = [...regs, ...BASE_RULES.filter((b) => !regs.some((r) => r.id === b.id))];
   const pool = [...cases.map((c) => ({ id: c.id, stem: `情境：${clip(c.situation, 40)}。按集团大学的案例，正确的做法是？`, right: c.lesson })), ...regs.map((r) => ({ id: `reg:${r.id}`, stem: `按《${r.title}》，下面哪一项是对的？`, right: r.rule }))];
   const wrongs = [...new Set([...pool.map((p) => p.right), '为了效率可以先自动发布再补审', '数据没有出处也可以先写上，之后再补', '同样的问题可以不引用条款直接退回'])];
   return pool.slice(0, QUIZ_N).map((p, i) => {

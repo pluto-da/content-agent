@@ -51,7 +51,7 @@ export function makeBudget(o: { year: number; total: number; deptWeights: Record
 }
 export interface SpendLike { deptId: string; yuan: number; at: string; ref?: string; project?: string }
 export interface BudgetLine { key: string; label: string; planned: number; plannedToDate: number; spent: number; rate: number | null; deviation: number | null; alert: boolean }
-/** 执行率（每日更新）：按当日在本季度 / 本年度的进度折算“应花”，偏差 = (实花 − 应花)/应花；|偏差| > 20% 预警（应花 < ¥0.05 时不预警，避免月初噪音）。 */
+/** 执行率（每日更新）：按当日在本季度的进度折算“应花”，偏差 = (实花 − 应花)/应花；超支 >20% 随时预警，少花 >20% 在季度过半后预警（应花 < ¥0.05 时不预警）。 */
 export function budgetExecution(b: Budget, ledger: SpendLike[], now: Date): { quarter: string; lines: BudgetLine[]; alerts: string[]; yearSpent: number; yearRate: number } {
   const q = Math.floor(now.getMonth() / 3);
   const qStart = new Date(now.getFullYear(), q * 3, 1).getTime(); const qEnd = new Date(now.getFullYear(), q * 3 + 3, 1).getTime();
@@ -62,7 +62,8 @@ export function budgetExecution(b: Budget, ledger: SpendLike[], now: Date): { qu
   const line = (key: string, label: string, planned: number, spent: number): BudgetLine => {
     const ptd = +(planned * qProg).toFixed(4);
     const deviation = ptd >= 0.05 ? +((spent - ptd) / ptd).toFixed(4) : null;
-    return { key, label, planned, plannedToDate: ptd, spent, rate: planned > 0 ? +(spent / planned).toFixed(4) : null, deviation, alert: deviation != null && Math.abs(deviation) > DEVIATION_ALERT };
+    // 少花只在季度过半后才预警（避免预算刚批、季度初的噪音）；超支随时预警。
+    return { key, label, planned, plannedToDate: ptd, spent, rate: planned > 0 ? +(spent / planned).toFixed(4) : null, deviation, alert: deviation != null && (deviation > DEVIATION_ALERT || (deviation < -DEVIATION_ALERT && qProg >= 0.5)) };
   };
   const qPlan = b.quarters[q]!;
   const deptQ = (d: string) => +((b.depts[d] ?? 0) * qPlan / b.total).toFixed(4);

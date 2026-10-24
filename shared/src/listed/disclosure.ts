@@ -136,7 +136,7 @@ table{border-collapse:collapse;width:100%;margin:8px 0;font-size:11.5px;table-la
 .chart{width:100%;max-width:520px;margin:6px 0}.sim{color:#b45309}
 .foot{position:fixed;bottom:-14mm;left:0;right:0;font-size:9.5px;color:#777;text-align:center}
 </style></head><body>
-<section class="cover"><div class="kicker">${esc(r.kind === 'annual' ? 'ANNUAL REPORT' : 'QUARTERLY REPORT')}</div><h1>${esc(r.title)}</h1><div>${esc(r.no)}</div><div class="meta">编制：董事会秘书　署名：${esc(pen)}<br>编制日期：${esc(r.at.slice(0, 10))}${r.sim ? '<br><span class="sim">本期含模拟数据（演示 / 自检）</span>' : ''}</div><div class="keys">${keys.map((x) => `<div class="key"><b>${esc(showFig(x))}</b><span>${esc(x.label)}</span></div>`).join('')}</div></section>
+<section class="cover"><div class="kicker">${esc(r.kind === 'annual' ? 'ANNUAL REPORT' : 'QUARTERLY REPORT')}</div><h1>${esc(r.title)}</h1><div>${esc(r.no)}</div><div class="meta">编制：董事会秘书 · 署名：${esc(pen)}<br>编制日期：${esc(r.at.slice(0, 10))}${r.sim ? '<br><span class="sim">本期含模拟数据（演示 / 自检）</span>' : ''}</div><div class="keys">${keys.map((x) => `<div class="key"><b>${esc(showFig(x))}</b><span>${esc(x.label)}</span></div>`).join('')}</div></section>
 <section class="toc"><h2>目录</h2><ol>${r.chapters.map((c) => `<li>${esc(c.title)}</li>`).join('')}</ol></section>
 ${r.chapters.map((c) => `<section class="ch"><h2>${c.no}. ${esc(c.title)}</h2>${c.paragraphs.map((p) => `<p>${esc(p)}</p>`).join('')}${c.table ? `<table><thead><tr>${c.table.head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${c.table.rows.map((row) => `<tr>${row.map((v) => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>` : ''}${chart(c.no)}${figTable(c)}</section>`).join('\n')}
 <div class="foot">${esc(LISTED_HONESTY)}</div>
@@ -152,7 +152,7 @@ export function buildDocx(r: PeriodicReport, o: { penName?: string } = {}): Uint
   const tbl = (head: string[], rows: string[][]) => `<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/></w:tblPr><w:tr>${head.map((h) => cell(h, true)).join('')}</w:tr>${rows.map((row) => `<w:tr>${row.map((v) => cell(v)).join('')}</w:tr>`).join('')}</w:tbl>`;
   const fig = (id: string) => r.figures.find((x) => x.id === id)!;
   const body = [
-    p(r.kind === 'annual' ? 'ANNUAL REPORT' : 'QUARTERLY REPORT', { color: '5B6CFF', center: true }), p(r.title, { b: true, size: 48, center: true }), p(r.no, { center: true }), p(`编制：董事会秘书　署名：${pen}　编制日期：${r.at.slice(0, 10)}`, { center: true, size: 20 }),
+    p(r.kind === 'annual' ? 'ANNUAL REPORT' : 'QUARTERLY REPORT', { color: '5B6CFF', center: true }), p(r.title, { b: true, size: 48, center: true }), p(r.no, { center: true }), p(`编制：董事会秘书 署名：${pen} 编制日期：${r.at.slice(0, 10)}`, { center: true, size: 20 }),
     ...(r.sim ? [p('本期含模拟数据（演示 / 自检）', { center: true, color: 'B45309' })] : []),
     p('目录', { b: true, size: 32, pageBreak: true }), ...r.chapters.map((c) => p(`${c.no}. ${c.title}`)),
     ...r.chapters.flatMap((c, i) => [p(`${c.no}. ${c.title}`, { b: true, size: 30, pageBreak: i === 0 }), ...c.paragraphs.map((t) => p(t)), ...(c.table ? [tbl(c.table.head, c.table.rows)] : []), ...(c.figures.length ? [tbl(['数字', '值', '出处（可追溯）'], c.figures.map((id) => [fig(id).label, showFig(fig(id)), fig(id).ref ?? NO_DATA]))] : [])]),

@@ -55,7 +55,7 @@ export function newSuccession(o: { role: string; incumbent: Variant; candidate: 
 }
 /** 并跑：同一任务两边各跑一次；到费用上限就停（未跑完 = over_budget，不能交接）。A/B 代号按任务号交替，盲评时看不出谁是谁。 */
 export async function runShadow(s: Succession, tasks: string[], gen: (v: Variant, task: string) => Promise<{ text: string; cost: number }>): Promise<Succession> {
-  let x = { ...s, runs: [...s.runs] };
+  const x = { ...s, runs: [...s.runs] };
   for (const task of tasks.slice(0, s.n)) {
     if (x.spent >= x.capYuan) { x.status = 'over_budget'; x.history = [...x.history, { at: new Date().toISOString(), event: `到费用上限 ¥${x.capYuan}，已跑 ${x.runs.length}/${x.n}` }]; return x; }
     const a = await gen(x.incumbent, task); const b = await gen(x.candidate, task);

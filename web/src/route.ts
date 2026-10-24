@@ -8,7 +8,8 @@ export interface Route { space: Space; sub: string; id: string | null; query?: R
 
 export const SPACES: Space[] = ['agent', 'p', 'me', 'onboarding', 'command', 'group'];
 /** 1.3.0：统领（集团模式）的标签（#group?tab=…）。 */
-export const GROUP_TABS_ROUTE = ['org', 'sessions', 'rooms', 'docs', 'okr', 'regs', 'cockpit'] as const;
+export const GROUP_TABS_ROUTE = ['org', 'sessions', 'rooms', 'docs', 'okr', 'regs', 'cockpit', 'gov'] as const;
+export const GOV_SECS_ROUTE = ['board', 'oversight', 'ops', 'disclosure', 'strategy', 'talent', 'university', 'academy'] as const;
 /** 1.2.0：指挥台的标签（#command?tab=…）。 */
 export const COMMAND_TABS = ['team', 'board', 'workflows', 'inbox', 'goals', 'connect'] as const;
 /** 1.1.0：“我的”12 个入口对应的子页（status 只保留 #me/status/cards 卡片样例页）。 */
@@ -116,7 +117,7 @@ export function parseHash(hash: string): Route {
     case 'p': return sub && /^[a-z0-9_-]+$/i.test(sub) ? { space: 'p', sub, id: null } : { space: 'agent', sub: '', id: null };
     case 'me': { const r: Route = { space: 'me', sub: (ME_SUBS as readonly string[]).includes(sub) ? sub : '', id: sub === 'models' ? id : sub === 'status' && id === 'cards' ? id : null }; if (query) r.query = query; return r; }
     case 'onboarding': return { space: 'onboarding', sub: '', id: null };
-    case 'group': { const r: Route = { space: 'group', sub: '', id: null }; if (query?.tab && (GROUP_TABS_ROUTE as readonly string[]).includes(query.tab)) r.query = { tab: query.tab }; return r; }
+    case 'group': { const r: Route = { space: 'group', sub: '', id: null }; if (query?.tab && (GROUP_TABS_ROUTE as readonly string[]).includes(query.tab)) r.query = query.tab === 'gov' && query.sec && (GOV_SECS_ROUTE as readonly string[]).includes(query.sec) ? { tab: 'gov', sec: query.sec } : { tab: query.tab }; return r; }
     case 'command': { const r: Route = { space: 'command', sub: '', id: null }; if (query?.tab && (COMMAND_TABS as readonly string[]).includes(query.tab)) r.query = { tab: query.tab }; return r; }
     default: {
       const s = (AGENT_SUBS as readonly string[]).includes(sub) ? sub : '';
