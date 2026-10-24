@@ -4,3 +4,4 @@ export * from './state.js';
 export * from './oversight.js';
 export * from './operations.js';
 export * from './disclosure.js';
+export * from './strategy.js';

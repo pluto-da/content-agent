@@ -5,6 +5,7 @@
 import { defaultBoard, type Board, type Motion, type BoardMeeting, type Agm } from './board.js';
 import type { GovSpend } from './gov.js';
 import type { Budget, MonthlyReview } from './operations.js';
+import type { StrategyPlan } from './strategy.js';
 import type { PeriodicReport, EarningsCall, ChairmanBrief } from './disclosure.js';
 import { defaultRisks, type Risk, type AuditReport, type ControlResult } from './oversight.js';
 
@@ -14,10 +15,11 @@ export interface ListedState {
   govLedger: GovSpend[]; govCapShare: number; monthBudgetYuan: number | null;
   budget: Budget | null; reviews: MonthlyReview[];
   reports: PeriodicReport[]; calls: EarningsCall[]; brief: ChairmanBrief | null; briefPeriod: 'daily' | 'weekly';
+  strategies: StrategyPlan[];
   risks: Risk[]; audits: AuditReport[]; controls: { at: string; results: ControlResult[]; text: string } | null;
 }
 export function emptyListedState(): ListedState {
-  return { version: 1, enabled: false, enabledAt: null, onboarded: false, clock: null, sim: false, board: defaultBoard(), motions: [], boardMeetings: [], agms: [], govLedger: [], govCapShare: 0.15, monthBudgetYuan: null, budget: null, reviews: [], reports: [], calls: [], brief: null, briefPeriod: 'weekly', risks: defaultRisks('2026-01-01T00:00:00.000Z'), audits: [], controls: null };
+  return { version: 1, enabled: false, enabledAt: null, onboarded: false, clock: null, sim: false, board: defaultBoard(), motions: [], boardMeetings: [], agms: [], govLedger: [], govCapShare: 0.15, monthBudgetYuan: null, strategies: [], budget: null, reviews: [], reports: [], calls: [], brief: null, briefPeriod: 'weekly', risks: defaultRisks('2026-01-01T00:00:00.000Z'), audits: [], controls: null };
 }
 export function readListedState(raw: string | null | undefined): ListedState {
   const base = emptyListedState();
