@@ -6,3 +6,4 @@ export * from './operations.js';
 export * from './disclosure.js';
 export * from './strategy.js';
 export * from './talent.js';
+export * from './university.js';
