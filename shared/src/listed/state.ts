@@ -8,6 +8,7 @@ import type { Budget, MonthlyReview } from './operations.js';
 import type { StrategyPlan } from './strategy.js';
 import type { Nomination, Assessment, Succession } from './talent.js';
 import type { CaseCard, Training } from './university.js';
+import type { WeeklyLesson } from './academy.js';
 import type { PeriodicReport, EarningsCall, ChairmanBrief } from './disclosure.js';
 import { defaultRisks, type Risk, type AuditReport, type ControlResult } from './oversight.js';
 
@@ -18,16 +19,17 @@ export interface ListedState {
   budget: Budget | null; reviews: MonthlyReview[];
   reports: PeriodicReport[]; calls: EarningsCall[]; brief: ChairmanBrief | null; briefPeriod: 'daily' | 'weekly';
   strategies: StrategyPlan[]; nominations: Nomination[]; assessments: Assessment[]; successions: Succession[];
+  academy: { read: string[]; weeklyOff: boolean; lessons: WeeklyLesson[] };
   cases: CaseCard[]; trainings: Training[]; bestPractices: { quarter: string; caseIds: string[]; skillPaths: string[] }[];
   risks: Risk[]; audits: AuditReport[]; controls: { at: string; results: ControlResult[]; text: string } | null;
 }
 export function emptyListedState(): ListedState {
-  return { version: 1, enabled: false, enabledAt: null, onboarded: false, clock: null, sim: false, board: defaultBoard(), motions: [], boardMeetings: [], agms: [], govLedger: [], govCapShare: 0.15, monthBudgetYuan: null, strategies: [], nominations: [], assessments: [], successions: [], cases: [], trainings: [], bestPractices: [], budget: null, reviews: [], reports: [], calls: [], brief: null, briefPeriod: 'weekly', risks: defaultRisks('2026-01-01T00:00:00.000Z'), audits: [], controls: null };
+  return { version: 1, enabled: false, enabledAt: null, onboarded: false, clock: null, sim: false, board: defaultBoard(), motions: [], boardMeetings: [], agms: [], govLedger: [], govCapShare: 0.15, monthBudgetYuan: null, strategies: [], nominations: [], assessments: [], successions: [], academy: { read: [], weeklyOff: false, lessons: [] }, cases: [], trainings: [], bestPractices: [], budget: null, reviews: [], reports: [], calls: [], brief: null, briefPeriod: 'weekly', risks: defaultRisks('2026-01-01T00:00:00.000Z'), audits: [], controls: null };
 }
 export function readListedState(raw: string | null | undefined): ListedState {
   const base = emptyListedState();
   if (!raw) return base;
-  try { const j = JSON.parse(raw) as Partial<ListedState>; return { ...base, ...j, board: j.board ?? base.board }; } catch { return base; }
+  try { const j = JSON.parse(raw) as Partial<ListedState>; return { ...base, ...j, board: j.board ?? base.board, academy: { ...base.academy, ...(j.academy ?? {}) } }; } catch { return base; }
 }
 export function writeListedState(s: ListedState): string {
   return JSON.stringify({ ...s, motions: s.motions.slice(-200), audits: s.audits.slice(-24), reviews: s.reviews.slice(-36), reports: s.reports.slice(-20), cases: s.cases.slice(-500), calls: s.calls.slice(-20), govLedger: s.govLedger.slice(-3000) });
