@@ -1,5 +1,5 @@
 {
- "at": "2026-10-24T07:18:17.797Z",
+ "at": "2026-10-24T07:57:05.364Z",
  "viewports": [
   "phone 360×800",
   "tablet 834×1194",
@@ -18,15 +18,13 @@
   "group?tab=gov&sec=revenue"
  ],
  "runs": {
-  "desktop-dark-en": {
+  "desktop-light-zh": {
    "pages": {
     "command?tab=team": {
-     "shot": "matrix/desktop-dark-en/command_tab_team.png",
+     "shot": "matrix/desktop-light-zh/command_tab_team.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "三件好事\n1. 董事会批准「2027 年度战略（基准情景）」"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -38,23 +36,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=board": {
-     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_board.png",
+     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_board.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "董事长",
-      "独立董事 A",
-      "独立董事 B",
-      "董事会秘书",
-      "战略委员会",
-      "董事长、独立董事 A、独立董事 B",
-      "审计委员会",
-      "独立董事 A、独立董事 B",
-      "提名与",
-      "薪酬",
-      "委员会",
-      "经营管理委员会、人力资源委员会"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -66,20 +51,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=oversight": {
-     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_oversight.png",
+     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_oversight.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "内审〔2026〕001号",
-      "本期抽查 51 项（抽样 10%），新发现 2 项（高 1）",
-      "越权：短视频事业部 自行追加 ¥5 视频生成（未走请示）（需",
-      "动作 sim-a1，执行者 bu-video-head（de",
-      "补走请示或撤销该动作；发起部门在下期前说明原因",
-      "短视频事业部",
-      "数据无出处：本周涨粉 35%，口播开头效果最好",
-      "产出 sim-d5（2026-11-02）；未写来源，也未标",
-      "补出处或标“推测”；质量委员会抽查同部门近 5 篇"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -91,30 +66,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=ops": {
-     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_ops.png",
+     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_ops.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "产出（稿件数）",
-      "20篇",
-      "15篇",
-      "-5篇",
-      "待分析：请事业部负责人说明",
-      "下月列为重点动作，指定负责人",
-      "采纳率",
-      "达标",
-      "保持",
-      "粉丝增长",
-      "1000人",
-      "640人",
-      "-360人",
-      "播放量",
-      "50000次",
-      "无数据",
-      "没有可核实的数据（请导入或录入）",
-      "下月前补齐数据来源",
-      "一次通过率"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -126,12 +81,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=disclosure": {
-     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_disclosure.png",
+     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_disclosure.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "三件好事\n1. 董事会批准「2027 年度战略（基准情景）」"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -143,31 +96,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=strategy": {
-     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_strategy.png",
+     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_strategy.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "无数据：请导入上期数据",
-      "公开来源：各平台创作者规则；你录入的受众反馈",
-      "一年内形成稳定的内容产出与复盘节奏",
-      "口播短视频的前 3 秒结构",
-      "为关注本领域的读者提供可直接用的干货",
-      "每周 3 篇；每月复盘一次；每季接入一项新数据",
-      "短视频事业部为主，数据中心支撑",
-      "鼓励说真话、写出处；停止无来源的夸大",
-      "2027 年稳定增长",
-      "短视频事业部：口播短视频周更 3 条",
-      "短视频事业部",
-      "粉丝",
-      "粉",
-      "图文事业部：图文笔记周更 2 篇",
-      "图文事业部",
-      "电商事业部：长视频月更 2 期",
-      "电商事业部",
-      "followers 13000粉",
-      "followers 10000粉",
-      "followers 6000粉"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -179,17 +111,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=talent": {
-     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_talent.png",
+     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_talent.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "资源激励规则（公开）：考核分 = KPI（只用可验证数据）×",
-      "短视频事业部 lead",
-      "图文事业部 lead",
-      "电商事业部 lead",
-      "无数据",
-      "国际事业部 lead"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -201,20 +126,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=university": {
-     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_university.png",
+     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_university.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "爆款：3 秒钩子口播",
-      "抖音 发布「3 秒钩子口播」",
-      "开头先给结论，3 秒内出现钩子",
-      "播放 5 万（模拟）",
-      "抖音 同类选题",
-      "情境：抖音 发布「3 秒钩子口播」。按集团大学的案例，正确的",
-      "按《质量管理办法》，下面哪一项是对的？",
-      "按《集团章程》，下面哪一项是对的？",
-      "按《信息与保密办法》，下面哪一项是对的？"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -226,13 +141,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=academy": {
-     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_academy.png",
+     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_academy.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "内审",
-      "发现 2 个问题. That is “Three lines"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -244,17 +156,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=revenue": {
-     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_revenue.png",
+     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_revenue.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "2026Q4 损益：收入 ¥36.50 − 花费 ¥19.0",
-      "图文事业部",
-      "短视频事业部",
-      "无数据",
-      "合计",
-      "进化目标：贡献利润 / 采纳 = ¥1.75；只能改内容与策"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -670,164 +575,10 @@
     }
    }
   },
-  "desktop-light-zh": {
+  "desktop-dark-en": {
    "pages": {
     "command?tab=team": {
-     "shot": "matrix/desktop-light-zh/command_tab_team.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=board": {
-     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_board.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=oversight": {
-     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_oversight.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=ops": {
-     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_ops.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=disclosure": {
-     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_disclosure.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=strategy": {
-     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_strategy.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=talent": {
-     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_talent.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=university": {
-     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_university.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=academy": {
-     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_academy.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=revenue": {
-     "shot": "matrix/desktop-light-zh/group_tab_gov&sec_revenue.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    }
-   }
-  },
-  "phone-dark-en": {
-   "pages": {
-    "command?tab=team": {
-     "shot": "matrix/phone-dark-en/command_tab_team.png",
+     "shot": "matrix/desktop-dark-en/command_tab_team.png",
      "spill": [],
      "squeezed": [],
      "cjk": [
@@ -844,7 +595,254 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=board": {
-     "shot": "matrix/phone-dark-en/group_tab_gov&sec_board.png",
+     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_board.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [
+      "董事长",
+      "独立董事 A",
+      "独立董事 B",
+      "董事会秘书",
+      "战略委员会",
+      "董事长、独立董事 A、独立董事 B",
+      "审计委员会",
+      "独立董事 A、独立董事 B",
+      "提名与",
+      "薪酬",
+      "委员会",
+      "经营管理委员会、人力资源委员会"
+     ],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=oversight": {
+     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_oversight.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [
+      "内审〔2026〕001号",
+      "本期抽查 51 项（抽样 10%），新发现 2 项（高 1）",
+      "越权：短视频事业部 自行追加 ¥5 视频生成（未走请示）（需",
+      "动作 sim-a1，执行者 bu-video-head（de",
+      "补走请示或撤销该动作；发起部门在下期前说明原因",
+      "短视频事业部",
+      "数据无出处：本周涨粉 35%，口播开头效果最好",
+      "产出 sim-d5（2026-11-02）；未写来源，也未标",
+      "补出处或标“推测”；质量委员会抽查同部门近 5 篇"
+     ],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=ops": {
+     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_ops.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [
+      "产出（稿件数）",
+      "20篇",
+      "15篇",
+      "-5篇",
+      "待分析：请事业部负责人说明",
+      "下月列为重点动作，指定负责人",
+      "采纳率",
+      "达标",
+      "保持",
+      "粉丝增长",
+      "1000人",
+      "640人",
+      "-360人",
+      "播放量",
+      "50000次",
+      "无数据",
+      "没有可核实的数据（请导入或录入）",
+      "下月前补齐数据来源",
+      "一次通过率"
+     ],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=disclosure": {
+     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_disclosure.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [
+      "三件好事\n1. 董事会批准「2027 年度战略（基准情景）」"
+     ],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=strategy": {
+     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_strategy.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [
+      "无数据：请导入上期数据",
+      "公开来源：各平台创作者规则；你录入的受众反馈",
+      "一年内形成稳定的内容产出与复盘节奏",
+      "口播短视频的前 3 秒结构",
+      "为关注本领域的读者提供可直接用的干货",
+      "每周 3 篇；每月复盘一次；每季接入一项新数据",
+      "短视频事业部为主，数据中心支撑",
+      "鼓励说真话、写出处；停止无来源的夸大",
+      "2027 年稳定增长",
+      "短视频事业部：口播短视频周更 3 条",
+      "短视频事业部",
+      "粉丝",
+      "粉",
+      "图文事业部：图文笔记周更 2 篇",
+      "图文事业部",
+      "电商事业部：长视频月更 2 期",
+      "电商事业部",
+      "followers 13000粉",
+      "followers 10000粉",
+      "followers 6000粉"
+     ],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=talent": {
+     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_talent.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [
+      "资源激励规则（公开）：考核分 = KPI（只用可验证数据）×",
+      "短视频事业部 lead",
+      "图文事业部 lead",
+      "电商事业部 lead",
+      "无数据",
+      "国际事业部 lead"
+     ],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=university": {
+     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_university.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [
+      "爆款：3 秒钩子口播",
+      "抖音 发布「3 秒钩子口播」",
+      "开头先给结论，3 秒内出现钩子",
+      "播放 5 万（模拟）",
+      "抖音 同类选题",
+      "情境：抖音 发布「3 秒钩子口播」。按集团大学的案例，正确的",
+      "按《质量管理办法》，下面哪一项是对的？",
+      "按《集团章程》，下面哪一项是对的？",
+      "按《信息与保密办法》，下面哪一项是对的？"
+     ],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=academy": {
+     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_academy.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [
+      "内审",
+      "发现 2 个问题. That is “Three lines"
+     ],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=revenue": {
+     "shot": "matrix/desktop-dark-en/group_tab_gov&sec_revenue.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [
+      "2026Q4 损益：收入 ¥36.50 − 花费 ¥19.0",
+      "图文事业部",
+      "短视频事业部",
+      "无数据",
+      "合计",
+      "进化目标：贡献利润 / 采纳 = ¥1.75；只能改内容与策"
+     ],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    }
+   }
+  },
+  "phone-light-zh": {
+   "pages": {
+    "command?tab=team": {
+     "shot": "matrix/phone-light-zh/command_tab_team.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=board": {
+     "shot": "matrix/phone-light-zh/group_tab_gov&sec_board.png",
      "spill": [],
      "squeezed": [],
      "cjk": [],
@@ -859,7 +857,7 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=oversight": {
-     "shot": "matrix/phone-dark-en/group_tab_gov&sec_oversight.png",
+     "shot": "matrix/phone-light-zh/group_tab_gov&sec_oversight.png",
      "spill": [],
      "squeezed": [],
      "cjk": [],
@@ -874,7 +872,7 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=ops": {
-     "shot": "matrix/phone-dark-en/group_tab_gov&sec_ops.png",
+     "shot": "matrix/phone-light-zh/group_tab_gov&sec_ops.png",
      "spill": [],
      "squeezed": [],
      "cjk": [],
@@ -889,7 +887,7 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=disclosure": {
-     "shot": "matrix/phone-dark-en/group_tab_gov&sec_disclosure.png",
+     "shot": "matrix/phone-light-zh/group_tab_gov&sec_disclosure.png",
      "spill": [],
      "squeezed": [],
      "cjk": [],
@@ -904,7 +902,7 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=strategy": {
-     "shot": "matrix/phone-dark-en/group_tab_gov&sec_strategy.png",
+     "shot": "matrix/phone-light-zh/group_tab_gov&sec_strategy.png",
      "spill": [],
      "squeezed": [],
      "cjk": [],
@@ -919,7 +917,7 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=talent": {
-     "shot": "matrix/phone-dark-en/group_tab_gov&sec_talent.png",
+     "shot": "matrix/phone-light-zh/group_tab_gov&sec_talent.png",
      "spill": [],
      "squeezed": [],
      "cjk": [],
@@ -934,7 +932,7 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=university": {
-     "shot": "matrix/phone-dark-en/group_tab_gov&sec_university.png",
+     "shot": "matrix/phone-light-zh/group_tab_gov&sec_university.png",
      "spill": [],
      "squeezed": [],
      "cjk": [],
@@ -949,7 +947,7 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=academy": {
-     "shot": "matrix/phone-dark-en/group_tab_gov&sec_academy.png",
+     "shot": "matrix/phone-light-zh/group_tab_gov&sec_academy.png",
      "spill": [],
      "squeezed": [],
      "cjk": [],
@@ -964,7 +962,7 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=revenue": {
-     "shot": "matrix/phone-dark-en/group_tab_gov&sec_revenue.png",
+     "shot": "matrix/phone-light-zh/group_tab_gov&sec_revenue.png",
      "spill": [],
      "squeezed": [],
      "cjk": [],
@@ -1290,164 +1288,10 @@
     }
    }
   },
-  "phone-light-zh": {
+  "phone-dark-en": {
    "pages": {
     "command?tab=team": {
-     "shot": "matrix/phone-light-zh/command_tab_team.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=board": {
-     "shot": "matrix/phone-light-zh/group_tab_gov&sec_board.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=oversight": {
-     "shot": "matrix/phone-light-zh/group_tab_gov&sec_oversight.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=ops": {
-     "shot": "matrix/phone-light-zh/group_tab_gov&sec_ops.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=disclosure": {
-     "shot": "matrix/phone-light-zh/group_tab_gov&sec_disclosure.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=strategy": {
-     "shot": "matrix/phone-light-zh/group_tab_gov&sec_strategy.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=talent": {
-     "shot": "matrix/phone-light-zh/group_tab_gov&sec_talent.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=university": {
-     "shot": "matrix/phone-light-zh/group_tab_gov&sec_university.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=academy": {
-     "shot": "matrix/phone-light-zh/group_tab_gov&sec_academy.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    },
-    "group?tab=gov&sec=revenue": {
-     "shot": "matrix/phone-light-zh/group_tab_gov&sec_revenue.png",
-     "spill": [],
-     "squeezed": [],
-     "cjk": [],
-     "overflow": false,
-     "truncated": [],
-     "small": [],
-     "overlap": [],
-     "axeCritical": 0,
-     "axeSerious": 0,
-     "axe": [],
-     "consoleErrors": [],
-     "pageErrors": []
-    }
-   }
-  },
-  "tablet-dark-en": {
-   "pages": {
-    "command?tab=team": {
-     "shot": "matrix/tablet-dark-en/command_tab_team.png",
+     "shot": "matrix/phone-dark-en/command_tab_team.png",
      "spill": [],
      "squeezed": [],
      "cjk": [
@@ -1464,29 +1308,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=board": {
-     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_board.png",
+     "shot": "matrix/phone-dark-en/group_tab_gov&sec_board.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "董事长",
-      "独立董事 A",
-      "独立董事 B",
-      "董事会秘书",
-      "战略委员会",
-      "董事长、独立董事 A、独立董事 B",
-      "审计委员会",
-      "独立董事 A、独立董事 B",
-      "提名与",
-      "薪酬",
-      "委员会",
-      "经营管理委员会、人力资源委员会",
-      "董事会议案〔2026〕003号",
-      "接班人交接：短视频脚本（候选 本机模拟（新提示词））",
-      "【结论】盲评质量 8 ≥ 在任 7，花费 ¥0.04 ≤ 在",
-      "[R1] 显示",
-      "预算",
-      "执行已有偏差，议案仍要求追加投入；风险应对没有写负责人与期限"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -1498,20 +1323,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=oversight": {
-     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_oversight.png",
+     "shot": "matrix/phone-dark-en/group_tab_gov&sec_oversight.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "内审〔2026〕001号",
-      "本期抽查 51 项（抽样 10%），新发现 2 项（高 1）",
-      "越权：短视频事业部 自行追加 ¥5 视频生成（未走请示）（需",
-      "动作 sim-a1，执行者 bu-video-head（de",
-      "补走请示或撤销该动作；发起部门在下期前说明原因",
-      "短视频事业部",
-      "数据无出处：本周涨粉 35%，口播开头效果最好",
-      "产出 sim-d5（2026-11-02）；未写来源，也未标",
-      "补出处或标“推测”；质量委员会抽查同部门近 5 篇"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -1523,33 +1338,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=ops": {
-     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_ops.png",
+     "shot": "matrix/phone-dark-en/group_tab_gov&sec_ops.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "产出（稿件数）",
-      "20篇",
-      "15篇",
-      "-5篇",
-      "待分析：请事业部负责人说明",
-      "下月列为重点动作，指定负责人",
-      "采纳率",
-      "达标",
-      "保持",
-      "粉丝增长",
-      "1000人",
-      "640人",
-      "-360人",
-      "播放量",
-      "50000次",
-      "无数据",
-      "没有可核实的数据（请导入或录入）",
-      "下月前补齐数据来源",
-      "一次通过率",
-      "退回率",
-      "贡献利润（收入 − 花费）",
-      "0元"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -1561,25 +1353,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=disclosure": {
-     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_disclosure.png",
+     "shot": "matrix/phone-dark-en/group_tab_gov&sec_disclosure.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "三件好事\n1. 董事会批准「2027 年度战略（基准情景）」",
-      "My Group 2026Q4 季度报告",
-      "季报〔2026〕001号",
-      "长鱼茶汤茗",
-      "15篇",
-      "产出（稿件数）",
-      "10篇",
-      "采纳（进入待发布或已发布）",
-      "19元",
-      "总花费（Token 账）",
-      "预算执行率",
-      "36.5元",
-      "收入（你录入 / 导出的结算）",
-      "17.5元"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -1591,34 +1368,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=strategy": {
-     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_strategy.png",
+     "shot": "matrix/phone-dark-en/group_tab_gov&sec_strategy.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "无数据：请导入上期数据",
-      "公开来源：各平台创作者规则；你录入的受众反馈",
-      "一年内形成稳定的内容产出与复盘节奏",
-      "口播短视频的前 3 秒结构",
-      "为关注本领域的读者提供可直接用的干货",
-      "每周 3 篇；每月复盘一次；每季接入一项新数据",
-      "短视频事业部为主，数据中心支撑",
-      "鼓励说真话、写出处；停止无来源的夸大",
-      "2027 年稳定增长",
-      "短视频事业部：口播短视频周更 3 条",
-      "短视频事业部",
-      "粉丝",
-      "粉",
-      "图文事业部：图文笔记周更 2 篇",
-      "图文事业部",
-      "电商事业部：长视频月更 2 期",
-      "电商事业部",
-      "followers 13000粉",
-      "平台规则与流量分配大体不变，且有利变化；模型价格不上涨，且有",
-      "followers 10000粉",
-      "平台规则与流量分配大体不变；模型价格不上涨；每周能稳定产出",
-      "followers 6000粉",
-      "平台规则与流量分配大体不变不成立；模型价格不上涨不成立；每周"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -1630,19 +1383,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=talent": {
-     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_talent.png",
+     "shot": "matrix/phone-dark-en/group_tab_gov&sec_talent.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "资源激励规则（公开）：考核分 = KPI（只用可验证数据）×",
-      "短视频事业部 lead",
-      "图文事业部 lead",
-      "电商事业部 lead",
-      "无数据",
-      "国际事业部 lead",
-      "在任 本机模拟（旧提示词）",
-      "候选 本机模拟（新提示词）"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -1654,20 +1398,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=university": {
-     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_university.png",
+     "shot": "matrix/phone-dark-en/group_tab_gov&sec_university.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "爆款：3 秒钩子口播",
-      "抖音 发布「3 秒钩子口播」",
-      "开头先给结论，3 秒内出现钩子",
-      "播放 5 万（模拟）",
-      "抖音 同类选题",
-      "情境：抖音 发布「3 秒钩子口播」。按集团大学的案例，正确的",
-      "按《质量管理办法》，下面哪一项是对的？",
-      "按《集团章程》，下面哪一项是对的？",
-      "按《信息与保密办法》，下面哪一项是对的？"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -1679,13 +1413,10 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=academy": {
-     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_academy.png",
+     "shot": "matrix/phone-dark-en/group_tab_gov&sec_academy.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "内审",
-      "发现 2 个问题. That is “Three lines"
-     ],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -1697,17 +1428,164 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=revenue": {
-     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_revenue.png",
+     "shot": "matrix/phone-dark-en/group_tab_gov&sec_revenue.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [
-      "2026Q4 损益：收入 ¥36.50 − 花费 ¥19.0",
-      "图文事业部",
-      "短视频事业部",
-      "无数据",
-      "合计",
-      "进化目标：贡献利润 / 采纳 = ¥1.75；只能改内容与策"
-     ],
+     "cjk": [],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    }
+   }
+  },
+  "tablet-light-zh": {
+   "pages": {
+    "command?tab=team": {
+     "shot": "matrix/tablet-light-zh/command_tab_team.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=board": {
+     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_board.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=oversight": {
+     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_oversight.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=ops": {
+     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_ops.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=disclosure": {
+     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_disclosure.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=strategy": {
+     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_strategy.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=talent": {
+     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_talent.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=university": {
+     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_university.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=academy": {
+     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_academy.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [],
+     "overflow": false,
+     "truncated": [],
+     "small": [],
+     "overlap": [],
+     "axeCritical": 0,
+     "axeSerious": 0,
+     "axe": [],
+     "consoleErrors": [],
+     "pageErrors": []
+    },
+    "group?tab=gov&sec=revenue": {
+     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_revenue.png",
+     "spill": [],
+     "squeezed": [],
+     "cjk": [],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -2071,7 +1949,8 @@
       "无数据",
       "国际事业部 lead",
       "在任 本机模拟（旧提示词）",
-      "候选 本机模拟（新提示词）"
+      "候选 本机模拟（新提示词）",
+      "盲评质量 8 ≥ 在任 7，花费 ¥0.04 ≤ 在任 ×1"
      ],
      "overflow": false,
      "truncated": [],
@@ -2150,13 +2029,15 @@
     }
    }
   },
-  "tablet-light-zh": {
+  "tablet-dark-en": {
    "pages": {
     "command?tab=team": {
-     "shot": "matrix/tablet-light-zh/command_tab_team.png",
+     "shot": "matrix/tablet-dark-en/command_tab_team.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [],
+     "cjk": [
+      "三件好事\n1. 董事会批准「2027 年度战略（基准情景）」"
+     ],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -2168,10 +2049,29 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=board": {
-     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_board.png",
+     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_board.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [],
+     "cjk": [
+      "董事长",
+      "独立董事 A",
+      "独立董事 B",
+      "董事会秘书",
+      "战略委员会",
+      "董事长、独立董事 A、独立董事 B",
+      "审计委员会",
+      "独立董事 A、独立董事 B",
+      "提名与",
+      "薪酬",
+      "委员会",
+      "经营管理委员会、人力资源委员会",
+      "董事会议案〔2026〕003号",
+      "接班人交接：短视频脚本（候选 本机模拟（新提示词））",
+      "【结论】盲评质量 8 ≥ 在任 7，花费 ¥0.04 ≤ 在",
+      "[R1] 显示",
+      "预算",
+      "执行已有偏差，议案仍要求追加投入；风险应对没有写负责人与期限"
+     ],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -2183,10 +2083,20 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=oversight": {
-     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_oversight.png",
+     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_oversight.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [],
+     "cjk": [
+      "内审〔2026〕001号",
+      "本期抽查 51 项（抽样 10%），新发现 2 项（高 1）",
+      "越权：短视频事业部 自行追加 ¥5 视频生成（未走请示）（需",
+      "动作 sim-a1，执行者 bu-video-head（de",
+      "补走请示或撤销该动作；发起部门在下期前说明原因",
+      "短视频事业部",
+      "数据无出处：本周涨粉 35%，口播开头效果最好",
+      "产出 sim-d5（2026-11-02）；未写来源，也未标",
+      "补出处或标“推测”；质量委员会抽查同部门近 5 篇"
+     ],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -2198,10 +2108,33 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=ops": {
-     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_ops.png",
+     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_ops.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [],
+     "cjk": [
+      "产出（稿件数）",
+      "20篇",
+      "15篇",
+      "-5篇",
+      "待分析：请事业部负责人说明",
+      "下月列为重点动作，指定负责人",
+      "采纳率",
+      "达标",
+      "保持",
+      "粉丝增长",
+      "1000人",
+      "640人",
+      "-360人",
+      "播放量",
+      "50000次",
+      "无数据",
+      "没有可核实的数据（请导入或录入）",
+      "下月前补齐数据来源",
+      "一次通过率",
+      "退回率",
+      "贡献利润（收入 − 花费）",
+      "0元"
+     ],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -2213,10 +2146,25 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=disclosure": {
-     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_disclosure.png",
+     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_disclosure.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [],
+     "cjk": [
+      "三件好事\n1. 董事会批准「2027 年度战略（基准情景）」",
+      "My Group 2026Q4 季度报告",
+      "季报〔2026〕001号",
+      "长鱼茶汤茗",
+      "15篇",
+      "产出（稿件数）",
+      "10篇",
+      "采纳（进入待发布或已发布）",
+      "19元",
+      "总花费（Token 账）",
+      "预算执行率",
+      "36.5元",
+      "收入（你录入 / 导出的结算）",
+      "17.5元"
+     ],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -2228,10 +2176,34 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=strategy": {
-     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_strategy.png",
+     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_strategy.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [],
+     "cjk": [
+      "无数据：请导入上期数据",
+      "公开来源：各平台创作者规则；你录入的受众反馈",
+      "一年内形成稳定的内容产出与复盘节奏",
+      "口播短视频的前 3 秒结构",
+      "为关注本领域的读者提供可直接用的干货",
+      "每周 3 篇；每月复盘一次；每季接入一项新数据",
+      "短视频事业部为主，数据中心支撑",
+      "鼓励说真话、写出处；停止无来源的夸大",
+      "2027 年稳定增长",
+      "短视频事业部：口播短视频周更 3 条",
+      "短视频事业部",
+      "粉丝",
+      "粉",
+      "图文事业部：图文笔记周更 2 篇",
+      "图文事业部",
+      "电商事业部：长视频月更 2 期",
+      "电商事业部",
+      "followers 13000粉",
+      "平台规则与流量分配大体不变，且有利变化；模型价格不上涨，且有",
+      "followers 10000粉",
+      "平台规则与流量分配大体不变；模型价格不上涨；每周能稳定产出",
+      "followers 6000粉",
+      "平台规则与流量分配大体不变不成立；模型价格不上涨不成立；每周"
+     ],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -2243,10 +2215,20 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=talent": {
-     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_talent.png",
+     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_talent.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [],
+     "cjk": [
+      "资源激励规则（公开）：考核分 = KPI（只用可验证数据）×",
+      "短视频事业部 lead",
+      "图文事业部 lead",
+      "电商事业部 lead",
+      "无数据",
+      "国际事业部 lead",
+      "在任 本机模拟（旧提示词）",
+      "候选 本机模拟（新提示词）",
+      "盲评质量 8 ≥ 在任 7，花费 ¥0.04 ≤ 在任 ×1"
+     ],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -2258,10 +2240,20 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=university": {
-     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_university.png",
+     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_university.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [],
+     "cjk": [
+      "爆款：3 秒钩子口播",
+      "抖音 发布「3 秒钩子口播」",
+      "开头先给结论，3 秒内出现钩子",
+      "播放 5 万（模拟）",
+      "抖音 同类选题",
+      "情境：抖音 发布「3 秒钩子口播」。按集团大学的案例，正确的",
+      "按《质量管理办法》，下面哪一项是对的？",
+      "按《集团章程》，下面哪一项是对的？",
+      "按《信息与保密办法》，下面哪一项是对的？"
+     ],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -2273,10 +2265,13 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=academy": {
-     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_academy.png",
+     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_academy.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [],
+     "cjk": [
+      "内审",
+      "发现 2 个问题. That is “Three lines"
+     ],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -2288,10 +2283,17 @@
      "pageErrors": []
     },
     "group?tab=gov&sec=revenue": {
-     "shot": "matrix/tablet-light-zh/group_tab_gov&sec_revenue.png",
+     "shot": "matrix/tablet-dark-en/group_tab_gov&sec_revenue.png",
      "spill": [],
      "squeezed": [],
-     "cjk": [],
+     "cjk": [
+      "2026Q4 损益：收入 ¥36.50 − 花费 ¥19.0",
+      "图文事业部",
+      "短视频事业部",
+      "无数据",
+      "合计",
+      "进化目标：贡献利润 / 采纳 = ¥1.75；只能改内容与策"
+     ],
      "overflow": false,
      "truncated": [],
      "small": [],
@@ -2310,7 +2312,7 @@
   "shots": 120,
   "spill": 0,
   "squeezed": 0,
-  "cjkInEnReportOnly": 396,
+  "cjkInEnReportOnly": 398,
   "overflow": 0,
   "overlap": 0,
   "truncated": 0,
