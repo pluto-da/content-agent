@@ -23,6 +23,7 @@ import { migrateV11 } from './v11/migrate';
 import type { Theme } from './state';
 import { migrateV12 } from './v12/migrate';
 import { migrateV13 } from './v13/migrate';
+import { migrateV14 } from './v14/migrate';
 import { startSuperScheduler } from './v12/store';
 
 // 页面级懒加载：首页随主包，其余按需加载（首屏轻量，借鉴 NextChat）。
@@ -145,7 +146,7 @@ export function App() {
     root.dataset.theme = theme;
   }, [theme]);
   // 1.1.0：一次性迁移（写作助手覆盖 → 技能修订、画像 → user/profile.md），幂等，失败不阻断启动
-  useEffect(() => { void migrateV11().catch(() => {}).then(() => migrateV12()).catch(() => {}).then(() => migrateV13()).catch(() => {}); }, []);
+  useEffect(() => { void migrateV11().catch(() => {}).then(() => migrateV12()).catch(() => {}).then(() => migrateV13()).catch(() => {}).then(() => migrateV14()).catch(() => {}); }, []);
   // 1.2.0：App 打开期间执行到期的定时工作流（关闭时不执行，只靠本机提醒通知）
   useEffect(() => (import.meta.env.MODE === 'test' ? undefined : startSuperScheduler()), []);
   useEffect(() => { localStorage.setItem('ca.lang', lang); document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en'; setLocale(lang === 'zh' ? 'zh-CN' : 'en'); document.title = translate(lang, 'ui.super_workbench'); }, [lang]);

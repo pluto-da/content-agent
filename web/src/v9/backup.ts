@@ -78,6 +78,8 @@ export async function restoreBackup(zipBytes: Uint8Array, o: { conflict?: 'local
   await (await import('../v12/migrate')).migrateV12().catch(() => undefined);
   // 1.3.0：集团状态缺失则建关闭状态（恢复的是 1.3 备份则保留原状态）
   await (await import('../v13/migrate')).migrateV13().catch(() => undefined);
+  // 1.4.0：上市公司状态缺失则建关闭状态；1.3 复盘转为案例卡（恢复的是 1.4 备份则保留原状态）
+  await (await import('../v14/migrate')).migrateV14().catch(() => undefined);
   await audit({ kind: 'restore', actor: 'user', summary: `恢复备份（${manifest.appVersion}，${manifest.exportedAt.slice(0, 10)}）：文件 ${nf}、集合 ${nc}、设置 ${nk}；Key 需要重新填写`, outcome: 'ok' });
   return { manifest, errors: [], restored: { files: nf, collections: nc, kv: nk }, snapshot };
 }
