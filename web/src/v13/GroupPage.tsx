@@ -357,7 +357,7 @@ function Cockpit({ s, o, run }: { s: GroupState; o: GroupOverview | null; run: R
       <Section title={t('ui.v13_brief')} testId="group-brief">{brief.map((b, i) => <Note key={i}>{b}</Note>)}</Section>
       <Section title={t('ui.v13_gray')} testId="group-gray">
         <Note>{t('ui.v13_gray_desc')}</Note>
-        <Row><button type="button" data-testid="group-gray-start" onClick={() => run(async () => setGid(await startGray('skills/douyin/SKILL.md')), 'ui.v13_gray_started')}>{t('ui.v13_gray_start')}</button></Row>
+        <Row><button type="button" data-testid="group-gray-start" onClick={() => run(async () => setGid(await startGray('skills/douyin-script/SKILL.md')), 'ui.v13_gray_started')}>{t('ui.v13_gray_start')}</button></Row>
         {gray && (
           <div className="flex flex-col gap-1" data-testid="gray-view">
             <Note>{gray.target.id} v{gray.target.version} · {t(`ui.v13_gs_${gray.status}`)}{gray.reason ? ` · ${gray.reason}` : ''}</Note>

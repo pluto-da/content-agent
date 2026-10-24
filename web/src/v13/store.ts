@@ -174,7 +174,11 @@ export async function createMeeting(o: { roomId: string; title: string; agenda?:
   let id = '';
   await updateGroup((s) => {
     guard(s);
-    const parts = o.participants?.length ? o.participants : recommendMembers(`${o.title} ${o.agenda ?? ''}`, s.org, 'staff-head').slice(0, 3);
+    let parts = o.participants?.length ? o.participants : recommendMembers(`${o.title} ${o.agenda ?? ''}`, s.org, 'staff-head').slice(0, 3);
+    // 讨论至少三方：不足时按会议室补齐（红蓝对抗把法务合规部放在最后当蓝军；其余补事业部与数据中心）
+    const fill = o.roomId === 'redblue' ? ['bu-video-head', 'data-center-head', 'legal-head'] : ['bu-video-head', 'bu-article-head', 'data-center-head', 'legal-head'];
+    for (const f of fill) { if (parts.length >= 3) break; if (!parts.includes(f)) parts = [...parts, f]; }
+    if (o.roomId === 'redblue' && parts.includes('legal-head')) parts = [...parts.filter((x) => x !== 'legal-head'), 'legal-head'];
     const ctx = retrieveContext(s.flow, o.title, { tokenBudget: 300 });
     const doc = preDocument({ title: o.title, background: o.agenda || o.title, question: o.title, options: [], data: ctx.items.map((x) => `${x.title}：${x.body.slice(0, 60)}`) });
     const m = newMeeting({ roomId: o.roomId, title: o.title, agenda: o.agenda ?? o.title, participants: parts, scheduledAt: o.scheduledAt ?? null, recurring: o.recurring ?? null, preDoc: doc });
