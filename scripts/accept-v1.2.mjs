@@ -162,7 +162,7 @@ const E22 = [
   grep('web/src/local/router.ts', "version: '1\\.[2-9]\\.\\d+'", '本机 /api/health ≥ 1.2.0'),
   grep('mobile/scripts/apply-native.mjs', 'Number\\(mv\\[1\\]\\) \\* 10000', 'versionCode = x*10000+y*100+z（1.2.0 → 10200）'),
   grep('.github/workflows/ci.yml', 'accept-v1\\.2\\.mjs --strict', 'CI 跑 accept-v1.2 --strict'),
-  grep('.github/workflows/ci.yml', 'name: reports-1\\.2\\.0', 'CI 报告产物 reports-1.2.0'),
+  grep('.github/workflows/ci.yml', 'name: reports-1\\.(?:[2-9]|\\d{2,})\\.\\d+', 'CI 报告产物 reports-1.x（1.3.0 起作回归：≥ reports-1.2.0）'),
   { ok: ci.indexOf('vitest-shared.json') > 0 && ci.indexOf('vitest-shared.json') < ci.indexOf('accept-v1.2.mjs'), text: 'CI 在 accept 之前现场生成 out/vitest-*.json' },
   { ok: !/uses:\s*android-actions\/setup-android/.test(ci), text: '未使用 android-actions/setup-android' },
   { ok: !/154\.8\.183\.93/.test(ci), text: 'CI 不部署 154.8.183.93' },

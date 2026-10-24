@@ -84,11 +84,17 @@ jobs:
       - name: accept:v1.2 (E1–E22)
         if: always()
         run: node scripts/accept-v1.2.mjs --strict
+      # 1.3.0：F1–F22（融合集团组织）。证据同上：单测结果现场生成，截图 / walkthrough / MiMo 实测随提交带入。
+      - name: accept:v1.3 (F1–F22)
+        if: always()
+        run: node scripts/accept-v1.3.mjs --strict
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: reports-1.2.0
+          name: reports-1.3.0
           path: |
+            out/accept-v1.3.json
+            out/accept-v1.3.md
             out/accept-v1.2.json
             out/accept-v1.2.md
             out/accept-v1.1.json
