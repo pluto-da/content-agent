@@ -63,7 +63,9 @@ export const needsCommittee = (doa: Doa, matter: Matter): boolean => !!doa[matte
 const HARD = [/自动(发布|发帖|点赞|评论|私信|关注|互动|回复并发送)/, /刷(量|赞|粉|评论|播放)/, /买粉|水军|模拟点击|反检测|指纹伪装|绕过?(风控|验证码)/, /(抓取|爬取).{0,8}(登录后|私有|后台|私信)/, /多账号|矩阵号批量|团队账号/, /154\.8\.183\.93/];
 export function violatesHardBoundary(text: string): string | null {
   for (const r of HARD) { const m = r.exec(text); if (m) return m[0]; }
-  if (SOCIAL_ACTION_ZH.test(text) && /自动|批量|代你|替你/.test(text)) return (SOCIAL_ACTION_ZH.exec(text) ?? [''])[0]!;
+  // 1.3.0 MiMo 实测发现误报：“逾期自动降级……对外发布由董事长本人完成”整句里同时出现“自动”和“发布”就被拒。改为要求修饰词紧邻动作（同一分句内 6 字以内）。
+  const near = new RegExp(`(自动|批量|代你|替你|代为|替用户|帮你)[^。；;，,\\n]{0,6}?(${SOCIAL_ACTION_ZH.source.replace(/^\(|\)$/g, '')})`);
+  const m = near.exec(text); if (m) return m[2] ?? m[0];
   if (/\bauto[_-]?(post|publish|like|comment|follow|dm)\b/i.test(text) || (SOCIAL_ACTION.test(text) && /\b(auto|bulk|mass)\b/i.test(text))) return 'auto social action';
   return null;
 }

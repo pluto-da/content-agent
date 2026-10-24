@@ -1615,7 +1615,7 @@ export const EN_UI: Record<string, string> = {
   'ui.v13_sessions_desc': 'Assign before you huddle, huddle before you meet. Huddles grant no new permissions; tick ✓ to dissolve when done.',
   'ui.v13_check_conflicts': 'Data Center: check OKR conflicts',
   'ui.v13_checked': 'Checked',
-  'ui.v13_pull_ph': 'Start a huddle about…',
+  'ui.v13_pull_ph': 'Huddle topic',
   'ui.v13_pull': 'Start huddle',
   'ui.v13_no_sessions': 'No huddles yet',
   'ui.v13_session_run': 'Continue',

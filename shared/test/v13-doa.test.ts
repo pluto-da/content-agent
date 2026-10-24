@@ -73,4 +73,12 @@ describe('F4 DOA 引擎执行，越权拦截并审计', () => {
     expect(r.ok).toBe(false);
     expect(r.audit.outcome).toBe('denied');
   });
+  it('硬边界不误报（MiMo 实测发现）：同一句里出现“逾期自动降级”和“对外发布由董事长本人完成”不算违规；紧邻的“自动发布 / 批量私信 / 替你点赞”仍拒', async () => {
+    const { violatesHardBoundary } = await import('../src/index.js');
+    expect(violatesHardBoundary('逾期则自动降级为素材试跑；任何内容对外发布由董事长本人完成。')).toBeNull();
+    expect(violatesHardBoundary('A 首条按期发布，逾期自动降级')).toBeNull();
+    expect(violatesHardBoundary('每天自动发布三条')).toBeTruthy();
+    expect(violatesHardBoundary('批量给粉丝私信')).toBeTruthy();
+    expect(violatesHardBoundary('替你点赞同行')).toBeTruthy();
+  });
 });

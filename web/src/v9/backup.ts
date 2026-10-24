@@ -12,7 +12,7 @@ import { importLegacyV11, LEGACY_V11_KV } from '../v11/migrate';
 
 const KV_EXCLUDE = /^(secrets|secure\.key|cache:|backup\.snapshot|run:|models$|models_v2_backup)/;
 const KV_KEYS = ['models_v3', 'prefs', 'usage', 'schema', 'approvals.remembered', 'memory.dontRemember', 'hot.cache', 'sources.creds.meta'];
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 
 /** 1.0：本机数据库读失败时带上是哪一步，界面据此给白话建议（不是“发现密钥”）。 */
 export class BackupReadError extends Error {
